@@ -307,3 +307,24 @@ func (s *Store) AdminSetPassword(name, password string) error {
 	s.AdminAudit("cli", "admin.reset-password", name)
 	return nil
 }
+
+// Admin settings: today only whether operators and curators must use two-factor.
+func init() {
+	migrations = append(migrations, `create table admin_settings(k text primary key, v text not null);`)
+}
+
+// Require2FA is on unless the owner turned it off; the owner's own account always needs it.
+func (s *Store) Require2FA() bool {
+	var v string
+	err := s.db.QueryRow(`select v from admin_settings where k='require_2fa'`).Scan(&v)
+	return err != nil || v != "0"
+}
+
+func (s *Store) SetRequire2FA(on bool) error {
+	v := "0"
+	if on {
+		v = "1"
+	}
+	_, err := s.db.Exec(`insert into admin_settings(k, v) values('require_2fa', ?) on conflict(k) do update set v=excluded.v`, v)
+	return err
+}

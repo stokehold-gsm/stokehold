@@ -158,9 +158,20 @@ func TestWithoutTwoFactorEverythingElseIsClosed(t *testing.T) {
 func TestLoginNeedsTheCodeAndNotTwice(t *testing.T) {
 	r := newARig(t)
 	secret := r.admin("owner", RoleOwner)
-	if rec := r.login("owner", ""); rec.Code != 401 {
-		t.Errorf("no code: %d", rec.Code)
+	rec := r.login("owner", "")
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "/login/code") || len(rec.Result().Cookies()) != 0 {
+		t.Fatalf("a right password without a code must lead to the code window and no session: %d", rec.Code)
 	}
+	pend := regexp.MustCompile(`name="pending" value="([^"]+)"`).FindStringSubmatch(rec.Body.String())[1]
+	if rec := r.do("POST", "/login/code", url.Values{"pending": {pend}, "code": {"000000"}}, nil); rec.Code != 401 {
+		t.Errorf("a wrong code: %d", rec.Code)
+	}
+	good, _ := auth.Code(secret, r.now)
+	if rec := r.do("POST", "/login/code", url.Values{"pending": {pend}, "code": {good}}, nil); rec.Code != 303 {
+		t.Errorf("the right code in the second window: %d", rec.Code)
+	}
+	r.jar = nil
+	r.now = r.now.Add(31 * time.Second)
 	if rec := r.login("owner", secret); rec.Code != 303 {
 		t.Fatalf("with code: %d", rec.Code)
 	}
@@ -377,5 +388,38 @@ func TestOwnerAddsStaffWithAOneTimePassword(t *testing.T) {
 	}
 	if rec := r.do("POST", "/staff", url.Values{"csrf": {tok}, "name": {"x y"}, "role": {"owner"}}, nil); rec.Code != 400 {
 		t.Errorf("bad name or role: %d", rec.Code)
+	}
+}
+
+func TestOwnerDecidesWhetherStaffNeedsTwoFactor(t *testing.T) {
+	r := newARig(t)
+	os := r.admin("owner", RoleOwner)
+	r.st.AdminCreate("anna", apass, RoleOperator)
+	tok := r.signIn("owner", os)
+
+	r.jar = nil
+	if rec := r.do("POST", "/login", url.Values{"name": {"anna"}, "password": {apass}}, nil); rec.Code != 303 {
+		t.Fatalf("anna without 2FA signs in with the password alone: %d", rec.Code)
+	}
+	if rec := r.do("GET", "/issue", nil, nil); rec.Code != 303 || rec.Header().Get("Location") != "/security" {
+		t.Errorf("2FA is required by default: %d %s", rec.Code, rec.Header().Get("Location"))
+	}
+
+	r.signIn("owner", os)
+	tok = r.csrf()
+	if rec := r.do("POST", "/staff/require-2fa", url.Values{"csrf": {tok}, "require": {"0"}}, nil); rec.Code != 303 {
+		t.Fatalf("switch off: %d", rec.Code)
+	}
+	r.jar = nil
+	r.do("POST", "/login", url.Values{"name": {"anna"}, "password": {apass}}, nil)
+	if rec := r.do("GET", "/issue", nil, nil); rec.Code != 200 {
+		t.Errorf("an operator may work without 2FA once the owner allows it: %d", rec.Code)
+	}
+	// the owner is never exempt
+	r.jar = nil
+	r.st.AdminCreate("boss", apass, RoleOwner)
+	r.do("POST", "/login", url.Values{"name": {"boss"}, "password": {apass}}, nil)
+	if rec := r.do("GET", "/issue", nil, nil); rec.Code != 303 {
+		t.Errorf("an owner without 2FA must still be sent to set it up: %d", rec.Code)
 	}
 }
