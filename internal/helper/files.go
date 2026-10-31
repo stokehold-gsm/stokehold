@@ -5,7 +5,7 @@ import (
 	"os/user"
 	"strings"
 
-	"stokehold/internal/safefs"
+	"github.com/stokehold-gsm/stokehold/internal/safefs"
 )
 
 // Config files can only be read and written inside these trees of a game

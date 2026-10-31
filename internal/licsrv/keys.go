@@ -8,7 +8,7 @@ import (
 	"encoding/hex"
 	"strings"
 
-	"stokehold/internal/license"
+	"github.com/stokehold-gsm/stokehold/pkg/license"
 )
 
 // NewKey returns a fresh licence key for the buyer and its normalised form.

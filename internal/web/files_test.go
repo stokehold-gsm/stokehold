@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"stokehold/internal/helper"
-	"stokehold/internal/safefs"
-	"stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/internal/helper"
+	"github.com/stokehold-gsm/stokehold/internal/safefs"
+	"github.com/stokehold-gsm/stokehold/internal/store"
 )
 
 // fileHelper answers the three file operations.

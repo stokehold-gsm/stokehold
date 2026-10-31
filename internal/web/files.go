@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"stokehold/internal/helper"
-	"stokehold/internal/safefs"
+	"github.com/stokehold-gsm/stokehold/internal/helper"
+	"github.com/stokehold-gsm/stokehold/internal/safefs"
 )
 
 // Config files can hold secrets such as RCON passwords, so only people who

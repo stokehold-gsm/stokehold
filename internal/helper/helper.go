@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"strings"
 
-	"stokehold/internal/lgsm"
-	"stokehold/internal/safefs"
+	"github.com/stokehold-gsm/stokehold/internal/lgsm"
+	"github.com/stokehold-gsm/stokehold/internal/safefs"
 )
 
 // Game users carry a prefix so the helper can never touch a real account

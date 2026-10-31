@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"stokehold/internal/catalog"
-	"stokehold/internal/helper"
-	"stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/internal/catalog"
+	"github.com/stokehold-gsm/stokehold/internal/helper"
+	"github.com/stokehold-gsm/stokehold/internal/store"
 )
 
 // stepHelper answers per operation and records every request.

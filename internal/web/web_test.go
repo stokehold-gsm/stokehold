@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"stokehold/internal/auth"
-	"stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/pkg/auth"
 )
 
 const (

@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"stokehold/internal/license"
-	"stokehold/internal/licsrv"
+	"github.com/stokehold-gsm/stokehold/internal/licsrv"
+	"github.com/stokehold-gsm/stokehold/pkg/license"
 )
 
 type mem map[string]string

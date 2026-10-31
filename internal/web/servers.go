@@ -8,9 +8,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"stokehold/internal/helper"
-	"stokehold/internal/lgsm"
-	"stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/internal/helper"
+	"github.com/stokehold-gsm/stokehold/internal/lgsm"
+	"github.com/stokehold-gsm/stokehold/internal/store"
 )
 
 // HelperFunc sends one request to the privileged helper.

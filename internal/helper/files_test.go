@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"stokehold/internal/safefs"
+	"github.com/stokehold-gsm/stokehold/internal/safefs"
 )
 
 type fakeFiles struct {

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"stokehold/internal/auth"
-	"stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/pkg/auth"
 )
 
 var newPwRE = regexp.MustCompile(`<code>([A-Za-z0-9_-]{20})</code>`)

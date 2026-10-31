@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/internal/store"
 )
 
 var timeRE = regexp.MustCompile(`^([01]\d|2[0-3]):([0-5]\d)$`)

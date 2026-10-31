@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"stokehold/internal/entitlement"
-	"stokehold/internal/helper"
-	"stokehold/internal/license"
-	"stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/internal/entitlement"
+	"github.com/stokehold-gsm/stokehold/internal/helper"
+	"github.com/stokehold-gsm/stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/pkg/license"
 )
 
 type fakeEnt struct {

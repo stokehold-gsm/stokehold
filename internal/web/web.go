@@ -14,12 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"stokehold/internal/auth"
-	"stokehold/internal/catalog"
-	"stokehold/internal/entitlement"
-	"stokehold/internal/helper"
-	"stokehold/internal/ratelimit"
-	"stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/internal/catalog"
+	"github.com/stokehold-gsm/stokehold/internal/entitlement"
+	"github.com/stokehold-gsm/stokehold/internal/helper"
+	"github.com/stokehold-gsm/stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/pkg/auth"
+	"github.com/stokehold-gsm/stokehold/pkg/ratelimit"
 )
 
 //go:embed templates/*.html

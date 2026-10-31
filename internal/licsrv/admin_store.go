@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"stokehold/internal/auth"
+	"github.com/stokehold-gsm/stokehold/pkg/auth"
 )
 
 const (

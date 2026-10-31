@@ -6,7 +6,7 @@ import (
 	"flag"
 	"log"
 
-	"stokehold/internal/helper"
+	"github.com/stokehold-gsm/stokehold/internal/helper"
 )
 
 func main() {

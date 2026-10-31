@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"stokehold/internal/helper"
-	"stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/internal/helper"
+	"github.com/stokehold-gsm/stokehold/internal/store"
 )
 
 type fakeHelper struct {

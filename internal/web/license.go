@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"stokehold/internal/entitlement"
-	"stokehold/internal/license"
-	"stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/internal/entitlement"
+	"github.com/stokehold-gsm/stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/pkg/license"
 )
 
 // Entitlements is what the web layer needs from the licensing side.

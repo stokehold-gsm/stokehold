@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"stokehold/internal/license"
+	"github.com/stokehold-gsm/stokehold/pkg/license"
 )
 
 var t0 = time.Date(2026, 11, 1, 12, 0, 0, 0, time.UTC)

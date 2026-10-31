@@ -12,7 +12,7 @@ import (
 	"os"
 	"time"
 
-	"stokehold/internal/discordsetup"
+	"github.com/stokehold-gsm/stokehold/internal/discordsetup"
 )
 
 func main() {

@@ -27,10 +27,10 @@ import (
 	"os"
 	"time"
 
-	"stokehold/internal/auth"
-	"stokehold/internal/license"
-	"stokehold/internal/licsrv"
-	"stokehold/internal/sign"
+	"github.com/stokehold-gsm/stokehold/internal/licsrv"
+	"github.com/stokehold-gsm/stokehold/pkg/auth"
+	"github.com/stokehold-gsm/stokehold/pkg/license"
+	"github.com/stokehold-gsm/stokehold/pkg/sign"
 )
 
 type onlineFile struct {

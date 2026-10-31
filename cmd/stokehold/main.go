@@ -12,14 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"stokehold/internal/auth"
-	"stokehold/internal/entitlement"
-	"stokehold/internal/helper"
-	"stokehold/internal/lgsm"
-	"stokehold/internal/license"
-	"stokehold/internal/sched"
-	"stokehold/internal/store"
-	"stokehold/internal/web"
+	"github.com/stokehold-gsm/stokehold/internal/entitlement"
+	"github.com/stokehold-gsm/stokehold/internal/helper"
+	"github.com/stokehold-gsm/stokehold/internal/lgsm"
+	"github.com/stokehold-gsm/stokehold/internal/sched"
+	"github.com/stokehold-gsm/stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/internal/web"
+	"github.com/stokehold-gsm/stokehold/pkg/auth"
+	"github.com/stokehold-gsm/stokehold/pkg/license"
 )
 
 var version = "dev" // set by -ldflags "-X main.version=..." at release

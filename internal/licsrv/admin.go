@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"stokehold/internal/auth"
-	"stokehold/internal/ratelimit"
+	"github.com/stokehold-gsm/stokehold/pkg/auth"
+	"github.com/stokehold-gsm/stokehold/pkg/ratelimit"
 )
 
 // AdminUI is the web interface for the owner and for helpers who issue keys

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/internal/store"
 )
 
 func schedPath(id int64) string { return "/servers/" + string(rune('0'+id)) + "/schedules" }

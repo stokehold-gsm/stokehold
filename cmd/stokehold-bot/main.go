@@ -10,8 +10,8 @@ import (
 	"os"
 	"time"
 
-	"stokehold/internal/discordbot"
-	"stokehold/internal/discordsetup"
+	"github.com/stokehold-gsm/stokehold/internal/discordbot"
+	"github.com/stokehold-gsm/stokehold/internal/discordsetup"
 )
 
 func main() {

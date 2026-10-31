@@ -3,7 +3,7 @@ package store
 import (
 	"errors"
 
-	"stokehold/internal/auth"
+	"github.com/stokehold-gsm/stokehold/pkg/auth"
 )
 
 var ErrLastOwner = errors.New("cannot remove or demote the last owner")

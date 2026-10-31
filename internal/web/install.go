@@ -9,9 +9,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"stokehold/internal/catalog"
-	"stokehold/internal/helper"
-	"stokehold/internal/store"
+	"github.com/stokehold-gsm/stokehold/internal/catalog"
+	"github.com/stokehold-gsm/stokehold/internal/helper"
+	"github.com/stokehold-gsm/stokehold/internal/store"
 )
 
 // One install runs at a time: downloads are large and apt takes a lock.

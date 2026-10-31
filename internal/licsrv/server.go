@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"stokehold/internal/license"
-	"stokehold/internal/ratelimit"
+	"github.com/stokehold-gsm/stokehold/pkg/license"
+	"github.com/stokehold-gsm/stokehold/pkg/ratelimit"
 )
 
 var (

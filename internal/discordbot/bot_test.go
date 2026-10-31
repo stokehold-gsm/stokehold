@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"stokehold/internal/discordsetup"
+	"github.com/stokehold-gsm/stokehold/internal/discordsetup"
 )
 
 var now = time.Date(2026, 11, 1, 12, 0, 0, 0, time.UTC)

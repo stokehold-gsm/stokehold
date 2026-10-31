@@ -26,7 +26,7 @@ import (
 	"sync"
 	"time"
 
-	"stokehold/internal/license"
+	"github.com/stokehold-gsm/stokehold/pkg/license"
 )
 
 // FreeServers is the Free tier limit.

@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"os"
 
-	"stokehold/internal/sign"
+	"github.com/stokehold-gsm/stokehold/pkg/sign"
 )
 
 func main() {

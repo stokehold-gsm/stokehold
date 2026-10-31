@@ -1,4 +1,4 @@
-module stokehold
+module github.com/stokehold-gsm/stokehold
 
 go 1.27.3
 

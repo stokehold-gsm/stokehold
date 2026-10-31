@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"stokehold/internal/discordsetup"
+	"github.com/stokehold-gsm/stokehold/internal/discordsetup"
 )
 
 const maxBody = 64 << 10

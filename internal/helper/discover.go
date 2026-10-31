@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"stokehold/internal/lgsm"
+	"github.com/stokehold-gsm/stokehold/internal/lgsm"
 )
 
 // onlyServerNames keeps the lines of a directory listing that look like
