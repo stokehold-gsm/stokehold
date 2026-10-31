@@ -16,10 +16,9 @@ import (
 
 // The update runs in a transient systemd unit, outside the cgroup of the
 // helper: the installer restarts the helper itself and must survive that.
-const (
-	updateUnit    = "stokehold-selfupdate"
-	updateStaging = "/var/lib/stokehold-update"
-)
+const updateUnit = "stokehold-selfupdate"
+
+var updateStaging = "/var/lib/stokehold-update" // a var so tests can point it at a temp dir
 
 // Test seams.
 var (

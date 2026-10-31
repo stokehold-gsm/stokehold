@@ -11,8 +11,9 @@ import (
 func stubUpdate(t *testing.T, stageErr error) *[]string {
 	t.Helper()
 	var calls []string
-	oldStage, oldRun := updateStage, updateRunner
-	t.Cleanup(func() { updateStage, updateRunner = oldStage, oldRun })
+	oldStage, oldRun, oldDir := updateStage, updateRunner, updateStaging
+	t.Cleanup(func() { updateStage, updateRunner, updateStaging = oldStage, oldRun, oldDir })
+	updateStaging = t.TempDir()
 	updateStage = func(ctx context.Context, c *http.Client, base, tag, arch, dir string) error { return stageErr }
 	updateRunner = func(name string, args ...string) ([]byte, error) {
 		calls = append(calls, name+" "+strings.Join(args, " "))
