@@ -11,7 +11,7 @@ A web panel for game servers on top of [LinuxGSM](https://linuxgsm.com). One Go 
 - Sign-in with argon2id passwords, TOTP two-factor, owner/admin/viewer roles, CSRF protection, a one-time setup code for the first account.
 - Russian and English interface.
 - An installer that verifies an ed25519 signature and SHA-256 sums before installing, rolls back a failed upgrade, and has an uninstaller that never touches game servers.
-- A licence server (key issuing, signed short-lived tokens, hash-chained audit log). Not wired into the panel yet.
+- A licence server (key issuing, signed short-lived tokens, hash-chained audit log).
 
 Not yet: mod manager, scheduled backups and wipes, S3 backups, update rollback for games, public status page, Discord notifications, paid tiers.
 
@@ -52,4 +52,4 @@ Releases are built by CI and signed by hand on the owner's machine, see [docs/re
 
 Written with the help of an AI assistant; a human decides, reviews and releases. Community: a Discord server (invite on the site). The Discord-free path always works: the panel, licences and updates do not depend on it.
 
-The project licence has not been chosen yet ([docs/licenses.md](docs/licenses.md)).
+The core is licensed under AGPL-3.0 ([LICENSE](LICENSE), [ADR 0005](docs/decisions/0005-open-core.md)). Paid Pro features are a separate closed module. The name and logo are not covered by the licence ([legal/trademark.md](legal/trademark.md)). See [CONTRIBUTING.md](CONTRIBUTING.md).
