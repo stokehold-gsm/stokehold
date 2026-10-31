@@ -11,4 +11,5 @@ for arch in amd64 arm64; do
   CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -trimpath -ldflags "-s -w" -o "dist/stokehold-helper-linux-$arch" ./cmd/stokehold-helper
 done
 cp install/install.sh install/uninstall.sh dist/
+( cd dist && sha256sum stokehold-linux-* stokehold-helper-linux-* install.sh uninstall.sh > SHA256SUMS )
 echo "built $VERSION:"; cat dist/SHA256SUMS
