@@ -43,6 +43,14 @@ func main() {
 		h.Mod = &discordbot.Mod{API: api, LogName: discordsetup.LogChannel, Warns: warns}
 		h.Tickets = &discordbot.Tickets{Category: discordsetup.TicketCategory, Notify: discordsetup.TicketNotify, Orders: discordsetup.TicketOrders}
 	}
+	// A community runs its own bot next to its own panel: the panel address and an API token switch the server commands on.
+	if u, t := os.Getenv("STOKEHOLD_PANEL_URL"), os.Getenv("STOKEHOLD_PANEL_TOKEN"); u != "" && t != "" {
+		role := os.Getenv("STOKEHOLD_CONTROL_ROLE")
+		if role == "" {
+			role = "Server Admin"
+		}
+		h.Panel = &discordbot.Panel{API: api, URL: u, Token: t, ControlRole: role, HTTP: &http.Client{Timeout: 50 * time.Second}}
+	}
 	if guild := os.Getenv("DISCORD_GUILD_ID"); guild != "" {
 		ev := &discordbot.Events{API: api, GuildID: guild, Channel: discordsetup.EventsChannel}
 		go ev.Run(context.Background(), log.Printf)

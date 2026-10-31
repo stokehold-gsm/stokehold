@@ -296,3 +296,89 @@ func TestAuditLogBecomesEventLines(t *testing.T) {
 		t.Errorf("replayed: %v", again)
 	}
 }
+
+func panelRig(t *testing.T, panelHandler http.Handler) (*Handler, *guild) {
+	h, g := modRig(t)
+	ps := httptest.NewServer(panelHandler)
+	t.Cleanup(ps.Close)
+	h.Panel = &Panel{API: h.API, URL: ps.URL, Token: "shapi_x", ControlRole: "Server Admin", HTTP: ps.Client()}
+	return h, g
+}
+
+func fakePanel(calls *[]string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*calls = append(*calls, r.Method+" "+r.URL.Path)
+		if r.Header.Get("Authorization") != "Bearer shapi_x" {
+			w.WriteHeader(401)
+			return
+		}
+		switch {
+		case r.URL.Path == "/api/v1/servers":
+			w.Write([]byte(`[{"id":7,"name":"Factorio","state":"STARTED","players":3,"max_players":20},{"id":8,"name":"Minecraft","state":"STOPPED"}]`))
+		case r.URL.Path == "/api/v1/servers/7/restart":
+			w.Write([]byte(`{"ok":true,"output":"restarted"}`))
+		case r.URL.Path == "/api/v1/metrics":
+			w.Write([]byte(`{"cpu_percent":12,"load1":0.5,"mem_used_bytes":1073741824,"mem_total_bytes":4294967296,"disk_used_bytes":0,"disk_total_bytes":0}`))
+		default:
+			w.WriteHeader(404)
+		}
+	})
+}
+
+func TestPanelServersListIsOpenToEveryone(t *testing.T) {
+	var calls []string
+	h, _ := panelRig(t, fakePanel(&calls))
+	got := h.Panel.run(context.Background(), cmd("servers", nil, nil))
+	if !strings.Contains(got, "**Factorio**: started, игроков 3/20") || !strings.Contains(got, "**Minecraft**: stopped") {
+		t.Errorf("%q", got)
+	}
+}
+
+func TestPanelControlNeedsTheRole(t *testing.T) {
+	var calls []string
+	h, g := panelRig(t, fakePanel(&calls))
+	g.members = map[string]string{}
+	// the guild fake knows no "Server Admin" role, so only Founder can control
+	opts := map[string]any{"name": "factorio", "action": "restart"}
+	if got := h.Panel.run(context.Background(), cmd("server", []string{"rM"}, opts)); !strings.Contains(got, "роль") {
+		t.Errorf("a moderator is not a server admin: %q", got)
+	}
+	for _, c := range calls {
+		if strings.Contains(c, "restart") {
+			t.Fatal("the panel was called without the right role")
+		}
+	}
+	if got := h.Panel.run(context.Background(), cmd("server", []string{"rF"}, opts)); !strings.Contains(got, "выполнено") {
+		t.Errorf("founder: %q", got)
+	}
+	if got := h.Panel.run(context.Background(), cmd("server", []string{"rF"}, map[string]any{"name": "nope", "action": "restart"})); !strings.Contains(got, "нет") {
+		t.Errorf("unknown server: %q", got)
+	}
+}
+
+func TestPanelMetricsAndOffline(t *testing.T) {
+	var calls []string
+	h, _ := panelRig(t, fakePanel(&calls))
+	if got := h.Panel.run(context.Background(), cmd("metrics", []string{"rF"}, nil)); !strings.Contains(got, "Процессор 12%") || !strings.Contains(got, "1.0 из 4.0") {
+		t.Errorf("%q", got)
+	}
+	h.Panel.Token = "wrong"
+	if got := h.Panel.run(context.Background(), cmd("servers", nil, nil)); !strings.Contains(got, "ключ") {
+		t.Errorf("a refused token must be explained: %q", got)
+	}
+}
+
+func TestPanelCommandsAreRegisteredAndRouted(t *testing.T) {
+	names := map[string]bool{}
+	for _, c := range PanelCommands() {
+		names[c["name"].(string)] = true
+	}
+	for _, n := range []string{"servers", "server", "metrics"} {
+		if !names[n] || !(&Panel{}).handles(n) {
+			t.Errorf("%s missing", n)
+		}
+	}
+	if (&Panel{}).handles("ban") {
+		t.Error("moderation commands must not be taken by the panel")
+	}
+}

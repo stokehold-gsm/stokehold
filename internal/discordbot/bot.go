@@ -35,6 +35,7 @@ type Handler struct {
 	AppID     string            // application id, needed to edit deferred answers
 	Mod       *Mod              // slash commands; nil switches them off
 	Tickets   *Tickets          // shop tickets; nil switches them off
+	Panel     *Panel            // /servers, /server, /metrics against a Stokehold panel; nil switches them off
 	Now       func() time.Time  // tests only
 
 	wg sync.WaitGroup // deferred answers still running
@@ -87,6 +88,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		reply(w, h.component(r.Context(), in))
 	case typeCommand:
+		if h.Panel != nil && h.Panel.handles(in.Data.Name) {
+			h.deferred(w, in, h.Panel.run)
+			return
+		}
 		if h.Mod == nil {
 			http.Error(w, "commands are off", http.StatusBadRequest)
 			return

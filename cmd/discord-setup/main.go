@@ -24,6 +24,7 @@ func main() {
 	onboarding := flag.Bool("onboarding", false, "set up onboarding questions (community must be enabled first)")
 	automod := flag.Bool("automod", false, "create the AutoMod rules (bot needs Manage Server)")
 	founder := flag.String("founder", "", "user id that gets the Founder role")
+	panelCmds := flag.String("register-panel-commands", "", "register /servers, /server and /metrics for this application id and exit")
 	commands := flag.String("register-commands", "", "register the moderation slash commands for this application id and exit")
 	invite := flag.String("invite-for", "", "print the bot invite URL for this application id and exit")
 	flag.Parse()
@@ -38,6 +39,18 @@ func main() {
 			log.Fatal(err)
 		}
 		log.Print("commands registered")
+		return
+	}
+	if *panelCmds != "" {
+		token, g := os.Getenv("DISCORD_BOT_TOKEN"), *guild
+		if token == "" || g == "" {
+			log.Fatal("need DISCORD_BOT_TOKEN and -guild")
+		}
+		c := &discordsetup.Client{Base: discordsetup.DefaultBase, Token: token, HTTP: &http.Client{Timeout: 30 * time.Second}}
+		if err := c.Do(context.Background(), "PUT", "/applications/"+*panelCmds+"/guilds/"+g+"/commands", discordbot.PanelCommands(), nil); err != nil {
+			log.Fatal(err)
+		}
+		log.Print("panel commands registered")
 		return
 	}
 	if *invite != "" {
