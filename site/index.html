@@ -48,12 +48,12 @@ footer a { color:var(--muted); }
 
 <main>
 <div class="hero">
-  <span class="badge">В разработке, публичного релиза пока нет</span>
+  <span class="badge">Версия 0.1, ранний доступ</span>
   <h1>Панель для игровых серверов поверх LinuxGSM</h1>
   <p class="lead">Один бинарник и SQLite вместо PHP, MySQL, Redis и Docker. Подхватывает серверы LinuxGSM, которые у вас уже стоят, без переустановки. Для админов сообществ на одном VPS.</p>
   <div class="btns">
-    <a class="btn primary" href="DISCORD_INVITE_URL">Обсудить в Discord</a>
-    <a class="btn" href="GITHUB_URL">GitHub</a>
+    <a class="btn primary" href="https://discord.gg/Z4Jkh4AYta">Обсудить в Discord</a>
+    <a class="btn" href="https://github.com/stokehold-gsm/stokehold">GitHub</a>
   </div>
   <p class="muted">Discord из России открывается через обход блокировок. Баги и вопросы можно оставлять и в GitHub.</p>
 </div>
@@ -69,15 +69,18 @@ footer a { color:var(--muted); }
 
 <section id="now">
   <h2>Что уже работает</h2>
-  <p class="muted">Проверено на Ubuntu 22.04. Пока прототип.</p>
+  <p class="muted">Проверено на Ubuntu 22.04. Ранняя версия: список короткий и точный.</p>
   <ul>
     <li>запуск, остановка, перезапуск, статус, проверка обновления и бэкап сервера LinuxGSM из веб-интерфейса;</li>
     <li>поиск и добавление уже установленных серверов (режим подхвата);</li>
     <li>вход по паролю (argon2id), двухфакторная защита TOTP, роли owner, admin и viewer, защита от CSRF;</li>
     <li>русский и английский интерфейс;</li>
-    <li>установщик с проверкой подписи, откатом при неудачном обновлении и удалением.</li>
+    <li>установщик с проверкой подписи, откатом при неудачном обновлении и удалением;</li>
+    <li>установка новых серверов из каталога LinuxGSM, редактор конфигов, расписание бэкапов, перезапусков и проверок обновлений;</li>
+    <li>мониторинг процессора, памяти, диска и состояния серверов;</li>
+    <li>с лицензией Pro: REST API, несколько машин через агента, список модов Factorio, уведомления и команды в Discord, публичная страница состояния.</li>
   </ul>
-  <p><b>Пока нет:</b> менеджер модов, вайпы, бэкапы в S3, откат обновления игры, публичная страница статуса, уведомления в Discord, платные лицензии.</p>
+  <p><b>Пока нет:</b> установка модов с портала, вайпы из интерфейса, бэкапы в S3, откат обновления игры, автообновление панели. Тесты на реальных играх пока только на Minecraft и Factorio.</p>
 </section>
 
 <section id="compare">
@@ -91,14 +94,14 @@ footer a { color:var(--muted); }
     <tr><td>AMP</td><td>проприетарная, простая установка</td><td>много</td><td>нет, покупка недоступна</td><td>платная</td></tr>
     <tr><td><b>Stokehold GSM</b></td><td>один Go-бинарник + SQLite, поверх LinuxGSM</td><td>143 игры через LinuxGSM</td><td>да</td><td>AGPL-3.0 (ядро)</td></tr>
   </table></div>
-  <p class="muted">Данные собраны в октябре 2026 по репозиториям проектов и их документации; у Pterodactyl были критические уязвимости (CVE-2025-49132, CVE-2024-27102). Источники и детали: <a href="MARKET_URL">разбор рынка</a>.</p>
+  <p class="muted">Данные собраны в октябре 2026 по репозиториям проектов и их документации; у Pterodactyl были критические уязвимости (CVE-2025-49132, CVE-2024-27102). Источники и детали: <a href="https://github.com/stokehold-gsm/stokehold/blob/main/docs/market.md">разбор рынка</a>.</p>
 </section>
 
 <section id="plans">
   <h2>Тарифы (план)</h2>
   <div class="grid">
     <div class="card"><h3>Free</h3><p class="muted">Всё открытое ядро (AGPL-3.0) без лимита на число серверов. Не обращается к нашему серверу и не требует ключа.</p></div>
-    <div class="card"><h3>Pro</h3><p class="muted">Платные функции: бэкапы в S3, откат обновлений, роли для нескольких администраторов. Цена пока не названа.</p></div>
+    <div class="card"><h3>Pro</h3><p class="muted">Платные функции: API, несколько машин, менеджер модов, Discord, публичная страница состояния; позже бэкапы в S3 и откат обновлений. Цена пока не названа.</p></div>
     <div class="card"><h3>Hosting</h3><p class="muted">Несколько машин и клиентский доступ. Позже, после первой версии.</p></div>
   </div>
 </section>
@@ -121,7 +124,7 @@ sudo bash install.sh</code></pre>
 </main>
 
 <footer>
-  <p>Stokehold GSM. Документы: <a href="EULA_URL">лицензионное соглашение</a>, <a href="PRIVACY_URL">политика обработки персональных данных</a>, <a href="OFFER_URL">оферта</a> (публикуются перед началом продаж).</p>
+  <p>Stokehold GSM. Документы: <a href="https://github.com/stokehold-gsm/stokehold/blob/main/legal/eula.md">лицензионное соглашение</a>, <a href="https://github.com/stokehold-gsm/stokehold/blob/main/legal/privacy.md">политика обработки персональных данных</a>, <a href="https://github.com/stokehold-gsm/stokehold/blob/main/legal/offer.md">оферта</a> (черновики, до начала продаж их проверит юрист).</p>
 </footer>
 </div>
 </body>

@@ -2,7 +2,7 @@
 
 Format follows Keep a Changelog. Versions follow semver once there is a first release.
 
-## Unreleased
+## 0.1.0 - 2026-10-31
 
 - Monitoring (CPU, memory, disk, load, server states and players), REST API with tokens, several machines through stokehold-agent, Factorio mod list, Discord webhook and bot commands, public status page. Features beyond monitoring are licence-gated (ADR 0006).
 - Fix: schedules never ran in the service because the scheduler was given the helper before it was set.

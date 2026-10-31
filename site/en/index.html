@@ -48,12 +48,12 @@ footer a { color:var(--muted); }
 
 <main>
 <div class="hero">
-  <span class="badge">Under development, no public release yet</span>
+  <span class="badge">Version 0.1, early access</span>
   <h1>A game server panel on top of LinuxGSM</h1>
   <p class="lead">One binary and SQLite instead of PHP, MySQL, Redis and Docker. It adopts the LinuxGSM servers you already run, no reinstall. Built for community admins on a single VPS.</p>
   <div class="btns">
-    <a class="btn primary" href="DISCORD_INVITE_URL">Join the Discord</a>
-    <a class="btn" href="GITHUB_URL">GitHub</a>
+    <a class="btn primary" href="https://discord.gg/Z4Jkh4AYta">Join the Discord</a>
+    <a class="btn" href="https://github.com/stokehold-gsm/stokehold">GitHub</a>
   </div>
 </div>
 
@@ -68,15 +68,18 @@ footer a { color:var(--muted); }
 
 <section id="now">
   <h2>What works today</h2>
-  <p class="muted">Verified on Ubuntu 22.04. This is a prototype, not a release; the list is short and exact.</p>
+  <p class="muted">Verified on Ubuntu 22.04. An early version: the list is short and exact.</p>
   <ul>
     <li>start, stop, restart, status, update check and backup of a LinuxGSM server from the web UI;</li>
     <li>finding and adding servers that are already installed (adopt mode);</li>
     <li>sign-in with argon2id passwords, TOTP two-factor, owner/admin/viewer roles, CSRF protection;</li>
     <li>Russian and English interface;</li>
-    <li>an installer with signature verification, rollback on a failed upgrade, and uninstall.</li>
+    <li>an installer with signature verification, rollback on a failed upgrade, and uninstall;</li>
+    <li>installing new servers from the LinuxGSM catalogue, a config editor, scheduled backups, restarts and update checks;</li>
+    <li>monitoring of CPU, memory, disk and server states;</li>
+    <li>with a Pro licence: REST API, several machines through an agent, the Factorio mod list, Discord notifications and commands, a public status page.</li>
   </ul>
-  <p><b>Not yet:</b> a mod manager, scheduled backups and wipes, S3 backups, game update rollback, a public status page, Discord notifications, paid licences.</p>
+  <p><b>Not yet:</b> installing mods from the portal, wipes from the UI, S3 backups, game update rollback, panel self-update. Real-game tests so far cover Minecraft and Factorio only.</p>
 </section>
 
 <section id="compare">
@@ -97,7 +100,7 @@ footer a { color:var(--muted); }
   <h2>Plans (intended)</h2>
   <div class="grid">
     <div class="card"><h3>Free</h3><p class="muted">The whole open core (AGPL-3.0), no limit on the number of servers. Makes no requests to our server and needs no key.</p></div>
-    <div class="card"><h3>Pro</h3><p class="muted">Paid features: S3 backups, update rollback, roles for several admins. No price announced yet.</p></div>
+    <div class="card"><h3>Pro</h3><p class="muted">Paid features: API, several machines, mod manager, Discord, a public status page; later S3 backups and update rollback. No price announced yet.</p></div>
     <div class="card"><h3>Hosting</h3><p class="muted">Several machines and customer access. Later, after the first version.</p></div>
   </div>
 </section>
