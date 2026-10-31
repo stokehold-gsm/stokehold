@@ -66,6 +66,8 @@ type page struct {
 	CanChangeLicense bool
 
 	UserRows    []store.UserRow
+	Sched       []schedRow
+	ServerID    int64
 	NewEmail    string
 	NewPassword string
 }
@@ -92,6 +94,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /servers/find", s.auth(s.find))
 	mux.HandleFunc("POST /servers/add", s.auth(s.addServer))
 	mux.HandleFunc("POST /servers/{id}/run", s.auth(s.runAction))
+	mux.HandleFunc("GET /servers/{id}/schedules", s.auth(s.schedulesPage))
+	mux.HandleFunc("POST /servers/{id}/schedules", s.auth(s.scheduleAdd))
+	mux.HandleFunc("POST /schedules/{id}/delete", s.auth(s.scheduleDelete))
 	mux.HandleFunc("GET /users", s.auth(s.usersPage))
 	mux.HandleFunc("POST /users/create", s.auth(s.userCreate))
 	mux.HandleFunc("POST /users/{id}/{action}", s.auth(s.userAction))

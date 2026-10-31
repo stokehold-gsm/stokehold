@@ -17,6 +17,7 @@ import (
 	"stokehold/internal/helper"
 	"stokehold/internal/lgsm"
 	"stokehold/internal/license"
+	"stokehold/internal/sched"
 	"stokehold/internal/store"
 	"stokehold/internal/web"
 )
@@ -112,6 +113,8 @@ func serve(args []string) {
 	}
 	panel := web.New(st, *secure, *proxy, setupToken)
 	panel.Entitlement = mgr
+	runner := &sched.Runner{S: st, Helper: sched.HelperFunc(panel.Helper)}
+	go runner.Loop(context.Background(), 30*time.Second)
 	panel.Helper = func(r helper.Request) (helper.Response, error) { return helper.Call(*helperSock, r) }
 	srv := &http.Server{
 		Addr:              *listen,
