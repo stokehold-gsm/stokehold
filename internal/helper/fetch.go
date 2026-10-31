@@ -23,7 +23,7 @@ var FetchHosts = map[string]bool{
 	"maven.minecraftforge.net": true, "files.minecraftforge.net": true,
 	"maven.neoforged.net": true,
 	"api.modrinth.com":    true, "cdn.modrinth.com": true,
-	"api.purpurmc.io": true,
+	"api.purpurmc.io": true, "api.purpurmc.org": true, "fill.papermc.io": true,
 }
 
 var maxFetch int64 = 512 << 20 // a var so tests can lower it
