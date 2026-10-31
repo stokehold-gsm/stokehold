@@ -64,10 +64,46 @@
   <h1>{{t . "servers"}}</h1>
   {{if .Servers}}
   <table>
-    <tr><th>{{t . "name"}}</th><th>{{t . "game"}}</th><th>{{t . "mode"}}</th></tr>
-    {{range .Servers}}<tr><td>{{.Name}}</td><td>{{.Game}}</td><td>{{.Mode}}</td></tr>{{end}}
+    <tr><th>{{t . "name"}}</th><th>{{t . "game"}}</th><th>{{t . "mode"}}</th><th></th></tr>
+    {{range $srv := .Servers}}<tr><td>{{$srv.Name}}</td><td>{{$srv.Game}}</td><td>{{$srv.Mode}}</td><td>
+      {{range $.Actions}}{{if or $.CanControl (eq . "details") (eq . "check-update")}}<form class="inline" method="post" action="/servers/{{$srv.ID}}/run">
+        <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="{{.}}">
+        <button class="link" type="submit">{{t $ (printf "act_%s" .)}}</button></form>{{end}}{{end}}
+    </td></tr>{{end}}
   </table>
   {{else}}<p class="muted">{{t . "no_servers"}}</p>{{end}}
+  {{if .CanControl}}<p><a href="/servers/add">{{t . "add_server"}}</a></p>{{end}}
+</div>
+{{template "foot" .}}{{end}}
+
+{{define "add"}}{{template "head" .}}
+<div class="card">
+  <h1>{{t . "add_server"}}</h1>
+  <p class="muted">{{t . "user_hint"}}</p>
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <form method="post" action="/servers/find">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="user">{{t . "linux_user"}}</label>
+    <input id="user" name="user" type="text" value="{{.AddUser}}" required pattern="[a-z_][a-z0-9_-]*" maxlength="32">
+    <button type="submit">{{t . "find"}}</button>
+  </form>
+  {{range $g := .Found}}
+  <form method="post" action="/servers/add">
+    <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="user" value="{{$.AddUser}}"><input type="hidden" name="game" value="{{$g}}">
+    <label for="n-{{$g}}">{{t $ "name"}}</label>
+    <input id="n-{{$g}}" name="name" type="text" value="{{$g}}" maxlength="60">
+    <button type="submit">{{t $ "add"}}: {{$g}}</button>
+  </form>
+  {{end}}
+</div>
+{{template "foot" .}}{{end}}
+
+{{define "result"}}{{template "head" .}}
+<div class="card">
+  <h1>{{.ServerName}}: {{t . (printf "act_%s" .Action)}}</h1>
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  {{if .Result}}<pre>{{.Result}}</pre>{{end}}
+  <p><a href="/">{{t . "back"}}</a></p>
 </div>
 {{template "foot" .}}{{end}}
 

@@ -40,14 +40,26 @@ type Claims struct {
 	Inst       string `json:"inst"` // base64 of the instance public key
 	Plan       string `json:"plan"`
 	MaxServers int    `json:"max_servers"`
+	Cert       *Cert  `json:"cert,omitempty"` // online key certificate signed by a root key
+}
+
+// Cert says "the root key vouches for this online signing key until NotAfter".
+// Tokens signed by that key carry it, so panels only need to trust root keys.
+type Cert struct {
+	Root     string `json:"root"`
+	KID      string `json:"kid"`
+	Pub      string `json:"pub"` // base64 of the online public key
+	NotAfter int64  `json:"not_after"`
+	Sig      string `json:"sig"`
 }
 
 // Verifier holds the trusted signing keys. LastSeen must be persisted by the
 // caller: it is the latest time we have observed, so winding the clock back
 // does not extend a token.
 type Verifier struct {
-	Keys     map[string]ed25519.PublicKey
-	Revoked  map[string]bool // revoked kids
+	Roots    map[string]ed25519.PublicKey // trusted root keys, by id; used with token certificates
+	Keys     map[string]ed25519.PublicKey // flat signing keys, for tests and simple setups
+	Revoked  map[string]bool              // revoked kids
 	LastSeen int64
 }
 
@@ -81,7 +93,7 @@ func (v *Verifier) Check(token, inst string, now time.Time) (Claims, State, erro
 	}
 	// The kid is read before verification only to pick a key; nothing in
 	// the claims is trusted until the signature checks out.
-	key, ok := v.Keys[c.KID]
+	key, ok := v.signingKey(c)
 	if !ok || v.Revoked[c.KID] || !ed25519.Verify(key, append([]byte(domain), payload...), sig) {
 		return Claims{}, Free, ErrInvalid
 	}

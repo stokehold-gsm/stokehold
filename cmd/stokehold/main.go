@@ -21,7 +21,7 @@ var version = "dev" // set by -ldflags "-X main.version=..." at release
 
 const usage = `usage:
   stokehold version
-  stokehold serve [-db panel.db] [-listen 127.0.0.1:8080] [-secure] [-trust-proxy]
+  stokehold serve [-db panel.db] [-listen 127.0.0.1:8080] [-helper /run/stokehold/helper.sock] [-secure] [-trust-proxy]
   stokehold scan <home>
   stokehold call <socket> <json>`
 
@@ -58,6 +58,7 @@ func serve(args []string) {
 	dbPath := fs.String("db", "panel.db", "SQLite database path")
 	listen := fs.String("listen", "127.0.0.1:8080", "listen address (put a TLS proxy in front)")
 	secure := fs.Bool("secure", false, "mark cookies Secure (use when served over HTTPS)")
+	helperSock := fs.String("helper", "/run/stokehold/helper.sock", "privileged helper socket")
 	proxy := fs.Bool("trust-proxy", false, "use the last X-Forwarded-For entry as the client address")
 	fs.Parse(args)
 
@@ -80,9 +81,11 @@ func serve(args []string) {
 		}
 	}()
 
+	panel := web.New(st, *secure, *proxy, setupToken)
+	panel.Helper = func(r helper.Request) (helper.Response, error) { return helper.Call(*helperSock, r) }
 	srv := &http.Server{
 		Addr:              *listen,
-		Handler:           web.New(st, *secure, *proxy, setupToken).Handler(),
+		Handler:           panel.Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,

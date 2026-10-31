@@ -18,3 +18,4 @@ table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--line); }
 code { word-break: break-all; }
 form.inline { display: inline; }
+pre { white-space: pre-wrap; word-break: break-word; background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 10px; max-height: 60vh; overflow: auto; }

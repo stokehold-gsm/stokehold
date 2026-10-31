@@ -30,7 +30,7 @@ func ExecRunner(name string, args ...string) (string, error) {
 }
 
 // Serve accepts one JSON request per connection from root or allowUID only.
-func Serve(sock string, allowUID uint32, run Runner) error {
+func Serve(sock string, allowUID uint32, run Runner, adopted Adopted) error {
 	os.Remove(sock)
 	l, err := net.Listen("unix", sock)
 	if err != nil {
@@ -64,7 +64,7 @@ func Serve(sock string, allowUID uint32, run Runner) error {
 				return
 			}
 			mu.Lock()
-			resp := Handle(req, run)
+			resp := HandleWith(req, run, adopted)
 			mu.Unlock()
 			log.Printf("uid=%d op=%s user=%s ok=%v", uid, req.Op, req.User, resp.OK)
 			c.SetWriteDeadline(time.Now().Add(10 * time.Second))

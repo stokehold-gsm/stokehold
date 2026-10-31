@@ -15,6 +15,9 @@ import (
 // (root, the admin, someone else's factorio user).
 var (
 	userRE = regexp.MustCompile(`^gs_[a-z0-9]{1,24}$`)
+	// Existing accounts the owner chose to manage (adopt mode). Shape only; the
+	// real gate is the root-owned adopt list.
+	adoptRE = regexp.MustCompile(`^[a-z_][a-z0-9_-]{0,31}$`)
 	// Shape check only; what may be installed is decided by PackageAllowed.
 	pkgRE = regexp.MustCompile(`^[a-z0-9][a-z0-9.+-]{1,60}(:i386)?$`)
 )
@@ -22,7 +25,7 @@ var (
 const maxPackages = 20
 
 type Request struct {
-	Op       string   `json:"op"` // create-user | install | deps | run
+	Op       string   `json:"op"` // create-user | install | deps | run | discover
 	User     string   `json:"user"`
 	Game     string   `json:"game,omitempty"`
 	Cmd      string   `json:"cmd,omitempty"`
@@ -37,10 +40,16 @@ type Response struct {
 
 var ErrInvalid = errors.New("invalid request")
 
-func Validate(r Request) error {
+// Adopted says whether root has listed an existing account for adopt mode.
+type Adopted func(user string) bool
+
+func Validate(r Request) error { return ValidateWith(r, nil) }
+
+func ValidateWith(r Request, adopted Adopted) error {
 	bad := func(what string) error { return fmt.Errorf("%w: %s", ErrInvalid, what) }
 	switch r.Op {
 	case "create-user":
+	case "discover":
 	case "install":
 		if !lgsm.ValidName(r.Game) {
 			return bad("game")
@@ -62,10 +71,14 @@ func Validate(r Request) error {
 	default:
 		return bad("op")
 	}
-	if !userRE.MatchString(r.User) {
-		return bad("user")
+	if userRE.MatchString(r.User) {
+		return nil
 	}
-	return nil
+	// An adopted account may only be driven and inspected, never created or installed into.
+	if (r.Op == "run" || r.Op == "discover") && adopted != nil && r.User != "root" && adoptRE.MatchString(r.User) && adopted(r.User) {
+		return nil
+	}
+	return bad("user")
 }
 
 // Runner runs one command and returns its combined output.
@@ -74,8 +87,10 @@ type Runner func(name string, args ...string) (string, error)
 // Handle turns a validated request into fixed command lines. Nothing from the
 // request is ever interpolated into a shell string except values that passed
 // the regexes above (lowercase letters and digits).
-func Handle(r Request, run Runner) Response {
-	if err := Validate(r); err != nil {
+func Handle(r Request, run Runner) Response { return HandleWith(r, run, nil) }
+
+func HandleWith(r Request, run Runner, adopted Adopted) Response {
+	if err := ValidateWith(r, adopted); err != nil {
 		return Response{Err: err.Error()}
 	}
 	var out string
@@ -91,6 +106,9 @@ func Handle(r Request, run Runner) Response {
 		out, err = run("runuser", "-l", r.User, "-c", "sh -c '"+script+"' sh "+r.Game)
 	case "run":
 		out, err = run("runuser", "-l", r.User, "-c", "./"+r.Game+" "+r.Cmd)
+	case "discover":
+		out, err = run("runuser", "-l", r.User, "-c", "ls -1 lgsm/config-lgsm")
+		out = onlyServerNames(out)
 	case "deps":
 		args := append([]string{"install", "-y", "--no-install-recommends", "--"}, r.Packages...)
 		out, err = run("apt-get", args...)

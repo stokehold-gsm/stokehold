@@ -12,10 +12,10 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"stokehold/internal/auth"
+	"stokehold/internal/ratelimit"
 	"stokehold/internal/store"
 )
 
@@ -32,10 +32,11 @@ type Server struct {
 	Secure     bool   // mark cookies Secure; set when served over HTTPS
 	TrustProxy bool   // take the client address from the last X-Forwarded-For entry
 	SetupToken string // required by /setup while there are no users
+	Helper     HelperFunc
 	Now        func() time.Time
 
 	tmpl    *template.Template
-	limiter *limiter
+	limiter *ratelimit.Limiter
 }
 
 type page struct {
@@ -46,10 +47,18 @@ type page struct {
 	Servers []store.Server
 	Secret  string
 	URI     string
+
+	AddUser    string
+	Found      []string
+	Result     string
+	ServerName string
+	Action     string
+	Actions    []string
+	CanControl bool
 }
 
 func New(st *store.Store, secure, trustProxy bool, setupToken string) *Server {
-	s := &Server{Store: st, Secure: secure, TrustProxy: trustProxy, SetupToken: setupToken, Now: time.Now, limiter: newLimiter(10, time.Minute)}
+	s := &Server{Store: st, Secure: secure, TrustProxy: trustProxy, SetupToken: setupToken, Now: time.Now, limiter: ratelimit.New(10, time.Minute)}
 	s.tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 		"t": func(p page, key string) string { return tr(p.Lang, key) },
 	}).ParseFS(templatesFS, "templates/*.html"))
@@ -66,6 +75,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /setup", s.setupForm)
 	mux.HandleFunc("POST /setup", s.setup)
 	mux.HandleFunc("POST /logout", s.auth(s.logout))
+	mux.HandleFunc("GET /servers/add", s.auth(s.addForm))
+	mux.HandleFunc("POST /servers/find", s.auth(s.find))
+	mux.HandleFunc("POST /servers/add", s.auth(s.addServer))
+	mux.HandleFunc("POST /servers/{id}/run", s.auth(s.runAction))
 	mux.HandleFunc("GET /security", s.auth(s.security))
 	mux.HandleFunc("POST /security/2fa/start", s.auth(s.twofaStart))
 	mux.HandleFunc("POST /security/2fa/enable", s.auth(s.twofaEnable))
@@ -165,6 +178,8 @@ func (s *Server) clientIP(r *http.Request) string {
 
 func (s *Server) dashboard(w http.ResponseWriter, r *http.Request, p *page) {
 	p.Servers, _ = s.Store.Servers()
+	p.CanControl = canControl(p.User.Role)
+	p.Actions = actionLabels
 	s.render(w, "dashboard", p, http.StatusOK)
 }
 
@@ -178,7 +193,7 @@ func (s *Server) loginForm(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	p := &page{Lang: lang(w, r)}
-	if !s.limiter.allow(s.clientIP(r), s.Now()) {
+	if !s.limiter.Allow(s.clientIP(r), s.Now()) {
 		p.Error = tr(p.Lang, "locked")
 		s.render(w, "login", p, http.StatusTooManyRequests)
 		return
@@ -235,7 +250,7 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	if !s.limiter.allow(s.clientIP(r), s.Now()) {
+	if !s.limiter.Allow(s.clientIP(r), s.Now()) {
 		p.Error = tr(p.Lang, "locked")
 		s.render(w, "setup", p, http.StatusTooManyRequests)
 		return
@@ -298,41 +313,4 @@ func (s *Server) twofaDisable(w http.ResponseWriter, r *http.Request, p *page) {
 	s.Store.SetTOTP(p.User.ID, "", false)
 	s.Store.Audit(p.User.ID, "2fa.disable", "")
 	http.Redirect(w, r, "/security", http.StatusSeeOther)
-}
-
-// --- login rate limit ---
-
-type bucket struct {
-	n     int
-	reset time.Time
-}
-
-type limiter struct {
-	mu     sync.Mutex
-	max    int
-	window time.Duration
-	m      map[string]*bucket
-}
-
-func newLimiter(max int, window time.Duration) *limiter {
-	return &limiter{max: max, window: window, m: map[string]*bucket{}}
-}
-
-func (l *limiter) allow(key string, now time.Time) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if len(l.m) > 10000 { // an attacker rotating addresses must not grow memory without bound
-		for k, b := range l.m {
-			if now.After(b.reset) {
-				delete(l.m, k)
-			}
-		}
-	}
-	b := l.m[key]
-	if b == nil || now.After(b.reset) {
-		b = &bucket{reset: now.Add(l.window)}
-		l.m[key] = b
-	}
-	b.n++
-	return b.n <= l.max
 }
