@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"stokehold/internal/lgsm"
+	"stokehold/internal/safefs"
 )
 
 // Game users carry a prefix so the helper can never touch a real account
@@ -22,14 +24,16 @@ var (
 	pkgRE = regexp.MustCompile(`^[a-z0-9][a-z0-9.+-]{1,60}(:i386)?$`)
 )
 
-const maxPackages = 20
+const maxPackages = 64 // LinuxGSM lists run past 20 packages for some games
 
 type Request struct {
-	Op       string   `json:"op"` // create-user | install | deps | run | discover
+	Op       string   `json:"op"` // create-user | install | deps | run | discover | files | read-file | write-file
 	User     string   `json:"user"`
 	Game     string   `json:"game,omitempty"`
 	Cmd      string   `json:"cmd,omitempty"`
 	Packages []string `json:"packages,omitempty"`
+	Path     string   `json:"path,omitempty"`    // read-file, write-file: relative to the user's home
+	Content  string   `json:"content,omitempty"` // write-file
 }
 
 type Response struct {
@@ -49,7 +53,14 @@ func ValidateWith(r Request, adopted Adopted) error {
 	bad := func(what string) error { return fmt.Errorf("%w: %s", ErrInvalid, what) }
 	switch r.Op {
 	case "create-user":
-	case "discover":
+	case "discover", "files":
+	case "read-file", "write-file":
+		if len(r.Path) == 0 || len(r.Path) > 300 || !inTree(r.Path) || !safefs.Editable(r.Path) || strings.ContainsAny(r.Path, "\\\x00") || strings.Contains(r.Path, "..") {
+			return bad("path")
+		}
+		if r.Op == "write-file" && len(r.Content) > safefs.MaxEditSize {
+			return bad("content too large")
+		}
 	case "install":
 		if !lgsm.ValidName(r.Game) {
 			return bad("game")
@@ -75,7 +86,7 @@ func ValidateWith(r Request, adopted Adopted) error {
 		return nil
 	}
 	// An adopted account may only be driven and inspected, never created or installed into.
-	if (r.Op == "run" || r.Op == "discover") && adopted != nil && r.User != "root" && adoptRE.MatchString(r.User) && adopted(r.User) {
+	if r.Op != "create-user" && r.Op != "install" && adopted != nil && r.User != "root" && adoptRE.MatchString(r.User) && adopted(r.User) {
 		return nil
 	}
 	return bad("user")
@@ -90,14 +101,35 @@ type Runner func(name string, args ...string) (string, error)
 func Handle(r Request, run Runner) Response { return HandleWith(r, run, nil) }
 
 func HandleWith(r Request, run Runner, adopted Adopted) Response {
-	if err := ValidateWith(r, adopted); err != nil {
+	return HandleFull(r, Backend{Run: run, Adopted: adopted})
+}
+
+// Backend bundles what the operations need. Files may be nil, in which case
+// the config editor operations answer that they are unavailable.
+type Backend struct {
+	Run     Runner
+	Adopted Adopted
+	Files   Files
+}
+
+func HandleFull(r Request, b Backend) Response {
+	if err := ValidateWith(r, b.Adopted); err != nil {
 		return Response{Err: err.Error()}
+	}
+	run := b.Run
+	switch r.Op {
+	case "files", "read-file", "write-file":
+		return handleFiles(r, b.Files)
 	}
 	var out string
 	var err error
 	switch r.Op {
 	case "create-user":
-		// useradd fails on an existing user, so we never modify one.
+		// gs_ is reserved for accounts this panel makes, so an existing one is
+		// ours from an earlier try: reuse it untouched, so a failed install can be retried.
+		if _, idErr := run("id", "-u", r.User); idErr == nil {
+			return Response{OK: true, Out: "account already exists, reusing it"}
+		}
 		if out, err = run("useradd", "--create-home", "--shell", "/bin/bash", "--user-group", r.User); err == nil {
 			out, err = run("chmod", "700", "/home/"+r.User)
 		}

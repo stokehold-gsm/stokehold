@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{t . "app"}}</title>
 <link rel="stylesheet" href="/static/app.css">
+{{if .Refresh}}<meta http-equiv="refresh" content="3">{{end}}
 </head>
 <body>
 <header>
@@ -72,10 +73,11 @@
         <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="{{.}}">
         <button class="link" type="submit">{{t $ (printf "act_%s" .)}}</button></form>{{end}}{{end}}
       <a href="/servers/{{$srv.ID}}/schedules">{{t $ "schedules"}}</a>
+      {{if $.CanControl}}<a href="/servers/{{$srv.ID}}/files">{{t $ "files"}}</a>{{end}}
     </td></tr>{{end}}
   </table>
   {{else}}<p class="muted">{{t . "no_servers"}}</p>{{end}}
-  {{if .CanControl}}<p><a href="/servers/add">{{t . "add_server"}}</a></p>{{end}}
+  {{if .CanControl}}<p><a href="/servers/new">{{t . "install_server"}}</a> · <a href="/servers/add">{{t . "add_server"}}</a></p>{{end}}
 </div>
 {{template "foot" .}}{{end}}
 
@@ -249,4 +251,55 @@
     <button type="submit">{{t . "sch_add"}}</button>
   </form>
 </div>{{end}}
+{{template "foot" .}}{{end}}
+
+{{define "newserver"}}{{template "head" .}}
+<div class="card">
+  <h1>{{t . "install_server"}}</h1>
+  <p class="muted">{{t . "install_hint"}}</p>
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <form method="post" action="/servers/new">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="game">{{t . "install_game"}}</label>
+    <select id="game" name="game">{{range .Games}}<option value="{{.Script}}">{{.Name}}</option>{{end}}</select>
+    <label for="name">{{t . "install_name"}}</label>
+    <input id="name" name="name" type="text" maxlength="60">
+    <button type="submit">{{t . "install_start"}}</button>
+  </form>
+</div>
+{{template "foot" .}}{{end}}
+
+{{define "job"}}{{template "head" .}}
+<div class="card">
+  <h1>{{t . "job_title"}}: {{.ServerName}}</h1>
+  <p>{{if eq .Action "running"}}{{t . "job_running"}}{{else if eq .Action "done"}}{{t . "job_done"}}{{else}}<span class="error">{{t . "job_failed"}}</span>{{end}}</p>
+  <pre>{{.Result}}</pre>
+  <p><a href="/">{{t . "back"}}</a></p>
+</div>
+{{template "foot" .}}{{end}}
+
+{{define "files"}}{{template "head" .}}
+<div class="card">
+  <h1>{{.ServerName}}: {{t . "files"}}</h1>
+  <p class="muted">{{t . "files_hint"}}</p>
+  {{if .Info}}<p>{{.Info}}</p>{{end}}
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  {{if .Files}}<table>{{range $f := .Files}}<tr><td><code>{{$f}}</code></td><td><a href="/servers/{{$.ServerID}}/edit?path={{$f}}">{{t $ "file_edit"}}</a></td></tr>{{end}}</table>
+  {{else if not .Error}}<p class="muted">{{t . "files_empty"}}</p>{{end}}
+  <p><a href="/">{{t . "back"}}</a></p>
+</div>
+{{template "foot" .}}{{end}}
+
+{{define "edit"}}{{template "head" .}}
+<div class="card">
+  <h1>{{.ServerName}}: {{.FilePath}}</h1>
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <form method="post" action="/servers/{{.ServerID}}/edit">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="hidden" name="path" value="{{.FilePath}}">
+    <textarea class="editor" name="content" rows="24" spellcheck="false">{{.FileContent}}</textarea>
+    <button type="submit">{{t . "file_save"}}</button>
+  </form>
+  <p><a href="/servers/{{.ServerID}}/files">{{t . "back"}}</a></p>
+</div>
 {{template "foot" .}}{{end}}

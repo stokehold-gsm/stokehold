@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	maxRequest = 8 << 10
-	opTimeout  = 10 * time.Minute // game installs are slow
+	maxRequest = 1 << 20          // write-file carries a config of up to 256 KB
+	opTimeout  = 45 * time.Minute // game installs download gigabytes
 )
 
 func ExecRunner(name string, args ...string) (string, error) {
@@ -64,7 +64,7 @@ func Serve(sock string, allowUID uint32, run Runner, adopted Adopted) error {
 				return
 			}
 			mu.Lock()
-			resp := HandleWith(req, run, adopted)
+			resp := HandleFull(req, Backend{Run: run, Adopted: adopted, Files: OSFiles{}})
 			mu.Unlock()
 			log.Printf("uid=%d op=%s user=%s ok=%v", uid, req.Op, req.User, resp.OK)
 			c.SetWriteDeadline(time.Now().Add(10 * time.Second))

@@ -42,6 +42,9 @@ func TestHandleBuildsFixedCommands(t *testing.T) {
 	var got []string
 	run := func(name string, args ...string) (string, error) {
 		got = append(got, name+" "+strings.Join(args, " "))
+		if name == "id" {
+			return "", errors.New("no such user")
+		}
 		return "", nil
 	}
 	cases := []struct {
@@ -49,6 +52,7 @@ func TestHandleBuildsFixedCommands(t *testing.T) {
 		want []string
 	}{
 		{Request{Op: "create-user", User: "gs_a1"}, []string{
+			"id -u gs_a1",
 			"useradd --create-home --shell /bin/bash --user-group gs_a1",
 			"chmod 700 /home/gs_a1"}},
 		{Request{Op: "run", User: "gs_a1", Game: "mcserver", Cmd: "start"}, []string{
@@ -77,8 +81,8 @@ func TestHandleNeverRunsInvalid(t *testing.T) {
 
 func TestHandleStopsAfterFailedUseradd(t *testing.T) {
 	n := 0
-	run := func(string, ...string) (string, error) { n++; return "exists", errors.New("exit 9") }
-	if resp := Handle(Request{Op: "create-user", User: "gs_a1"}, run); resp.OK || n != 1 {
+	run := func(string, ...string) (string, error) { n++; return "boom", errors.New("exit 9") }
+	if resp := Handle(Request{Op: "create-user", User: "gs_a1"}, run); resp.OK || n != 2 {
 		t.Errorf("must not chmod an existing home: %+v n=%d", resp, n)
 	}
 }

@@ -15,7 +15,9 @@ import (
 	"time"
 
 	"stokehold/internal/auth"
+	"stokehold/internal/catalog"
 	"stokehold/internal/entitlement"
+	"stokehold/internal/helper"
 	"stokehold/internal/ratelimit"
 	"stokehold/internal/store"
 )
@@ -35,7 +37,10 @@ type Server struct {
 	SetupToken  string // required by /setup while there are no users
 	Helper      HelperFunc
 	Entitlement Entitlements // nil means Free only
-	Now         func() time.Time
+	Distro      string       // e.g. ubuntu-22.04, selects the LinuxGSM package list
+
+	jobs jobTracker
+	Now  func() time.Time
 
 	tmpl    *template.Template
 	limiter *ratelimit.Limiter
@@ -67,13 +72,18 @@ type page struct {
 
 	UserRows    []store.UserRow
 	Sched       []schedRow
+	Games       []catalog.Game
+	Files       []string
+	FilePath    string
+	FileContent string
+	Refresh     bool
 	ServerID    int64
 	NewEmail    string
 	NewPassword string
 }
 
 func New(st *store.Store, secure, trustProxy bool, setupToken string) *Server {
-	s := &Server{Store: st, Secure: secure, TrustProxy: trustProxy, SetupToken: setupToken, Now: time.Now, limiter: ratelimit.New(10, time.Minute)}
+	s := &Server{Distro: helper.CurrentDistro(), Store: st, Secure: secure, TrustProxy: trustProxy, SetupToken: setupToken, Now: time.Now, limiter: ratelimit.New(10, time.Minute)}
 	s.tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 		"t": func(p page, key string) string { return tr(p.Lang, key) },
 	}).ParseFS(templatesFS, "templates/*.html"))
@@ -90,6 +100,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /setup", s.setupForm)
 	mux.HandleFunc("POST /setup", s.setup)
 	mux.HandleFunc("POST /logout", s.auth(s.logout))
+	mux.HandleFunc("GET /servers/new", s.auth(s.newServerForm))
+	mux.HandleFunc("POST /servers/new", s.auth(s.newServer))
+	mux.HandleFunc("GET /jobs/{id}", s.auth(s.jobPage))
 	mux.HandleFunc("GET /servers/add", s.auth(s.addForm))
 	mux.HandleFunc("POST /servers/find", s.auth(s.find))
 	mux.HandleFunc("POST /servers/add", s.auth(s.addServer))
@@ -97,6 +110,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /servers/{id}/schedules", s.auth(s.schedulesPage))
 	mux.HandleFunc("POST /servers/{id}/schedules", s.auth(s.scheduleAdd))
 	mux.HandleFunc("POST /schedules/{id}/delete", s.auth(s.scheduleDelete))
+	mux.HandleFunc("GET /servers/{id}/files", s.auth(s.filesPage))
+	mux.HandleFunc("GET /servers/{id}/edit", s.auth(s.editPage))
+	mux.HandleFunc("POST /servers/{id}/edit", s.auth(s.editSave))
 	mux.HandleFunc("GET /users", s.auth(s.usersPage))
 	mux.HandleFunc("POST /users/create", s.auth(s.userCreate))
 	mux.HandleFunc("POST /users/{id}/{action}", s.auth(s.userAction))

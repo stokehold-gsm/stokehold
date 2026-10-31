@@ -21,4 +21,4 @@ func Call(sock string, r Request) (Response, error) {
 	return resp, err
 }
 
-const opTimeoutClient = 11 * time.Minute
+const opTimeoutClient = 46 * time.Minute

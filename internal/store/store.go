@@ -309,3 +309,21 @@ func (s *Store) Servers() ([]Server, error) {
 	}
 	return out, rows.Err()
 }
+
+// AuditRows returns the newest audit entries as "action: detail" strings.
+func (s *Store) AuditRows(limit int) ([]string, error) {
+	rows, err := s.db.Query(`select action, detail from audit order by id desc limit ?`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var a, d string
+		if err := rows.Scan(&a, &d); err != nil {
+			return nil, err
+		}
+		out = append(out, a+": "+d)
+	}
+	return out, rows.Err()
+}

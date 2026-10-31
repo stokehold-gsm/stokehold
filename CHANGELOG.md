@@ -10,6 +10,7 @@ Format follows Keep a Changelog. Versions follow semver once there is a first re
 - Installer with signature and checksum verification, rollback on failed upgrade, uninstaller.
 - Licence server: key format with checksum, hashed key storage, one licence per order, token issuing with a root-certified online key, replay protection, hash-chained audit log.
 - Licence server admin interface: owner and issuer roles, mandatory two-factor, one key per order, daily limit for issuers, hash-chained audit view.
+- Install a new game server from the LinuxGSM catalogue (background job with a live log); config editor with safe replace, backup of the previous version, and path/symlink protection.
 - Schedules: backups, restarts and update checks daily at a UTC time or every N hours, with catch-up after downtime and the last result shown.
 - Users page for owners (create with one-time password, reset password and 2FA, delete), change-own-password.
 - Licensing in the panel: licence page, activation, daily renewal, grace period, Free tier limited to one server (existing servers are never stopped).

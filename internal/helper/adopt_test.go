@@ -95,3 +95,32 @@ func TestDiscoverRunsWithoutShellInterpolation(t *testing.T) {
 		t.Errorf("command line: %q", got)
 	}
 }
+
+func TestCreateUserReusesAnExistingGsAccountWithoutTouchingIt(t *testing.T) {
+	var cmds []string
+	run := func(name string, args ...string) (string, error) {
+		cmds = append(cmds, name)
+		return "", nil // `id -u` succeeds: the account exists
+	}
+	resp := Handle(Request{Op: "create-user", User: "gs_old"}, run)
+	if !resp.OK || len(cmds) != 1 || cmds[0] != "id" {
+		t.Errorf("an existing gs_ account must be reused without useradd or chmod: %+v %v", resp, cmds)
+	}
+	// real accounts are still out of reach: only gs_ names pass validation at all
+	for _, u := range []string{"root", "factorio", "user"} {
+		cmds = nil
+		if resp := Handle(Request{Op: "create-user", User: u}, run); resp.OK || len(cmds) != 0 {
+			t.Errorf("%s: %+v %v", u, resp, cmds)
+		}
+	}
+}
+
+func TestMorePackagesThanBeforeAreAccepted(t *testing.T) {
+	pkgs, _ := DepsFor("ubuntu-22.04", "rust")
+	if len(pkgs) <= 20 {
+		t.Skip("this list is short")
+	}
+	if err := Validate(Request{Op: "deps", Packages: pkgs}); err != nil {
+		t.Errorf("a real LinuxGSM list was refused: %v", err)
+	}
+}
