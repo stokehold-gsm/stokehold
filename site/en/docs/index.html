@@ -79,6 +79,7 @@ footer { padding:24px 0 48px; color:var(--muted); font-size:.9rem; border-top:1p
   <a href="#api">REST API</a>
   <a href="#nodes">Several machines</a>
   <a href="#mods">Factorio mods</a>
+  <a href="#game-tools">Game tools</a>
   <a href="#discord">Discord and status page</a>
   <b>Reference</b>
   <a href="#cli">Commands and flags</a>
@@ -252,6 +253,23 @@ curl -H "Authorization: Bearer shapi_..." https://panel.example.com/api/v1/metri
 <section id="mods">
   <h2>Factorio mods <span class="pro">Pro</span></h2>
   <p>A Factorio server has a Mods link in the list. It reads <code>serverfiles/mods/mod-list.json</code> and turns mods on or off, leaving the other fields of the file (a version, say) alone. You place the mod files yourself: the panel does not download from the mod portal because the portal needs your login and token and we do not want to keep those in the panel. For other games the page says so.</p>
+</section>
+
+<section id="game-tools">
+  <h2>Game tools <span class="pro">Pro</span></h2>
+  <p>The "Game tools" link in a server's "⋯" menu opens a page with tabs. It works for Minecraft Java (<code>mcserver</code> and PaperMC <code>pmcserver</code>) and Factorio, for owners and admins.</p>
+  <h3>Minecraft version and core</h3>
+  <ul>
+    <li><b>Changing the version.</b> The list comes from Mojang (releases or snapshots) or PaperMC. The panel writes the version to the LinuxGSM settings (<code>mcversion</code>, and <code>branch</code> for Vanilla) and runs <code>update</code>; LinuxGSM itself does the download.</li>
+    <li><b>Another core.</b> On an <code>mcserver</code> server you can install Paper, Purpur or Fabric: the panel downloads the core file over <code>minecraft_server.jar</code> and records it in <code>serverfiles/stokehold-core.json</code>. Forge and NeoForge are marked "soon": they need an installer run.</li>
+    <li><b>Careful.</b> The LinuxGSM <code>update</code> command may replace an installed core with vanilla. For Paper and Purpur the panel pins the version so that does not happen; Fabric has no such protection, so do not run <code>update</code> by hand. You can go back to Vanilla on the same page.</li>
+    <li>Before a change the panel offers a backup and asks you to confirm the restart. Progress is shown step by step, and if something fails a server that was stopped is started again.</li>
+  </ul>
+  <h3>Plugins and mods</h3>
+  <p>Search the Modrinth catalogue filtered by the core (plugins for Paper and Purpur, mods for Fabric) and the game version. "Install" downloads the file into <code>serverfiles/plugins</code> or <code>serverfiles/mods</code> and checks its checksum. Installed files can be removed on the same page. The panel only names required dependencies; install them separately. Restart the server afterwards. Vanilla has no plugins or mods.</p>
+  <h3>Quick settings</h3>
+  <p>Forms with validation for Minecraft's <code>server.properties</code> (description, player count, difficulty, mode, PvP, online-mode, view distance, whitelist, world seed) and for Factorio settings (name, description, players, password, visibility, commands). Only the listed values change; the rest of the file stays. The Factorio password is never sent back to the page: an empty field keeps the old one. Changes take effect after the server restarts.</p>
+  <p class="muted">Version lists and downloads come only from official sources (Mojang, PaperMC, Purpur, Fabric, Modrinth) through the helper.</p>
 </section>
 
 <section id="discord">
