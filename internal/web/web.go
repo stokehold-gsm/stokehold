@@ -64,6 +64,10 @@ type page struct {
 	Count            int
 	Info             string
 	CanChangeLicense bool
+
+	UserRows    []store.UserRow
+	NewEmail    string
+	NewPassword string
 }
 
 func New(st *store.Store, secure, trustProxy bool, setupToken string) *Server {
@@ -88,6 +92,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /servers/find", s.auth(s.find))
 	mux.HandleFunc("POST /servers/add", s.auth(s.addServer))
 	mux.HandleFunc("POST /servers/{id}/run", s.auth(s.runAction))
+	mux.HandleFunc("GET /users", s.auth(s.usersPage))
+	mux.HandleFunc("POST /users/create", s.auth(s.userCreate))
+	mux.HandleFunc("POST /users/{id}/{action}", s.auth(s.userAction))
+	mux.HandleFunc("POST /security/password", s.auth(s.changePassword))
 	mux.HandleFunc("GET /license", s.auth(s.licensePage))
 	mux.HandleFunc("POST /license/activate", s.auth(s.licenseActivate))
 	mux.HandleFunc("POST /license/renew", s.auth(s.licenseRenew))
@@ -288,6 +296,9 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) security(w http.ResponseWriter, r *http.Request, p *page) {
+	if r.URL.Query().Get("ok") != "" {
+		p.Info = tr(p.Lang, "pw_done")
+	}
 	if !p.User.TOTPEnabled && p.User.TOTPSecret != "" {
 		p.Secret = p.User.TOTPSecret
 		p.URI = auth.TOTPURI(p.Secret, p.User.Email, "Stokehold GSM")

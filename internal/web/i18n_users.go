@@ -1,0 +1,48 @@
+package web
+
+func init() {
+	merge("ru", map[string]string{
+		"users":           "Пользователи",
+		"user_email":      "Почта",
+		"user_role":       "Роль",
+		"user_2fa":        "2FA",
+		"user_create":     "Создать пользователя",
+		"user_invalid":    "Проверьте почту и роль.",
+		"user_exists":     "Пользователь с такой почтой уже есть.",
+		"user_self":       "Нельзя удалить самого себя.",
+		"user_last_owner": "Нельзя удалить последнего владельца.",
+		"user_reset":      "Сбросить пароль и 2FA",
+		"user_delete":     "Удалить",
+		"yes":             "да",
+		"no":              "нет",
+		"newuser_title":   "Одноразовый пароль",
+		"newuser_hint":    "Передайте пароль человеку лично, он показывается один раз и нигде не сохраняется. После входа пусть сменит его на странице «Безопасность» и включит 2FA.",
+		"pw_title":        "Сменить пароль",
+		"pw_current":      "Текущий пароль",
+		"pw_new":          "Новый пароль (не короче 10 символов)",
+		"pw_change":       "Сменить",
+		"pw_done":         "Пароль изменён, остальные сессии завершены.",
+	})
+	merge("en", map[string]string{
+		"users":           "Users",
+		"user_email":      "Email",
+		"user_role":       "Role",
+		"user_2fa":        "2FA",
+		"user_create":     "Create user",
+		"user_invalid":    "Check the email and the role.",
+		"user_exists":     "A user with that email already exists.",
+		"user_self":       "You cannot delete yourself.",
+		"user_last_owner": "The last owner cannot be removed.",
+		"user_reset":      "Reset password and 2FA",
+		"user_delete":     "Delete",
+		"yes":             "yes",
+		"no":              "no",
+		"newuser_title":   "One-time password",
+		"newuser_hint":    "Give the password to the person in private. It is shown once and not stored anywhere. After signing in they should change it on the Security page and turn on 2FA.",
+		"pw_title":        "Change password",
+		"pw_current":      "Current password",
+		"pw_new":          "New password (at least 10 characters)",
+		"pw_change":       "Change",
+		"pw_done":         "Password changed, other sessions were ended.",
+	})
+}

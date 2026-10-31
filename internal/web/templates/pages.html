@@ -15,6 +15,7 @@
       <a href="/">{{t . "servers"}}</a>
       <a href="/security">{{t . "security"}}</a>
       <a href="/license">{{t . "license"}}</a>
+      {{if eq .User.Role "owner"}}<a href="/users">{{t . "users"}}</a>{{end}}
       <form class="inline" method="post" action="/logout">
         <input type="hidden" name="csrf" value="{{.CSRF}}">
         <button class="link" type="submit">{{t . "signout"}}</button>
@@ -110,6 +111,18 @@
 
 {{define "security"}}{{template "head" .}}
 <div class="card">
+  <h1>{{t . "pw_title"}}</h1>
+  {{if .Info}}<p>{{.Info}}</p>{{end}}
+  <form method="post" action="/security/password">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="current">{{t . "pw_current"}}</label>
+    <input id="current" name="current" type="password" required autocomplete="current-password">
+    <label for="new">{{t . "pw_new"}}</label>
+    <input id="new" name="new" type="password" required minlength="10" autocomplete="new-password">
+    <button type="submit">{{t . "pw_change"}}</button>
+  </form>
+</div>
+<div class="card">
   <h1>{{t . "twofa"}}</h1>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   {{if .User.TOTPEnabled}}
@@ -170,5 +183,39 @@
   {{end}}
   <h2>{{t . "lic_sent_title"}}</h2>
   <p class="muted">{{t . "lic_sent"}}</p>
+</div>
+{{template "foot" .}}{{end}}
+
+{{define "users"}}{{template "head" .}}
+<div class="card">
+  <h1>{{t . "users"}}</h1>
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <table>
+    <tr><th>{{t . "user_email"}}</th><th>{{t . "user_role"}}</th><th>{{t . "user_2fa"}}</th><th></th></tr>
+    {{range $u := .UserRows}}<tr><td>{{$u.Email}}</td><td>{{$u.Role}}</td><td>{{if $u.TOTPEnabled}}{{t $ "yes"}}{{else}}{{t $ "no"}}{{end}}</td><td>
+      <form class="inline" method="post" action="/users/{{$u.ID}}/reset"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="link" type="submit">{{t $ "user_reset"}}</button></form>
+      <form class="inline" method="post" action="/users/{{$u.ID}}/delete"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="link" type="submit">{{t $ "user_delete"}}</button></form>
+    </td></tr>{{end}}
+  </table>
+</div>
+<div class="card">
+  <h1>{{t . "user_create"}}</h1>
+  <form method="post" action="/users/create">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="email">{{t . "user_email"}}</label>
+    <input id="email" name="email" type="email" required maxlength="120">
+    <label for="role">{{t . "user_role"}}</label>
+    <select id="role" name="role"><option value="viewer">viewer</option><option value="admin">admin</option><option value="owner">owner</option></select>
+    <button type="submit">{{t . "user_create"}}</button>
+  </form>
+</div>
+{{template "foot" .}}{{end}}
+
+{{define "newuser"}}{{template "head" .}}
+<div class="card">
+  <h1>{{t . "newuser_title"}}: {{.NewEmail}}</h1>
+  <p><code>{{.NewPassword}}</code></p>
+  <p class="muted">{{t . "newuser_hint"}}</p>
+  <p><a href="/users">{{t . "back"}}</a></p>
 </div>
 {{template "foot" .}}{{end}}
