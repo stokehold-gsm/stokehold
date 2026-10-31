@@ -24,6 +24,9 @@ func TestValidateRejects(t *testing.T) {
 		{Op: "deps", Packages: []string{"-o", "x"}},
 		{Op: "deps", Packages: []string{"a b"}},
 		{Op: "deps", Packages: []string{"x;id"}},
+		{Op: "deps", Packages: []string{"openssh-server"}},
+		{Op: "deps", Packages: []string{"docker.io"}},
+		{Op: "deps", Packages: []string{"openjdk-25-jre", "netcat-traditional"}},
 		{Op: "deps", Packages: make([]string, 21)},
 		{Op: "reboot", User: "gs_a"},
 		{},
@@ -77,5 +80,18 @@ func TestHandleStopsAfterFailedUseradd(t *testing.T) {
 	run := func(string, ...string) (string, error) { n++; return "exists", errors.New("exit 9") }
 	if resp := Handle(Request{Op: "create-user", User: "gs_a1"}, run); resp.OK || n != 1 {
 		t.Errorf("must not chmod an existing home: %+v n=%d", resp, n)
+	}
+}
+
+func TestPackageAllowlist(t *testing.T) {
+	for _, p := range []string{"openjdk-25-jre", "lib32gcc-s1", "libsdl2-2.0-0:i386", "tmux", "steamcmd"} {
+		if !PackageAllowed(p) {
+			t.Errorf("%s should come from the LinuxGSM lists", p)
+		}
+	}
+	for _, p := range []string{"openssh-server", "docker.io", "netcat-traditional", "", "all"} {
+		if PackageAllowed(p) {
+			t.Errorf("%s must not be installable", p)
+		}
 	}
 }

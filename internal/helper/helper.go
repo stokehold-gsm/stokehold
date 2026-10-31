@@ -15,8 +15,7 @@ import (
 // (root, the admin, someone else's factorio user).
 var (
 	userRE = regexp.MustCompile(`^gs_[a-z0-9]{1,24}$`)
-	// Debian package names only. Real allow-listing of what may be installed
-	// is a known gap: see docs/prototype-findings.md.
+	// Shape check only; what may be installed is decided by PackageAllowed.
 	pkgRE = regexp.MustCompile(`^[a-z0-9][a-z0-9.+-]{1,60}(:i386)?$`)
 )
 
@@ -55,8 +54,8 @@ func Validate(r Request) error {
 			return bad("package count")
 		}
 		for _, p := range r.Packages {
-			if !pkgRE.MatchString(p) {
-				return bad("package name")
+			if !pkgRE.MatchString(p) || !PackageAllowed(p) {
+				return bad("package not allowed")
 			}
 		}
 		return nil // deps run as root without a game user
