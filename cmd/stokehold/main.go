@@ -116,6 +116,9 @@ func serve(args []string) {
 	}
 	panel := web.New(st, *secure, *proxy, setupToken)
 	panel.Entitlement = mgr
+	panel.Version = version
+	panel.DataDir = filepath.Dir(*dbPath)
+	panel.TLSAddr = *tlsListen
 	panel.Helper = func(r helper.Request) (helper.Response, error) { return helper.Call(*helperSock, r) }
 	panel.Metrics = metrics.New(60)
 	stop := make(chan struct{})
@@ -124,7 +127,6 @@ func serve(args []string) {
 	runner := &sched.Runner{S: st, Helper: panel.HelperOn}
 	go runner.Loop(context.Background(), 30*time.Second)
 	go panel.StatusLoop(context.Background(), time.Minute)
-	panel.Version = version
 	go panel.UpdateLoop(context.Background(), time.Hour)
 	srv := &http.Server{
 		Addr:              *listen,

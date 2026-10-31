@@ -197,7 +197,7 @@ func TestSecurityHeaders(t *testing.T) {
 			t.Errorf("%s = %q", k, h.Get(k))
 		}
 	}
-	if csp := h.Get("Content-Security-Policy"); !strings.Contains(csp, "default-src 'none'") || strings.Contains(csp, "unsafe") {
+	if csp := h.Get("Content-Security-Policy"); !strings.Contains(csp, "default-src 'none'") || !strings.Contains(csp, "script-src 'self'") || strings.Contains(csp, "unsafe") {
 		t.Errorf("CSP: %q", csp)
 	}
 	if rec := r.do("GET", "/static/app.css", nil, nil); rec.Code != 200 {

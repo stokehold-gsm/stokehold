@@ -1,11 +1,12 @@
 {{define "head"}}<!doctype html>
-<html lang="{{.Lang}}">
+<html lang="{{.Lang}}"{{if .Theme}} data-theme="{{.Theme}}"{{end}}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{t . "app"}}</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js" defer></script>
 {{if .Refresh}}<meta http-equiv="refresh" content="3">{{end}}
 </head>
 <body>
@@ -13,27 +14,38 @@
   <a class="brand" href="/"><img src="/static/logo.svg" alt="" width="28" height="28"> {{t . "app"}}</a>
   <nav>
     {{if .User}}
-      <span class="muted">{{.User.Email}} ({{.User.Role}})</span>
       <a href="/">{{t . "servers"}}</a>
       <a href="/monitor">{{t . "monitor"}}</a>
       <a href="/security">{{t . "security"}}</a>
       <a href="/license">{{t . "license"}}</a>
-      {{if eq .User.Role "owner"}}<a href="/users">{{t . "users"}}</a>{{if pro}} <a href="/nodes">{{t . "nodes"}}</a> <a href="/integrations">{{t . "integrations"}}</a>{{end}}{{end}}
+      {{if eq .User.Role "owner"}}<a href="/users">{{t . "users"}}</a><a href="/settings">{{t . "settings"}}</a><a href="/updates">{{t . "nav_updates"}}</a>{{if pro}} <a href="/nodes">{{t . "nodes"}}</a> <a href="/integrations">{{t . "integrations"}}</a>{{end}}{{end}}
       {{if pro}}<a href="/tokens">{{t . "tokens"}}</a>{{end}}
+      {{if .UpdTag}}<a class="upd-badge" href="/updates" title="{{.UpdTag}}"><span class="pulse" aria-hidden="true"></span>{{t . "upd_badge"}}</a>{{end}}
+      <span class="who" title="{{.User.Email}}">{{.User.Email}} ({{.User.Role}})</span>
       <form class="inline" method="post" action="/logout">
         <input type="hidden" name="csrf" value="{{.CSRF}}">
         <button class="link" type="submit">{{t . "signout"}}</button>
       </form>
     {{end}}
-    <a href="?lang=ru">RU</a> <a href="?lang=en">EN</a>
   </nav>
+  {{$cur := "auto"}}{{if .Theme}}{{$cur = .Theme}}{{end}}
+  <a class="theme" href="/theme?set={{.ThemeNext}}" data-theme-cur="{{$cur}}" data-l-auto="{{t . "theme_auto"}}" data-l-light="{{t . "theme_light"}}" data-l-dark="{{t . "theme_dark"}}" aria-label="{{t . (printf "theme_%s" $cur)}}" title="{{t . (printf "theme_%s" $cur)}}">
+    <svg class="i-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    <svg class="i-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    <svg class="i-auto" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" class="fill"/></svg>
+  </a>
+  <div class="lang" data-lang="{{.Lang}}" role="group" aria-label="{{t . "language"}}">
+    <a href="?lang=ru" data-lang="ru" lang="ru" aria-current="{{if eq .Lang "ru"}}true{{else}}false{{end}}">RU</a>
+    <a href="?lang=en" data-lang="en" lang="en" aria-current="{{if eq .Lang "en"}}true{{else}}false{{end}}">EN</a>
+    <span class="thumb" aria-hidden="true"></span>
+  </div>
 </header>
 <main>{{end}}
 
 {{define "foot"}}</main></body></html>{{end}}
 
 {{define "login"}}{{template "head" .}}
-<div class="card">
+<div class="card auth">
   <h1>{{t . "login"}}</h1>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   <form method="post" action="/login" autocomplete="on">
@@ -49,7 +61,7 @@
 {{template "foot" .}}{{end}}
 
 {{define "setup"}}{{template "head" .}}
-<div class="card">
+<div class="card auth">
   <h1>{{t . "setup"}}</h1>
   <p class="muted">{{t . "setup_hint"}}</p>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
@@ -67,20 +79,43 @@
 
 {{define "dashboard"}}{{template "head" .}}
 <div class="card">
-  <h1>{{t . "servers"}} ({{.Count}})</h1>
-  {{if .Servers}}
-  <table>
-    <tr><th>{{t . "name"}}</th><th>{{t . "game"}}</th><th>{{t . "mode"}}</th><th></th></tr>
-    {{range $srv := .Servers}}<tr><td>{{$srv.Name}}{{with index $.NodeNames $srv.NodeID}} <span class="muted">({{.}})</span>{{end}}</td><td>{{$srv.Game}}</td><td>{{$srv.Mode}}</td><td>
-      {{range $.Actions}}{{if or $.CanControl (eq . "details") (eq . "check-update")}}<form class="inline" method="post" action="/servers/{{$srv.ID}}/run">
-        <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="{{.}}">
-        <button class="link" type="submit">{{t $ (printf "act_%s" .)}}</button></form>{{end}}{{end}}
-      <a href="/servers/{{$srv.ID}}/schedules">{{t $ "schedules"}}</a>
-      {{if $.CanControl}}<a href="/servers/{{$srv.ID}}/files">{{t $ "files"}}</a>{{if and pro (eq $srv.Game "fctrserver")}} <a href="/servers/{{$srv.ID}}/mods">{{t $ "mods"}}</a>{{end}}{{end}}
-    </td></tr>{{end}}
-  </table>
+  <div class="card-head">
+    <h1>{{t . "servers"}} ({{.Count}})</h1>
+    {{if .CanControl}}<div class="head-actions"><a class="btn primary" href="/servers/new">{{t . "install_server"}}</a><a class="btn" href="/servers/add">{{t . "add_server"}}</a></div>{{end}}
+  </div>
+  {{if .Rows}}
+  <div class="srv-list">
+    {{range $r := .Rows}}<div class="srv">
+      <div class="srv-main">
+        <div class="srv-name">{{$r.Name}}{{if $r.Node}} <span class="muted">({{$r.Node}})</span>{{end}}</div>
+        <div class="srv-meta muted">{{$r.Game}} · {{$r.Mode}}</div>
+      </div>
+      <div class="srv-state"><span class="badge st-{{$r.State}}">{{t $ (printf "st_%s" $r.State)}}</span>{{if $r.Players}}<span class="muted">{{t $ "players"}} {{$r.Players}}</span>{{end}}</div>
+      <div class="srv-actions">
+        {{if $.CanControl}}
+        <form class="inline" method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="start"><button class="btn start" type="submit"{{if not $r.CanStart}} disabled{{end}}>{{t $ "act_start"}}</button></form>
+        <form class="inline" method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="stop"><button class="btn stop" type="submit"{{if not $r.CanStop}} disabled{{end}}>{{t $ "act_stop"}}</button></form>
+        <form class="inline" method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="restart"><button class="btn restart" type="submit"{{if not $r.CanRestart}} disabled{{end}}>{{t $ "act_restart"}}</button></form>
+        <details class="menu">
+          <summary class="btn icon" aria-label="{{t $ "more"}}" title="{{t $ "more"}}">⋯</summary>
+          <div class="menu-list">
+            <form method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="details"><button class="menu-item" type="submit">{{t $ "act_details"}}</button></form>
+            <form method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="backup"><button class="menu-item" type="submit">{{t $ "act_backup"}}</button></form>
+            <form method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="check-update"><button class="menu-item" type="submit">{{t $ "act_check-update"}}</button></form>
+            <a class="menu-item" href="/servers/{{$r.ID}}/schedules">{{t $ "schedules"}}</a>
+            <a class="menu-item" href="/servers/{{$r.ID}}/files">{{t $ "files"}}</a>
+            {{if and pro (eq $r.Game "fctrserver")}}<a class="menu-item" href="/servers/{{$r.ID}}/mods">{{t $ "mods"}}</a>{{end}}
+          </div>
+        </details>
+        {{else}}
+        <form class="inline" method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="details"><button class="btn" type="submit">{{t $ "act_details"}}</button></form>
+        <form class="inline" method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="check-update"><button class="btn" type="submit">{{t $ "act_check-update"}}</button></form>
+        <a class="btn" href="/servers/{{$r.ID}}/schedules">{{t $ "schedules"}}</a>
+        {{end}}
+      </div>
+    </div>{{end}}
+  </div>
   {{else}}<p class="muted">{{t . "no_servers"}}</p>{{end}}
-  {{if .CanControl}}<p><a href="/servers/new">{{t . "install_server"}}</a> · <a href="/servers/add">{{t . "add_server"}}</a></p>{{end}}
 </div>
 {{template "foot" .}}{{end}}
 
@@ -117,6 +152,8 @@
 {{template "foot" .}}{{end}}
 
 {{define "security"}}{{template "head" .}}
+{{if .Need2FA}}<div class="card banner bad"><b>{{t . "need2fa"}}</b></div>{{end}}
+<div class="grid2">
 <div class="card">
   <h1>{{t . "pw_title"}}</h1>
   {{if .Info}}<p>{{.Info}}</p>{{end}}
@@ -158,24 +195,58 @@
     </form>
   {{end}}
 </div>
+</div>
 {{template "foot" .}}{{end}}
 
 {{define "message"}}{{template "head" .}}
-<div class="card"><p>{{.Error}}</p><p><a href="/">{{t . "back"}}</a></p></div>
+<div class="card auth"><p>{{.Error}}</p><p><a href="/">{{t . "back"}}</a></p></div>
+{{template "foot" .}}{{end}}
+
+{{define "settings"}}{{template "head" .}}
+{{if .Info}}<div class="card"><span class="chip ok">{{.Info}}</span></div>{{end}}
+{{if .Error}}<div class="card"><p class="error">{{.Error}}</p></div>{{end}}
+<form method="post" action="/settings" class="settings">
+  <input type="hidden" name="csrf" value="{{.CSRF}}">
+  <div class="grid2">
+    <div class="card">
+      <h1>{{t . "set_security"}}</h1>
+      <label class="switch-row" for="require_2fa">
+        <span class="switch"><input id="require_2fa" type="checkbox" name="require_2fa" value="1"{{if .SetRequire2FA}} checked{{end}}><span class="slider"></span></span>
+        <span><b>{{t . "set_require2fa"}}</b><span class="muted block">{{t . "set_require2fa_h"}}</span></span>
+      </label>
+      <label for="session_hours">{{t . "set_session"}}</label>
+      <input id="session_hours" name="session_hours" type="number" min="1" max="168" step="1" required value="{{.SetSessionHours}}">
+      <p class="muted small">{{t . "set_session_h"}}</p>
+    </div>
+    <div class="card">
+      <h1>{{t . "set_general"}}</h1>
+      <label for="default_lang">{{t . "set_lang"}}</label>
+      <select id="default_lang" name="default_lang">
+        <option value=""{{if eq .SetDefaultLang ""}} selected{{end}}>{{t . "set_lang_auto"}}</option>
+        <option value="ru"{{if eq .SetDefaultLang "ru"}} selected{{end}}>Русский</option>
+        <option value="en"{{if eq .SetDefaultLang "en"}} selected{{end}}>English</option>
+      </select>
+      <p class="muted small">{{t . "set_lang_h"}}</p>
+    </div>
+  </div>
+  <div class="card">
+    <h1>{{t . "set_about"}}</h1>
+    <dl class="facts">
+      <dt>{{t . "set_version"}}</dt><dd><code>{{.PanelVersion}}</code></dd>
+      <dt>{{t . "set_datadir"}}</dt><dd><code>{{.DataDir}}</code></dd>
+      <dt>{{t . "set_plan"}}</dt><dd><span class="chip ok">{{t . (printf "plan_%s" .CurPlan)}}</span></dd>
+      <dt>{{t . "set_https"}}</dt><dd>{{if .HTTPSOn}}<span class="chip ok">{{t . "set_on"}}</span>{{else}}<span class="chip">{{t . "set_off"}}</span>{{end}}</dd>
+    </dl>
+  </div>
+  <button type="submit">{{t . "save"}}</button>
+</form>
 {{template "foot" .}}{{end}}
 
 {{define "license"}}{{template "head" .}}
 <div class="card">
   <h1>{{t . "license"}}</h1>
-  {{if .Info}}<p>{{.Info}}</p>{{end}}
+  {{if .Info}}<p><span class="chip ok">{{.Info}}</span></p>{{end}}
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
-  <table>
-    <tr><th>{{t . "lic_plan"}}</th><td>{{if .Lic.Plan}}{{t . "lic_pro"}} ({{.Lic.Plan}}){{else}}{{t . "lic_free"}}{{end}}</td></tr>
-    <tr><th>{{t . "lic_features"}}</th><td>{{range .Lic.Features}}<code>{{.}}</code> {{else}}-{{end}}</td></tr>
-    {{if .LicExpires}}<tr><th>{{t . "lic_until"}}</th><td>{{.LicExpires}}</td></tr>{{end}}
-  </table>
-  {{if .IsGrace}}<p class="muted">{{t . "lic_grace"}}</p>{{end}}
-  {{if .Lic.LastError}}<p class="muted">{{t . "lic_last_error"}}: {{.Lic.LastError}}</p>{{end}}
   {{if .CanChangeLicense}}
   <form method="post" action="/license/activate">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
@@ -183,12 +254,42 @@
     <input id="key" name="key" type="text" required autocomplete="off" spellcheck="false" placeholder="SKH-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX">
     <button type="submit">{{t . "lic_activate"}}</button>
   </form>
-  {{if .Lic.HasKey}}<form method="post" action="/license/renew">
+  {{if .Lic.HasKey}}<form class="inline" method="post" action="/license/renew">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
-    <button type="submit">{{t . "lic_renew"}}</button>
+    <button class="link" type="submit">{{t . "lic_renew"}}</button>
   </form>{{end}}
-  {{end}}
-  <h2>{{t . "lic_sent_title"}}</h2>
+  {{else}}<p class="muted">{{t . "lic_owner_only"}}</p>{{end}}
+  <p>{{t . "lic_plan"}}: <span class="chip ok">{{t . (printf "plan_%s" .CurPlan)}}{{if .Lic.Plan}} ({{.Lic.Plan}}){{end}}</span>{{if .LicExpires}} · {{t . "lic_until"}} {{.LicExpires}}{{end}}</p>
+  {{if .Lic.Features}}<p class="muted">{{t . "lic_features"}}: {{range .Lic.Features}}<code>{{.}}</code> {{end}}</p>{{end}}
+  {{if .IsGrace}}<p class="muted">{{t . "lic_grace"}}</p>{{end}}
+  {{if .Lic.LastError}}<p class="muted">{{t . "lic_last_error"}}: {{.Lic.LastError}}</p>{{end}}
+</div>
+<div class="card">
+  <h1>{{t . "lic_plans"}}</h1>
+  <div class="scroll"><table class="plans">
+    <thead><tr>
+      <th></th>
+      <th class="{{if eq .CurPlan "free"}}cur{{end}}">Free<span class="sub">{{t . "plan_free_sub"}}</span></th>
+      <th class="{{if eq .CurPlan "pro"}}cur{{end}}">Pro<span class="sub">{{t . "plan_pro_sub"}}</span></th>
+      <th class="{{if eq .CurPlan "hosting"}}cur{{end}}">Hosting<span class="sub">{{t . "plan_hosting_sub"}}</span></th>
+    </tr></thead>
+    <tbody>
+    {{range $r := .PlanRows}}<tr><td>{{$r.Label}}</td>{{range $r.Cells}}<td class="{{if .Cur}}cur{{end}}"><span class="mark {{.Class}}">{{.Text}}</span></td>{{end}}</tr>
+    {{end}}
+    <tr><td>{{t . "lic_pros"}}</td>
+      <td class="note{{if eq .CurPlan "free"}} cur{{end}}">{{t . "plan_free_pros"}}</td>
+      <td class="note{{if eq .CurPlan "pro"}} cur{{end}}">{{t . "plan_pro_pros"}}</td>
+      <td class="note{{if eq .CurPlan "hosting"}} cur{{end}}">{{t . "plan_hosting_pros"}}</td></tr>
+    <tr><td>{{t . "lic_cons"}}</td>
+      <td class="note{{if eq .CurPlan "free"}} cur{{end}}">{{t . "plan_free_cons"}}</td>
+      <td class="note{{if eq .CurPlan "pro"}} cur{{end}}">{{t . "plan_pro_cons"}}</td>
+      <td class="note{{if eq .CurPlan "hosting"}} cur{{end}}">{{t . "plan_hosting_cons"}}</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted">{{t . "lic_plans_note"}}</p>
+</div>
+<div class="card">
+  <h1>{{t . "lic_sent_title"}}</h1>
   <p class="muted">{{t . "lic_sent"}}</p>
 </div>
 {{template "foot" .}}{{end}}
@@ -197,13 +298,13 @@
 <div class="card">
   <h1>{{t . "users"}}</h1>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
-  <table>
+  <div class="scroll"><table>
     <tr><th>{{t . "user_email"}}</th><th>{{t . "user_role"}}</th><th>{{t . "user_2fa"}}</th><th></th></tr>
     {{range $u := .UserRows}}<tr><td>{{$u.Email}}</td><td>{{$u.Role}}</td><td>{{if $u.TOTPEnabled}}{{t $ "yes"}}{{else}}{{t $ "no"}}{{end}}</td><td>
       <form class="inline" method="post" action="/users/{{$u.ID}}/reset"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="link" type="submit">{{t $ "user_reset"}}</button></form>
       <form class="inline" method="post" action="/users/{{$u.ID}}/delete"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="link" type="submit">{{t $ "user_delete"}}</button></form>
     </td></tr>{{end}}
-  </table>
+  </table></div>
 </div>
 <div class="card">
   <h1>{{t . "user_create"}}</h1>
@@ -233,12 +334,12 @@
   <p class="muted">{{t . "sch_note"}}</p>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   {{if .Sched}}
-  <table>
+  <div class="scroll"><table>
     <tr><th>{{t . "sch_cmd"}}</th><th></th><th>{{t . "sch_last"}}</th><th></th></tr>
     {{range $x := .Sched}}<tr><td>{{t $ (printf "act_%s" $x.Cmd)}}</td><td>{{$x.When}}</td>
       <td>{{$x.Last}}{{if $x.Note}}: {{if not $x.OK}}<span class="error">{{end}}{{$x.Note}}{{if not $x.OK}}</span>{{end}}{{end}}</td>
       <td>{{if $.CanControl}}<form class="inline" method="post" action="/schedules/{{$x.ID}}/delete"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="link" type="submit">{{t $ "sch_delete"}}</button></form>{{end}}</td></tr>{{end}}
-  </table>
+  </table></div>
   {{else}}<p class="muted">{{t . "sch_empty"}}</p>{{end}}
 </div>
 {{if .CanControl}}<div class="card">
@@ -277,21 +378,16 @@
 {{define "job"}}{{template "head" .}}
 <div class="card">
   <h1>{{t . "job_title"}}: {{.ServerName}}</h1>
-  <p>{{if eq .Action "running"}}{{t . "job_running"}}{{else if eq .Action "done"}}{{t . "job_done"}}{{else}}<span class="error">{{t . "job_failed"}}</span>{{end}}</p>
-  <pre>{{.Result}}</pre>
-  <p><a href="/">{{t . "back"}}</a></p>
-</div>
-{{template "foot" .}}{{end}}
-
-{{define "files"}}{{template "head" .}}
-<div class="card">
-  <h1>{{.ServerName}}: {{t . "files"}}</h1>
-  <p class="muted">{{t . "files_hint"}}</p>
-  {{if .Info}}<p>{{.Info}}</p>{{end}}
-  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
-  {{if .Files}}<table>{{range $f := .Files}}<tr><td><code>{{$f}}</code></td><td><a href="/servers/{{$.ServerID}}/edit?path={{$f}}">{{t $ "file_edit"}}</a></td></tr>{{end}}</table>
-  {{else if not .Error}}<p class="muted">{{t . "files_empty"}}</p>{{end}}
-  <p><a href="/">{{t . "back"}}</a></p>
+  {{if eq .Action "done"}}<div class="banner ok"><b>{{t . "job_ok_title"}}</b><p>{{t . "job_ok_text"}}</p><a class="btn primary" href="/">{{t . "job_open"}}</a></div>
+  {{else if eq .Action "failed"}}<div class="banner bad"><b>{{t . "job_fail_title"}}</b>{{if .JobError}}<p><code>{{.JobError}}</code></p>{{end}}<div class="btns"><a class="btn primary" href="/servers/new">{{t . "job_retry"}}</a><a class="btn" href="/">{{t . "back"}}</a></div></div>
+  {{else}}<p class="muted">{{t . "job_running"}}</p>{{end}}
+  <div class="job-meta"><span>{{t . "job_progress"}}: <b>{{.Pct}}%</b></span><span>{{t . "job_elapsed"}}: <b>{{.Elapsed}}</b></span></div>
+  <progress class="bar{{if eq .Action "failed"}} bad{{end}}" max="100" value="{{.Pct}}">{{.Pct}}%</progress>
+  <ol class="steps">
+    {{range .Steps}}<li class="step {{.State}}"><span class="dot" aria-hidden="true"></span><div><b>{{.Title}}</b> <span class="muted">{{t $ (printf "job_state_%s" .State)}}</span>{{if .Detail}}<div class="muted small">{{.Detail}}</div>{{end}}{{if .Note}}<div class="error small">{{.Note}}</div>{{end}}</div></li>
+    {{end}}
+  </ol>
+  <details class="raw"{{if eq .Action "failed"}} open{{end}}><summary>{{t . "job_details"}}</summary><pre>{{.Result}}</pre></details>
 </div>
 {{template "foot" .}}{{end}}
 
@@ -313,22 +409,22 @@
 <div class="card">
   <h1>{{t . "monitor"}}</h1>
   {{if .Mon.Have}}
-  <table>
+  <div class="scroll"><table>
     <tr><th>{{t . "mon_cpu"}}</th><td>{{printf "%.0f" .Mon.CPU}}%</td><td>{{if .Mon.CPUPoints}}<svg class="spark" viewBox="0 0 120 30" aria-hidden="true"><polyline points="{{.Mon.CPUPoints}}"/></svg>{{end}}</td></tr>
     <tr><th>{{t . "mon_mem"}}</th><td>{{printf "%.0f" .Mon.Mem}}% ({{.Mon.MemText}})</td><td>{{if .Mon.MemPoints}}<svg class="spark" viewBox="0 0 120 30" aria-hidden="true"><polyline points="{{.Mon.MemPoints}}"/></svg>{{end}}</td></tr>
     <tr><th>{{t . "mon_disk"}}</th><td>{{printf "%.0f" .Mon.Disk}}% ({{.Mon.DiskText}})</td><td></td></tr>
     <tr><th>{{t . "mon_load"}}</th><td>{{printf "%.2f" .Mon.Load1}}</td><td></td></tr>
-  </table>
+  </table></div>
   <p class="muted">{{t . "mon_note"}}</p>
   {{else}}<p class="muted">{{t . "mon_none"}}</p>{{end}}
 </div>
 <div class="card">
   <h1>{{t . "servers"}}</h1>
-  {{if .Servers}}<table>
+  {{if .Servers}}<div class="scroll"><table>
     <tr><th>{{t . "name"}}</th><th>{{t . "mon_state"}}</th><th>{{t . "mon_players"}}</th></tr>
     {{range $srv := .Servers}}{{$st := index $.Statuses $srv.ID}}<tr><td>{{$srv.Name}}{{with index $.NodeNames $srv.NodeID}} <span class="muted">({{.}})</span>{{end}}</td>
       <td>{{if $st.State}}{{$st.State}}{{else}}-{{end}}</td><td>{{if $st.HasPlayers}}{{$st.Players}}/{{$st.Max}}{{else}}-{{end}}</td></tr>{{end}}
-  </table>{{else}}<p class="muted">{{t . "no_servers"}}</p>{{end}}
+  </table></div>{{else}}<p class="muted">{{t . "no_servers"}}</p>{{end}}
 </div>
 {{template "foot" .}}{{end}}
 

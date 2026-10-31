@@ -1,26 +1,30 @@
 {{define "updates"}}{{template "head" .}}
 <div class="card">
-  <h1>{{t . "upd_title"}}</h1>
+  <div class="card-head">
+    <h1>{{t . "upd_title"}}</h1>
+    <form method="post" action="/updates/check" class="inline"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="btn" type="submit">{{t . "upd_check"}}</button></form>
+  </div>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
-  <table>
-    <tr><th>{{t . "upd_current"}}</th><td><code>{{.Upd.Current}}</code></td></tr>
-    <tr><th>{{t . "upd_latest"}}</th><td>{{if .Upd.Latest}}<code>{{.Upd.Latest.Tag}}</code>{{if .Upd.Latest.Prerelease}} <span class="muted">(beta)</span>{{end}}{{else}}<span class="muted">{{t . "upd_unknown"}}</span>{{end}}</td></tr>
-    <tr><th>{{t . "upd_checked"}}</th><td>{{if .Upd.Checked}}{{.Upd.Checked}}{{else}}<span class="muted">{{t . "upd_never"}}</span>{{end}}</td></tr>
-  </table>
-  {{if .Upd.CheckErr}}<p class="error">{{t . "upd_check_failed"}} <code>{{.Upd.CheckErr}}</code></p>{{end}}
-  {{if .Upd.Dev}}<p class="muted">{{t . "upd_dev"}}</p>
-  {{else if .Upd.Active}}<p><b>{{t . "upd_running"}}</b></p>
-  {{else if .Upd.Started}}<p><b>{{t . "upd_started"}}</b></p>
+  <dl class="facts">
+    <dt>{{t . "upd_current"}}</dt><dd><code>{{.Upd.Current}}</code></dd>
+    <dt>{{t . "upd_latest"}}</dt><dd>{{if .Upd.Latest}}<code>{{.Upd.Latest.Tag}}</code>{{if .Upd.Latest.Prerelease}} <span class="chip">beta</span>{{end}}{{else}}<span class="muted">{{t . "upd_unknown"}}</span>{{end}}</dd>
+    <dt>{{t . "upd_checked"}}</dt><dd>{{if .Upd.Checked}}{{.Upd.Checked}}{{else}}<span class="muted">{{t . "upd_never"}}</span>{{end}}</dd>
+  </dl>
+  {{if .Upd.CheckErr}}<div class="banner bad"><p>{{t . "upd_check_failed"}} <code>{{.Upd.CheckErr}}</code></p></div>{{end}}
+  {{if .Upd.Dev}}<div class="banner"><p class="muted">{{t . "upd_dev"}}</p></div>
+  {{else if .Upd.Active}}<div class="banner"><b>{{t . "upd_running"}}</b></div>
+  {{else if .Upd.Started}}<div class="banner ok"><b>{{t . "upd_started"}}</b></div>
   {{else if .Upd.Newer}}
-    <p><b>{{t . "upd_available"}} <code>{{.Upd.Latest.Tag}}</code></b></p>
-    {{if .Upd.Latest.Notes}}<pre>{{.Upd.Latest.Notes}}</pre>{{end}}
-    <p class="muted">{{t . "upd_how"}}</p>
-    <form method="post" action="/updates/apply" class="inline">
-      <input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="version" value="{{.Upd.Latest.Tag}}">
-      <button type="submit">{{t . "upd_apply"}}</button>
-    </form>
-  {{else if .Upd.Latest}}<p>{{t . "upd_uptodate"}}</p>{{end}}
-  <form method="post" action="/updates/check" class="inline"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">{{t . "upd_check"}}</button></form>
+    <div class="banner ok">
+      <b>{{t . "upd_available"}} <code>{{.Upd.Latest.Tag}}</code></b>
+      {{if .Upd.Latest.Notes}}<pre>{{.Upd.Latest.Notes}}</pre>{{end}}
+      <p class="muted">{{t . "upd_how"}}</p>
+      <form method="post" action="/updates/apply" class="inline">
+        <input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="version" value="{{.Upd.Latest.Tag}}">
+        <button class="btn primary" type="submit">{{t . "upd_apply"}}</button>
+      </form>
+    </div>
+  {{else if .Upd.Latest}}<div class="banner ok"><b>{{t . "upd_uptodate"}}</b></div>{{end}}
 </div>
 
 <div class="card">
