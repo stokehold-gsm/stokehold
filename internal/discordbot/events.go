@@ -2,20 +2,17 @@ package discordbot
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/stokehold-gsm/stokehold/internal/discordsetup"
 )
 
-// The server log is built from Discord's audit log, polled over plain HTTP
-// like everything else here. It covers bans, kicks, timeouts, role, channel,
-// invite, webhook and message-deletion events. It cannot see joins, leaves or
-// the text of edited messages: those need a gateway connection and privileged
-// intents (docs/moderation.md).
+// The events channel is built from Discord's audit log, polled over plain HTTP.
+// It is the only source that says who did something: bans, kicks, timeouts,
+// role and channel changes, webhooks. What was written, who joined or spoke
+// comes from the gateway (logs.go).
 var auditActions = map[int]string{
 	1: "Изменён сервер", 10: "Создан канал", 11: "Изменён канал", 12: "Удалён канал",
 	13: "Права канала: добавлены", 14: "Права канала: изменены", 15: "Права канала: удалены",
@@ -49,23 +46,40 @@ type Events struct {
 	GuildID string
 	Channel string // channel name to write to
 	Every   time.Duration
+	// GatewayOn drops invite entries: the gateway log already shows them with the code.
+	GatewayOn bool
+	Now       func() time.Time // tests only
+	Sink      *Sink            // nil: made on first use
 
 	lastID string
 }
 
+// entryColor groups audit actions: removals red, creations green, the rest blue.
+func entryColor(action int) int {
+	switch action {
+	case 12, 15, 20, 22, 32, 41, 52, 72, 73, 142, 21:
+		return colRed
+	case 10, 13, 30, 40, 50, 140, 28, 23:
+		return colGreen
+	case 143, 145:
+		return colOrange
+	}
+	return colBlue
+}
+
 func snowflake(s string) uint64 { n, _ := strconv.ParseUint(s, 10, 64); return n }
 
-// Poll fetches entries newer than the last one seen and returns the lines to
+// Poll fetches entries newer than the last one seen and returns the embeds to
 // post, oldest first. The first call only records the position, so a restart
 // never replays history.
-func (e *Events) Poll(ctx context.Context, botID string) ([]string, error) {
+func (e *Events) Poll(ctx context.Context, botID string) ([]map[string]any, error) {
 	q := url.Values{"limit": {"50"}}
 	var page auditPage
 	if err := e.API.Do(ctx, "GET", "/guilds/"+e.GuildID+"/audit-logs?"+q.Encode(), nil, &page); err != nil {
 		return nil, err
 	}
 	first := e.lastID == ""
-	var lines []string
+	var lines []map[string]any
 	newest := e.lastID
 	for i := len(page.Entries) - 1; i >= 0; i-- { // the API answers newest first
 		en := page.Entries[i]
@@ -78,7 +92,14 @@ func (e *Events) Poll(ctx context.Context, botID string) ([]string, error) {
 		if en.UserID == botID { // the bot's own commands write their own log entries
 			continue
 		}
-		lines = append(lines, formatEntry(en))
+		if e.GatewayOn && en.ActionType == 40 {
+			continue
+		}
+		at := time.Now()
+		if e.Now != nil {
+			at = e.Now()
+		}
+		lines = append(lines, formatEntry(en, at))
 	}
 	e.lastID = newest
 	if first {
@@ -87,29 +108,28 @@ func (e *Events) Poll(ctx context.Context, botID string) ([]string, error) {
 	return lines, nil
 }
 
-func formatEntry(en auditEntry) string {
+func formatEntry(en auditEntry, at time.Time) map[string]any {
 	name, ok := auditActions[en.ActionType]
 	if !ok {
 		name = "Событие " + strconv.Itoa(en.ActionType)
 	}
-	var b strings.Builder
-	fmt.Fprintf(&b, "**%s**", name)
+	var f []map[string]any
 	if en.UserID != "" {
-		fmt.Fprintf(&b, " · кто: <@%s>", en.UserID)
+		f = append(f, field("Кто", "<@"+en.UserID+"> ("+en.UserID+")", true))
 	}
 	if en.TargetID != "" {
-		fmt.Fprintf(&b, " · цель: %s", en.TargetID)
+		f = append(f, field("Цель", en.TargetID, true))
 	}
 	if en.Options.ChannelID != "" {
-		fmt.Fprintf(&b, " · канал: <#%s>", en.Options.ChannelID)
+		f = append(f, field("Канал", "<#"+en.Options.ChannelID+">", true))
 	}
 	if en.Options.Count != "" {
-		fmt.Fprintf(&b, " · сообщений: %s", en.Options.Count)
+		f = append(f, field("Сообщений", en.Options.Count, true))
 	}
 	if en.Reason != "" {
-		fmt.Fprintf(&b, " · причина: %s", en.Reason)
+		f = append(f, field("Причина", en.Reason, false))
 	}
-	return b.String()
+	return embed(name, entryColor(en.ActionType), at, f...)
 }
 
 // Run polls until ctx ends. Without the View Audit Log permission it tries
@@ -146,39 +166,11 @@ func (e *Events) Run(ctx context.Context, logf func(string, ...any)) {
 	}
 }
 
-func (e *Events) post(ctx context.Context, lines []string, logf func(string, ...any)) {
-	var chans []struct{ ID, Name string }
-	if err := e.API.Do(ctx, "GET", "/guilds/"+e.GuildID+"/channels", nil, &chans); err != nil {
+func (e *Events) post(ctx context.Context, lines []map[string]any, logf func(string, ...any)) {
+	if e.Sink == nil {
+		e.Sink = &Sink{API: e.API, GuildID: e.GuildID}
+	}
+	if err := e.Sink.Embeds(ctx, e.Channel, lines...); err != nil {
 		logf("events: %v", err)
-		return
-	}
-	id := ""
-	for _, c := range chans {
-		if c.Name == e.Channel {
-			id = c.ID
-		}
-	}
-	if id == "" {
-		logf("events: channel %q not found", e.Channel)
-		return
-	}
-	// one message holds up to 2000 characters
-	for len(lines) > 0 {
-		var b strings.Builder
-		n := 0
-		for n < len(lines) && b.Len()+len(lines[n])+1 < 1900 {
-			b.WriteString(lines[n] + "\n")
-			n++
-		}
-		if n == 0 { // a single oversized line
-			b.WriteString(lines[0][:1900])
-			n = 1
-		}
-		lines = lines[n:]
-		body := map[string]any{"content": b.String(), "allowed_mentions": map[string]any{"parse": []string{}}}
-		if err := e.API.Do(ctx, "POST", "/channels/"+id+"/messages", body, nil); err != nil {
-			logf("events: %v", err)
-			return
-		}
 	}
 }

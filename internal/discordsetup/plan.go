@@ -201,7 +201,15 @@ func Default() Plan {
 				{Key: "curators", Name: "🧭・кураторы", Topic: "Обсуждение персонала, жалобы на модераторов, апелляции", OnlyFor: []string{RoleFounder, RoleCurator}},
 				{Key: "log", Name: LogChannel, Topic: "Журнал модерации: каждое наказание одной записью", OnlyFor: modTeam, Messages: []Message{logRU}},
 				{Key: "events", Name: EventsChannel, Topic: "События сервера из журнала аудита Discord", OnlyFor: modTeam},
-				{Key: "botlog", Name: "🤖・бот", Topic: "Служебные сообщения бота", OnlyFor: modTeam},
+				{Key: "reports", Name: ReportsChannel, Topic: "Жалобы участников: кнопки под каждой жалобой", OnlyFor: helpTeam},
+				{Key: "botlog", Name: BotLogChannel, Topic: "Какие команды бота кто вызывал", OnlyFor: modTeam},
+			}},
+			{Name: "📜 ЛОГИ", Channels: []Channel{
+				{Key: "log-messages", Name: LogMessages, Topic: "Изменённые и удалённые сообщения", OnlyFor: modTeam},
+				{Key: "log-members", Name: LogMembers, Topic: "Вход, выход, роли, ники и аватары", OnlyFor: modTeam},
+				{Key: "log-voice", Name: LogVoice, Topic: "Вход, выход и перемещения в голосовых", OnlyFor: modTeam},
+				{Key: "log-server", Name: LogServer, Topic: "Приглашения и ветки", OnlyFor: modTeam},
+				{Key: "log-automod", Name: LogAutomod, Topic: "Сработавшие правила AutoMod", OnlyFor: modTeam},
 			}},
 			{Name: "🛒 МАГАЗИН (ПЕРСОНАЛ)", Channels: []Channel{
 				{Key: "shop-rules", Name: "📘・регламент-шопа", Topic: "Как проверять заказы и выдавать лицензии", ReadOnly: true, OnlyFor: shopTeam, Messages: shopRulesRU},
@@ -228,4 +236,13 @@ const (
 	TicketOrders   = "🧾・заказы"
 	LogChannel     = "📋・журнал"
 	EventsChannel  = "📜・события"
+	ReportsChannel = "📣・жалобы"
+	BotLogChannel  = "🤖・бот"
+
+	// Detailed logs the bot fills from the gateway (docs/discord.md).
+	LogMessages = "💬・сообщения"
+	LogMembers  = "👥・участники"
+	LogVoice    = "🔊・голос"
+	LogServer   = "🗄・сервер"
+	LogAutomod  = "🛡・автомод"
 )

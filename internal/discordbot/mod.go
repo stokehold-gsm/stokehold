@@ -36,7 +36,7 @@ func Commands() []map[string]any {
 			"dm_permission":              false,
 		}
 	}
-	return []map[string]any{
+	return append(ReportCommands(),
 		cmd("warn", "Выдать предупреждение", user, reason),
 		cmd("warnings", "Показать предупреждения участника", user),
 		cmd("timeout", "Отправить в таймаут", user,
@@ -46,7 +46,7 @@ func Commands() []map[string]any {
 		cmd("ban", "Забанить (кураторы)", user, reason),
 		cmd("unban", "Разбанить по id (кураторы)", map[string]any{"type": 3, "name": "user_id", "description": "id пользователя", "required": true, "max_length": 25}, reason),
 		cmd("purge", "Удалить последние сообщения в канале", map[string]any{"type": 4, "name": "count", "description": "Сколько, 2-100", "required": true, "min_value": 2, "max_value": 100}),
-	}
+	)
 }
 
 // Ranks of the staff roles. The shop roles protect their holders from
@@ -75,6 +75,7 @@ type Mod struct {
 	LogName   string // name of the moderation log channel
 	Warns     *Warns
 	Now       func() time.Time
+	Cases     func() int // numbers log entries as «Дело #N»; nil leaves them unnumbered
 	logChanID string
 }
 
@@ -259,10 +260,6 @@ func (m *Mod) purge(ctx context.Context, in interaction, countStr string) string
 // log writes one entry to the moderation log channel. A failure to log never
 // undoes the action, it only shows up in the bot's own log.
 func (m *Mod) log(ctx context.Context, guildID, what, target, by, reason, extra string) {
-	id := m.channel(ctx, guildID)
-	if id == "" {
-		return
-	}
 	fields := []map[string]any{{"name": "Кто", "value": "<@" + by + ">", "inline": true}}
 	if target != "" {
 		fields = append(fields, map[string]any{"name": "Участник", "value": "<@" + target + "> (" + target + ")", "inline": true})
@@ -273,8 +270,19 @@ func (m *Mod) log(ctx context.Context, guildID, what, target, by, reason, extra 
 	if extra != "" {
 		fields = append(fields, map[string]any{"name": "Детали", "value": extra})
 	}
-	body := map[string]any{"embeds": []map[string]any{{"title": what, "color": 0xf1c40f, "fields": fields, "timestamp": m.now().UTC().Format(time.RFC3339)}},
-		"allowed_mentions": map[string]any{"parse": []string{}}}
+	if m.Cases != nil {
+		what = fmt.Sprintf("Дело #%d · %s", m.Cases(), what)
+	}
+	m.logEmbed(ctx, guildID, embed(what, colYellow, m.now(), fields...))
+}
+
+// logEmbed posts a ready embed to the moderation log.
+func (m *Mod) logEmbed(ctx context.Context, guildID string, e map[string]any) {
+	id := m.channel(ctx, guildID)
+	if id == "" {
+		return
+	}
+	body := map[string]any{"embeds": []map[string]any{e}, "allowed_mentions": map[string]any{"parse": []string{}}}
 	_ = m.API.Do(ctx, "POST", "/channels/"+id+"/messages", body, nil)
 }
 

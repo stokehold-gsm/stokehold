@@ -299,7 +299,7 @@ func TestStaffChannelsAreVisibleOnlyToTheRightBranch(t *testing.T) {
 			t.Errorf("%s: founder and shop curator must see it", key)
 		}
 	}
-	for _, key := range []string{"mods", "log", "events", "curators"} {
+	for _, key := range []string{"mods", "log", "events", "curators", "reports", "botlog", "log-messages", "log-members", "log-voice", "log-server", "log-automod"} {
 		if has(key, RoleOperator) || has(key, RoleShopCurator) {
 			t.Errorf("%s: shop staff must not see moderation channels", key)
 		}

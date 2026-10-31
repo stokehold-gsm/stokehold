@@ -21,6 +21,7 @@ type guild struct {
 	topics  map[string]string
 	members map[string]string // user id -> JSON of the member object
 	posts   []string
+	byPath  map[string][]string // POST path -> bodies
 }
 
 func (g *guild) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -34,6 +35,10 @@ func (g *guild) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			b, _ := json.Marshal(body)
 			g.posts = append(g.posts, string(b))
+			if g.byPath == nil {
+				g.byPath = map[string][]string{}
+			}
+			g.byPath[p] = append(g.byPath[p], string(b))
 		}
 	}
 	switch {
@@ -41,7 +46,9 @@ func (g *guild) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`[{"id":"rF","name":"Founder"},{"id":"rC","name":"Curator"},{"id":"rM","name":"Moderator"},{"id":"rH","name":"Helper"},{"id":"rSC","name":"Shop Curator"},{"id":"rO","name":"Shop Operator"}]`))
 	case r.Method == "GET" && p == "/guilds/g/channels":
 		out := `[{"id":"cLog","name":"` + discordsetup.LogChannel + `"},{"id":"cCat","name":"` + discordsetup.TicketCategory + `","type":4},` +
-			`{"id":"cNew","name":"` + discordsetup.TicketNotify + `"},{"id":"cOrd","name":"` + discordsetup.TicketOrders + `"}`
+			`{"id":"cNew","name":"` + discordsetup.TicketNotify + `"},{"id":"cOrd","name":"` + discordsetup.TicketOrders + `"},` +
+			`{"id":"cRep","name":"` + discordsetup.ReportsChannel + `"},{"id":"cBot","name":"` + discordsetup.BotLogChannel + `"},{"id":"cLm","name":"` + discordsetup.LogMessages + `"},` +
+			`{"id":"cLmem","name":"` + discordsetup.LogMembers + `"},{"id":"cLv","name":"` + discordsetup.LogVoice + `"},{"id":"cLs","name":"` + discordsetup.LogServer + `"},{"id":"cLa","name":"` + discordsetup.LogAutomod + `"}`
 		for id, topic := range g.topics {
 			out += `,{"id":"` + id + `","name":"ticket-x","topic":"` + topic + `","parent_id":"cCat"}`
 		}
@@ -53,6 +60,9 @@ func (g *guild) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Write([]byte(m))
+	case r.Method == "POST" && p == "/users/@me/channels":
+		rec()
+		w.Write([]byte(`{"id":"dm1"}`))
 	case r.Method == "GET" && p == "/users/@me":
 		w.Write([]byte(`{"id":"bot"}`))
 	case r.Method == "GET":
@@ -289,7 +299,7 @@ func TestAuditLogBecomesEventLines(t *testing.T) {
 	}
 	page = `{"audit_log_entries":[{"id":"31","user_id":"bot","action_type":24},{"id":"30","user_id":"u1","target_id":"c9","action_type":12},{"id":"20","user_id":"u1","action_type":22}]}`
 	lines, err := e.Poll(context.Background(), "bot")
-	if err != nil || len(lines) != 1 || !strings.Contains(lines[0], "Удалён канал") {
+	if err != nil || len(lines) != 1 || lines[0]["title"] != "Удалён канал" {
 		t.Errorf("only the new foreign entry should be reported once: %v %v", lines, err)
 	}
 	if again, _ := e.Poll(context.Background(), "bot"); len(again) != 0 {
