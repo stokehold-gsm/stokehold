@@ -78,6 +78,7 @@ type page struct {
 	Sched       []schedRow
 	Games       []catalog.Game
 	Files       []string
+	FM          *fmView
 	FilePath    string
 	FileContent string
 	Refresh     bool
@@ -137,6 +138,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /security/2fa/enable", s.auth(s.twofaEnable))
 	mux.HandleFunc("POST /security/2fa/disable", s.auth(s.twofaDisable))
 	mux.HandleFunc("GET /monitor", s.auth(s.monitorPage))
+	s.fmRoutes(mux)
 	s.proRoutes(mux)
 	return s.protect(mux)
 }
