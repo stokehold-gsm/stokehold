@@ -36,6 +36,8 @@ type Handler struct {
 	Mod       *Mod              // slash commands; nil switches them off
 	Tickets   *Tickets          // shop tickets; nil switches them off
 	Panel     *Panel            // /servers, /server, /metrics against a Stokehold panel; nil switches them off
+	Reports   *Reports          // /report and the complaint buttons; nil switches them off
+	Logs      *Logs             // writes every command into the bot log; nil switches that off
 	Now       func() time.Time  // tests only
 
 	wg sync.WaitGroup // deferred answers still running
@@ -60,7 +62,21 @@ type interaction struct {
 		CustomID string   `json:"custom_id"`
 		Name     string   `json:"name"`
 		Options  []option `json:"options"`
+		TargetID string   `json:"target_id"` // message menu commands
+		Resolved struct {
+			Users    map[string]resolvedUser `json:"users"`
+			Messages map[string]struct {
+				Content string       `json:"content"`
+				Author  resolvedUser `json:"author"`
+			} `json:"messages"`
+		} `json:"resolved"`
 	} `json:"data"`
+}
+
+type resolvedUser struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	Bot      bool   `json:"bot"`
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -86,8 +102,25 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.deferred(w, in, h.ticket)
 			return
 		}
+		if strings.HasPrefix(in.Data.CustomID, "rep:") && h.Reports != nil {
+			h.deferred(w, in, h.Reports.press)
+			return
+		}
 		reply(w, h.component(r.Context(), in))
 	case typeCommand:
+		if h.Logs != nil {
+			h.wg.Add(1)
+			go func() {
+				defer h.wg.Done()
+				ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+				defer cancel()
+				h.Logs.Command(ctx, in)
+			}()
+		}
+		if h.Reports != nil && h.Reports.handles(in.Data.Name) {
+			h.deferred(w, in, h.Reports.run)
+			return
+		}
 		if h.Panel != nil && h.Panel.handles(in.Data.Name) {
 			h.deferred(w, in, h.Panel.run)
 			return

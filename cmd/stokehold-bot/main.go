@@ -42,6 +42,12 @@ func main() {
 		h.AppID = app
 		h.Mod = &discordbot.Mod{API: api, LogName: discordsetup.LogChannel, Warns: warns}
 		h.Tickets = &discordbot.Tickets{Category: discordsetup.TicketCategory, Notify: discordsetup.TicketNotify, Orders: discordsetup.TicketOrders}
+		if guild := os.Getenv("DISCORD_GUILD_ID"); guild != "" {
+			sink := &discordbot.Sink{API: api, GuildID: guild}
+			h.Reports = &discordbot.Reports{API: api, Sink: sink, Mod: h.Mod, Channel: discordsetup.ReportsChannel, Path: os.Getenv("STOKEHOLD_BOT_REPORTS")}
+			h.Mod.Cases = h.Reports.NextCase
+			h.Logs = &discordbot.Logs{Sink: sink, Log: log.Printf}
+		}
 	}
 	// A community runs its own bot next to its own panel: the panel address and an API token switch the server commands on.
 	if u, t := os.Getenv("STOKEHOLD_PANEL_URL"), os.Getenv("STOKEHOLD_PANEL_TOKEN"); u != "" && t != "" {
@@ -52,8 +58,15 @@ func main() {
 		h.Panel = &discordbot.Panel{API: api, URL: u, Token: t, ControlRole: role, HTTP: &http.Client{Timeout: 50 * time.Second}}
 	}
 	if guild := os.Getenv("DISCORD_GUILD_ID"); guild != "" {
-		ev := &discordbot.Events{API: api, GuildID: guild, Channel: discordsetup.EventsChannel}
+		// The detailed logs need a gateway connection; STOKEHOLD_GATEWAY=off keeps only the audit-log events.
+		gateway := os.Getenv("STOKEHOLD_GATEWAY") != "off" && h.Logs != nil
+		ev := &discordbot.Events{API: api, GuildID: guild, Channel: discordsetup.EventsChannel, GatewayOn: gateway}
 		go ev.Run(context.Background(), log.Printf)
+		if gateway {
+			gw := &discordbot.Gateway{Token: token, GuildID: guild, OnEvent: h.Logs.Handle, Logf: log.Printf}
+			h.Logs.NoContent = func() bool { return !gw.Granted.Load() }
+			go gw.Run(context.Background())
+		}
 	}
 
 	mux := http.NewServeMux()

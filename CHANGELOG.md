@@ -2,6 +2,11 @@
 
 Format follows Keep a Changelog. Versions follow semver once there is a first release.
 
+## Unreleased
+
+- Discord: detailed logs as embeds from a gateway connection (messages with before and after, members, voice, invites, threads, AutoMod), bot commands and audit events as embeds, numbered moderation cases.
+- Discord: complaint system: /report, a message menu command, and a complaint card with take, warn, resolve and reject buttons.
+
 ## 0.1.0 - 2026-10-31
 
 - Monitoring (CPU, memory, disk, load, server states and players), REST API with tokens, several machines through stokehold-agent, Factorio mod list, Discord webhook and bot commands, public status page. Features beyond monitoring are licence-gated (ADR 0006).
