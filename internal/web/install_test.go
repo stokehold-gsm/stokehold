@@ -102,7 +102,7 @@ func TestInstallRunsThreeStepsAndRegistersTheServer(t *testing.T) {
 		t.Errorf("stored: %+v", list)
 	}
 	page := r.do("GET", "/jobs/1", nil, nil).Body.String()
-	if !strings.Contains(page, "Done.") || strings.Contains(page, `http-equiv="refresh"`) {
+	if !strings.Contains(page, "Server installed") || strings.Contains(page, `http-equiv="refresh"`) {
 		t.Error("a finished job page must say so and stop refreshing")
 	}
 	if r.st.AuditCount("server.install") != 1 {

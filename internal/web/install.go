@@ -31,6 +31,7 @@ type job struct {
 	Status string // running | done | failed
 	Log    []string
 	Start  time.Time
+	End    time.Time
 }
 
 func (t *jobTracker) begin(name, game, user string) (*job, bool) {
@@ -61,6 +62,7 @@ func (t *jobTracker) finish(j *job, ok bool) {
 	if !ok {
 		j.Status = "failed"
 	}
+	j.End = time.Now()
 	t.running = false
 	t.mu.Unlock()
 }
@@ -251,5 +253,11 @@ func (s *Server) jobPage(w http.ResponseWriter, r *http.Request, p *page) {
 	p.ServerName, p.Action = j.Name, j.Status
 	p.Result = strings.Join(j.Log, "\n")
 	p.Refresh = j.Status == "running"
+	p.Steps = jobSteps(p.Lang, j)
+	p.Pct = jobProgress(p.Steps, j.Status)
+	p.Elapsed = elapsed(j, time.Now())
+	if j.Status == "failed" {
+		p.JobError = jobFailure(p.Steps, j)
+	}
 	s.render(w, "job", p, http.StatusOK)
 }

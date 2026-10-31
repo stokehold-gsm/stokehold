@@ -251,10 +251,15 @@ func (s *Store) SetTOTP(userID int64, secret string, enabled bool) error {
 // CreateSession returns the cookie token and the CSRF token. Only hashes and
 // the CSRF value are stored.
 func (s *Store) CreateSession(userID int64) (token, csrf string, err error) {
+	return s.CreateSessionTTL(userID, SessionTTL)
+}
+
+// CreateSessionTTL is CreateSession with a lifetime the owner chose.
+func (s *Store) CreateSessionTTL(userID int64, ttl time.Duration) (token, csrf string, err error) {
 	token, hash := auth.NewToken()
 	csrf, _ = auth.NewToken()
 	_, err = s.db.Exec(`insert into sessions(user_id, token_hash, csrf, created_at, expires_at) values(?,?,?,?,?)`,
-		userID, hash, csrf, now(), now()+int64(SessionTTL.Seconds()))
+		userID, hash, csrf, now(), now()+int64(ttl.Seconds()))
 	return
 }
 

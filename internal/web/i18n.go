@@ -130,6 +130,9 @@ func lang(w http.ResponseWriter, r *http.Request) string {
 	if c, err := r.Cookie("lang"); err == nil && (c.Value == "ru" || c.Value == "en") {
 		return c.Value
 	}
+	if d, _ := defaultLang.Load().(string); d == "ru" || d == "en" { // the owner's choice for visitors without a cookie
+		return d
+	}
 	if strings.HasPrefix(strings.ToLower(strings.TrimSpace(r.Header.Get("Accept-Language"))), "ru") {
 		return "ru"
 	}

@@ -21,8 +21,41 @@
     if (here) a.setAttribute('aria-current', 'page');
   });
 
+  // Theme: auto -> light -> dark. The server reads the same cookie, so the next page paints right.
+  var NEXT = { auto: 'light', light: 'dark', dark: 'auto' };
+  function setTheme(btn, theme) {
+    var root = doc.documentElement;
+    root.classList.add('theming');
+    setTimeout(function () { root.classList.remove('theming'); }, 450);
+    var secure = location.protocol === 'https:' ? '; secure' : '';
+    if (theme === 'auto') {
+      root.removeAttribute('data-theme');
+      doc.cookie = 'theme=; path=/; max-age=0; samesite=lax' + secure;
+    } else {
+      root.setAttribute('data-theme', theme);
+      doc.cookie = 'theme=' + theme + '; path=/; max-age=31536000; samesite=lax' + secure;
+    }
+    btn.dataset.themeCur = theme;
+    btn.setAttribute('href', '/theme?set=' + NEXT[theme]);
+    var label = btn.getAttribute('data-l-' + theme);
+    if (label) { btn.setAttribute('aria-label', label); btn.setAttribute('title', label); }
+  }
+
+  // "..." menus are <details>: close one when something else is clicked or Esc is pressed.
+  doc.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    doc.querySelectorAll('details.menu[open]').forEach(function (d) { d.removeAttribute('open'); });
+  });
+  doc.addEventListener('toggle', function (e) {
+    if (!e.target.matches || !e.target.matches('details.menu') || !e.target.open) return;
+    doc.querySelectorAll('details.menu[open]').forEach(function (d) { if (d !== e.target) d.removeAttribute('open'); });
+  }, true);
+
   doc.addEventListener('click', function (e) {
+    doc.querySelectorAll('details.menu[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); });
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    var th = e.target.closest && e.target.closest('a.theme');
+    if (th) { e.preventDefault(); setTheme(th, NEXT[th.dataset.themeCur] || 'light'); return; }
     var a = e.target.closest && e.target.closest('a[href]');
     if (!a || a.target || a.hasAttribute('download') || a.origin !== location.origin) return;
     var sw = a.closest('.lang');

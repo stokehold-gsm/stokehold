@@ -39,6 +39,10 @@ type Server struct {
 	Entitlement Entitlements // nil means Free only
 	Distro      string       // e.g. ubuntu-22.04, selects the LinuxGSM package list
 
+	Version string // shown on the settings page
+	DataDir string
+	TLSAddr string // the direct HTTPS listener, empty when off
+
 	Metrics    *metrics.Collector // nil: no monitoring
 	HookClient *http.Client       // nil: a default client; tests replace it
 	status     statusCache
@@ -74,7 +78,22 @@ type page struct {
 	Info             string
 	CanChangeLicense bool
 	CurPlan          string
-	PlanRows         []planRowView
+
+	Theme, ThemeNext string // set by render from the cookie
+	Rows             []srvRow
+	Steps            []jobStep
+	Pct              int
+	Elapsed          string
+	JobError         string
+	Need2FA          bool // the owner requires two-factor and this user has none yet
+
+	SetRequire2FA   bool
+	SetSessionHours int
+	SetDefaultLang  string
+	PanelVersion    string
+	DataDir         string
+	HTTPSOn         bool
+	PlanRows        []planRowView
 
 	UserRows    []store.UserRow
 	Sched       []schedRow
@@ -101,6 +120,7 @@ func New(st *store.Store, secure, trustProxy bool, setupToken string) *Server {
 		"t":   func(p page, key string) string { return tr(p.Lang, key) },
 		"pro": func() bool { return proBuild },
 	}).ParseFS(templatesFS, "templates/*.html"))
+	s.loadSettings()
 	return s
 }
 
@@ -131,6 +151,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /users/create", s.auth(s.userCreate))
 	mux.HandleFunc("POST /users/{id}/{action}", s.auth(s.userAction))
 	mux.HandleFunc("POST /security/password", s.auth(s.changePassword))
+	mux.HandleFunc("GET /theme", s.themeSet)
+	mux.HandleFunc("GET /settings", s.auth(s.settingsPage))
+	mux.HandleFunc("POST /settings", s.auth(s.settingsSave))
 	mux.HandleFunc("GET /license", s.auth(s.licensePage))
 	mux.HandleFunc("POST /license/activate", s.auth(s.licenseActivate))
 	mux.HandleFunc("POST /license/renew", s.auth(s.licenseRenew))
@@ -157,7 +180,7 @@ func (s *Server) protect(next http.Handler) http.Handler {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(&themeWriter{ResponseWriter: w, theme: themeOf(r)}, r)
 	})
 }
 
@@ -196,21 +219,29 @@ func (s *Server) auth(h handler) http.HandlerFunc {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
-		h(w, r, &page{Lang: lang(w, r), User: u, CSRF: csrf})
+		need2FA := s.require2FA() && !u.TOTPEnabled
+		if need2FA && !without2FAOK(r.URL.Path) {
+			http.Redirect(w, r, "/security", http.StatusSeeOther)
+			return
+		}
+		h(w, r, &page{Lang: lang(w, r), User: u, CSRF: csrf, Need2FA: need2FA})
 	}
 }
 
 func (s *Server) render(w http.ResponseWriter, name string, p *page, status int) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
-	if err := s.tmpl.ExecuteTemplate(w, name, *p); err != nil {
+	pp := *p
+	pp.Theme = themeFor(w)
+	pp.ThemeNext = themeNext(pp.Theme)
+	if err := s.tmpl.ExecuteTemplate(w, name, pp); err != nil {
 		log.Printf("render %s: %v", name, err)
 	}
 }
 
-func (s *Server) setCookie(w http.ResponseWriter, token string) {
+func (s *Server) setCookie(w http.ResponseWriter, token string, ttl time.Duration) {
 	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: token, Path: "/", HttpOnly: true, Secure: s.Secure,
-		SameSite: http.SameSiteStrictMode, MaxAge: int(store.SessionTTL.Seconds())})
+		SameSite: http.SameSiteStrictMode, MaxAge: int(ttl.Seconds())})
 }
 
 func (s *Server) clearCookie(w http.ResponseWriter) {
@@ -235,6 +266,8 @@ func (s *Server) clientIP(r *http.Request) string {
 func (s *Server) dashboard(w http.ResponseWriter, r *http.Request, p *page) {
 	p.Servers, _ = s.Store.Servers()
 	s.fillNodes(p)
+	p.Statuses = s.Statuses()
+	p.Rows = srvRows(p.Servers, p.Statuses, p.NodeNames)
 	p.CanControl = canControl(p.User.Role)
 	p.Actions = actionLabels
 	s.fillLicense(p)
@@ -273,12 +306,13 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		s.render(w, "login", p, http.StatusUnauthorized)
 		return
 	}
-	token, _, err := s.Store.CreateSession(u.ID)
+	ttl := s.sessionTTL()
+	token, _, err := s.Store.CreateSessionTTL(u.ID, ttl)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	s.setCookie(w, token)
+	s.setCookie(w, token, ttl)
 	s.Store.Audit(u.ID, "login.ok", "")
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
