@@ -25,6 +25,7 @@ type Schedule struct {
 	ServerName string
 	LinuxUser  string
 	Game       string
+	NodeID     int64
 }
 
 func init() {
@@ -83,7 +84,7 @@ func (s *Store) DeleteSchedule(id int64) error {
 	return nil
 }
 
-const schedCols = `sc.id, sc.server_id, sc.cmd, sc.kind, sc.value, sc.enabled, sc.last_run, sc.last_ok, sc.last_note, sv.name, sv.linux_user, sv.game`
+const schedCols = `sc.id, sc.server_id, sc.cmd, sc.kind, sc.value, sc.enabled, sc.last_run, sc.last_ok, sc.last_note, sv.name, sv.linux_user, sv.game, sv.node_id`
 
 func (s *Store) querySchedules(where string, args ...any) ([]Schedule, error) {
 	rows, err := s.db.Query(`select `+schedCols+` from schedules sc join servers sv on sv.id=sc.server_id `+where, args...)
@@ -95,7 +96,7 @@ func (s *Store) querySchedules(where string, args ...any) ([]Schedule, error) {
 	for rows.Next() {
 		var x Schedule
 		var en, ok int
-		if err := rows.Scan(&x.ID, &x.ServerID, &x.Cmd, &x.Kind, &x.Value, &en, &x.LastRun, &ok, &x.LastNote, &x.ServerName, &x.LinuxUser, &x.Game); err != nil {
+		if err := rows.Scan(&x.ID, &x.ServerID, &x.Cmd, &x.Kind, &x.Value, &en, &x.LastRun, &ok, &x.LastNote, &x.ServerName, &x.LinuxUser, &x.Game, &x.NodeID); err != nil {
 			return nil, err
 		}
 		x.Enabled, x.LastOK = en == 1, ok == 1

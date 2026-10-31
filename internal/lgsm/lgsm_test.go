@@ -86,3 +86,13 @@ func TestRunExecutes(t *testing.T) {
 		t.Fatalf("%q %v", out, err)
 	}
 }
+
+func TestParsePlayers(t *testing.T) {
+	on, max, ok := ParsePlayers("Status:   STARTED\n> Players:  3/20\n")
+	if !ok || on != 3 || max != 20 {
+		t.Errorf("got %d/%d %v", on, max, ok)
+	}
+	if _, _, ok := ParsePlayers("Status:   STARTED\n"); ok {
+		t.Error("no players line must give ok=false")
+	}
+}

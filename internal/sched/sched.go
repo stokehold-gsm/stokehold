@@ -19,7 +19,8 @@ type Store interface {
 	Audit(userID int64, action, detail string)
 }
 
-type HelperFunc func(helper.Request) (helper.Response, error)
+// HelperFunc sends a request to the helper of a node (0 is this machine).
+type HelperFunc func(node int64, r helper.Request) (helper.Response, error)
 
 type Runner struct {
 	S      Store
@@ -48,7 +49,7 @@ func (r *Runner) Tick() int {
 		return 0
 	}
 	for _, x := range due {
-		resp, err := r.Helper(helper.Request{Op: "run", User: x.LinuxUser, Game: x.Game, Cmd: x.Cmd})
+		resp, err := r.Helper(x.NodeID, helper.Request{Op: "run", User: x.LinuxUser, Game: x.Game, Cmd: x.Cmd})
 		ok, note := err == nil && resp.OK, "OK"
 		switch {
 		case err != nil:

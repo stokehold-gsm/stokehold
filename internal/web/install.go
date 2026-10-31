@@ -27,6 +27,7 @@ type job struct {
 	Name   string
 	Game   string
 	User   string
+	Node   int64
 	Status string // running | done | failed
 	Log    []string
 	Start  time.Time
@@ -114,6 +115,7 @@ func (s *Server) newServerForm(w http.ResponseWriter, r *http.Request, p *page) 
 		s.denied(w, p)
 		return
 	}
+	s.fillNodes(p)
 	p.Games = catalog.Games()
 	s.render(w, "newserver", p, http.StatusOK)
 }
@@ -123,6 +125,7 @@ func (s *Server) newServer(w http.ResponseWriter, r *http.Request, p *page) {
 		s.denied(w, p)
 		return
 	}
+	s.fillNodes(p)
 	p.Games = catalog.Games()
 	fail := func(key string, status int) {
 		p.Error = tr(p.Lang, key)
@@ -156,11 +159,17 @@ func (s *Server) newServer(w http.ResponseWriter, r *http.Request, p *page) {
 		}
 		return false
 	})
+	node, ok := s.pickNode(r)
+	if !ok {
+		fail("node_bad", http.StatusBadRequest)
+		return
+	}
 	j, started := s.jobs.begin(name, game.Script, user)
 	if !started {
 		fail("install_busy", http.StatusConflict)
 		return
 	}
+	j.Node = node
 	s.Store.Audit(p.User.ID, "server.install", name+" "+game.Script)
 	go s.runInstall(j, game)
 	http.Redirect(w, r, "/jobs/"+strconv.FormatInt(j.ID, 10), http.StatusSeeOther)
@@ -172,7 +181,7 @@ func (s *Server) runInstall(j *job, game catalog.Game) {
 	t := &s.jobs
 	step := func(n int, what string, req helper.Request) bool {
 		t.logf(j, "[%d/3] %s ...", n, what)
-		resp, err := s.callHelper(req)
+		resp, err := s.callHelperOn(j.Node, req)
 		switch {
 		case err != nil:
 			t.logf(j, "    failed: %v", err)
@@ -207,7 +216,7 @@ func (s *Server) runInstall(j *job, game catalog.Game) {
 		t.finish(j, false)
 		return
 	}
-	if _, err := s.Store.AddServer(store.Server{Name: j.Name, Game: game.Script, LinuxUser: j.User, Dir: "/home/" + j.User, Mode: "managed"}); err != nil {
+	if _, err := s.Store.AddServer(store.Server{Name: j.Name, Game: game.Script, LinuxUser: j.User, Dir: "/home/" + j.User, Mode: "managed", NodeID: j.Node}); err != nil {
 		t.logf(j, "installed, but could not register the server: %v", err)
 		t.finish(j, false)
 		return

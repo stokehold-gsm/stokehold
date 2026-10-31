@@ -23,11 +23,22 @@ var actionLabels = []string{"details", "start", "stop", "restart", "backup", "ch
 
 func canControl(role string) bool { return role == store.RoleOwner || role == store.RoleAdmin }
 
-func (s *Server) callHelper(r helper.Request) (helper.Response, error) {
-	if s.Helper == nil {
-		return helper.Response{}, errors.New("helper is not configured")
+func (s *Server) callHelper(r helper.Request) (helper.Response, error) { return s.callHelperOn(0, r) }
+
+// callHelperOn sends the request to this machine's helper, or to the agent of
+// node when node is not 0.
+func (s *Server) callHelperOn(node int64, r helper.Request) (helper.Response, error) {
+	if node == 0 {
+		if s.Helper == nil {
+			return helper.Response{}, errors.New("helper is not configured")
+		}
+		return s.Helper(r)
 	}
-	return s.Helper(r)
+	n, err := s.Store.NodeByID(node)
+	if err != nil {
+		return helper.Response{}, err
+	}
+	return helper.Remote{Addr: n.Addr, Fingerprint: n.Fingerprint, Secret: n.Secret}.Call(r)
 }
 
 // режем вывод скрипта, чтобы страница не пухла
@@ -49,6 +60,7 @@ func (s *Server) addForm(w http.ResponseWriter, r *http.Request, p *page) {
 		s.denied(w, p)
 		return
 	}
+	s.fillNodes(p)
 	s.render(w, "add", p, http.StatusOK)
 }
 
@@ -59,14 +71,21 @@ func (s *Server) find(w http.ResponseWriter, r *http.Request, p *page) {
 		s.denied(w, p)
 		return
 	}
+	s.fillNodes(p)
+	node, ok := s.pickNode(r)
+	if !ok {
+		p.Error = tr(p.Lang, "node_bad")
+		s.render(w, "add", p, http.StatusBadRequest)
+		return
+	}
 	user := strings.TrimSpace(r.PostFormValue("user"))
-	resp, err := s.callHelper(helper.Request{Op: "discover", User: user})
+	resp, err := s.callHelperOn(node, helper.Request{Op: "discover", User: user})
 	if err != nil || !resp.OK {
 		p.Error = tr(p.Lang, "find_failed")
 		s.render(w, "add", p, http.StatusBadRequest)
 		return
 	}
-	p.AddUser = user
+	p.AddUser, p.NodeID = user, node
 	for _, name := range strings.Split(resp.Out, "\n") {
 		if name = strings.TrimSpace(name); lgsm.ValidName(name) {
 			p.Found = append(p.Found, name)
@@ -83,13 +102,20 @@ func (s *Server) addServer(w http.ResponseWriter, r *http.Request, p *page) {
 		s.denied(w, p)
 		return
 	}
+	s.fillNodes(p)
 	user, game := strings.TrimSpace(r.PostFormValue("user")), strings.TrimSpace(r.PostFormValue("game"))
 	name := strings.TrimSpace(r.PostFormValue("name"))
 	if name == "" || utf8.RuneCountInString(name) > 60 {
 		name = game
 	}
+	node, ok := s.pickNode(r)
+	if !ok {
+		p.Error = tr(p.Lang, "node_bad")
+		s.render(w, "add", p, http.StatusBadRequest)
+		return
+	}
 	// Never trust the form: ask the helper again whether this account really has this server.
-	resp, err := s.callHelper(helper.Request{Op: "discover", User: user})
+	resp, err := s.callHelperOn(node, helper.Request{Op: "discover", User: user})
 	found := false
 	if err == nil && resp.OK {
 		for _, n := range strings.Split(resp.Out, "\n") {
@@ -105,7 +131,7 @@ func (s *Server) addServer(w http.ResponseWriter, r *http.Request, p *page) {
 	if strings.HasPrefix(user, "gs_") {
 		mode = "managed"
 	}
-	_, err = s.Store.AddServer(store.Server{Name: name, Game: game, LinuxUser: user, Dir: "/home/" + user, Mode: mode})
+	_, err = s.Store.AddServer(store.Server{Name: name, Game: game, LinuxUser: user, Dir: "/home/" + user, Mode: mode, NodeID: node})
 	if errors.Is(err, store.ErrExists) {
 		p.Error = tr(p.Lang, "server_exists")
 		s.render(w, "add", p, http.StatusConflict)
@@ -146,7 +172,7 @@ func (s *Server) runAction(w http.ResponseWriter, r *http.Request, p *page) {
 	}
 	// Backups and updates can take minutes; the server-wide write timeout is short.
 	http.NewResponseController(w).SetWriteDeadline(time.Now().Add(12 * time.Minute))
-	resp, err := s.callHelper(helper.Request{Op: "run", User: sv.LinuxUser, Game: sv.Game, Cmd: cmd})
+	resp, err := s.callHelperOn(sv.NodeID, helper.Request{Op: "run", User: sv.LinuxUser, Game: sv.Game, Cmd: cmd})
 	s.Store.Audit(p.User.ID, "server.run", sv.Name+" "+cmd)
 	p.ServerName, p.Action = sv.Name, cmd
 	switch {
@@ -159,4 +185,10 @@ func (s *Server) runAction(w http.ResponseWriter, r *http.Request, p *page) {
 		p.Result = trim(resp.Out)
 	}
 	s.render(w, "result", p, http.StatusOK)
+}
+
+// HelperOn is what the scheduler and the status loop call: it picks the local
+// helper or the agent of the node the server lives on.
+func (s *Server) HelperOn(node int64, r helper.Request) (helper.Response, error) {
+	return s.callHelperOn(node, r)
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/stokehold-gsm/stokehold/internal/entitlement"
 	"github.com/stokehold-gsm/stokehold/internal/helper"
 	"github.com/stokehold-gsm/stokehold/internal/lgsm"
+	"github.com/stokehold-gsm/stokehold/internal/metrics"
 	"github.com/stokehold-gsm/stokehold/internal/sched"
 	"github.com/stokehold-gsm/stokehold/internal/store"
 	"github.com/stokehold-gsm/stokehold/internal/web"
@@ -113,9 +114,14 @@ func serve(args []string) {
 	}
 	panel := web.New(st, *secure, *proxy, setupToken)
 	panel.Entitlement = mgr
-	runner := &sched.Runner{S: st, Helper: sched.HelperFunc(panel.Helper)}
-	go runner.Loop(context.Background(), 30*time.Second)
 	panel.Helper = func(r helper.Request) (helper.Response, error) { return helper.Call(*helperSock, r) }
+	panel.Metrics = metrics.New(60)
+	stop := make(chan struct{})
+	go panel.Metrics.Run(stop, time.Minute)
+	// The helper must be set before the loops start: they copy it.
+	runner := &sched.Runner{S: st, Helper: panel.HelperOn}
+	go runner.Loop(context.Background(), 30*time.Second)
+	go panel.StatusLoop(context.Background(), time.Minute)
 	srv := &http.Server{
 		Addr:              *listen,
 		Handler:           panel.Handler(),

@@ -49,3 +49,7 @@ form.inline { display: inline; }
 pre { white-space: pre-wrap; word-break: break-word; background: var(--bg); border: 1px solid var(--line); padding: 10px; max-height: 60vh; overflow: auto; }
 
 @media (max-width: 560px) { header { padding: 10px 14px; } main { margin-top: 14px; } .card { padding: 14px; } td:last-child { white-space: normal; } }
+
+.spark { width: 120px; height: 30px; vertical-align: middle; }
+.spark polyline { fill: none; stroke: var(--ember); stroke-width: 1.5; }
+label input[type=checkbox] { width: auto; margin-right: 6px; }

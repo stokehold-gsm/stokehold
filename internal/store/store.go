@@ -49,6 +49,7 @@ type Server struct {
 	LinuxUser string
 	Dir       string
 	Mode      string // managed | adopted
+	NodeID    int64  // 0 is this machine
 }
 
 // Each entry runs once, in order. Never edit a shipped migration, add a new one.
@@ -282,8 +283,8 @@ func (s *Store) AuditCount(action string) (n int) {
 }
 
 func (s *Store) AddServer(sv Server) (int64, error) {
-	res, err := s.db.Exec(`insert into servers(name, game, linux_user, dir, mode, created_at) values(?,?,?,?,?,?)`,
-		sv.Name, sv.Game, sv.LinuxUser, sv.Dir, sv.Mode, now())
+	res, err := s.db.Exec(`insert into servers(name, game, linux_user, dir, mode, node_id, created_at) values(?,?,?,?,?,?,?)`,
+		sv.Name, sv.Game, sv.LinuxUser, sv.Dir, sv.Mode, sv.NodeID, now())
 	if err != nil {
 		if isUnique(err) {
 			return 0, ErrExists
@@ -294,7 +295,7 @@ func (s *Store) AddServer(sv Server) (int64, error) {
 }
 
 func (s *Store) Servers() ([]Server, error) {
-	rows, err := s.db.Query(`select id, name, game, linux_user, dir, mode from servers order by name`)
+	rows, err := s.db.Query(`select id, name, game, linux_user, dir, mode, node_id from servers order by name`)
 	if err != nil {
 		return nil, err
 	}
@@ -302,7 +303,7 @@ func (s *Store) Servers() ([]Server, error) {
 	var out []Server
 	for rows.Next() {
 		var sv Server
-		if err := rows.Scan(&sv.ID, &sv.Name, &sv.Game, &sv.LinuxUser, &sv.Dir, &sv.Mode); err != nil {
+		if err := rows.Scan(&sv.ID, &sv.Name, &sv.Game, &sv.LinuxUser, &sv.Dir, &sv.Mode, &sv.NodeID); err != nil {
 			return nil, err
 		}
 		out = append(out, sv)

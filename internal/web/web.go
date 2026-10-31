@@ -16,8 +16,10 @@ import (
 	"github.com/stokehold-gsm/stokehold/internal/catalog"
 	"github.com/stokehold-gsm/stokehold/internal/entitlement"
 	"github.com/stokehold-gsm/stokehold/internal/helper"
+	"github.com/stokehold-gsm/stokehold/internal/metrics"
 	"github.com/stokehold-gsm/stokehold/internal/store"
 	"github.com/stokehold-gsm/stokehold/pkg/auth"
+	"github.com/stokehold-gsm/stokehold/pkg/license"
 	"github.com/stokehold-gsm/stokehold/pkg/ratelimit"
 )
 
@@ -37,6 +39,10 @@ type Server struct {
 	Helper      HelperFunc
 	Entitlement Entitlements // nil means Free only
 	Distro      string       // e.g. ubuntu-22.04, selects the LinuxGSM package list
+
+	Metrics    *metrics.Collector // nil: no monitoring
+	HookClient *http.Client       // nil: a default client; tests replace it
+	status     statusCache
 
 	jobs jobTracker
 	Now  func() time.Time
@@ -79,6 +85,18 @@ type page struct {
 	ServerID    int64
 	NewEmail    string
 	NewPassword string
+
+	Nodes        []store.Node
+	NodeNames    map[int64]string
+	NodeID       int64
+	Locked       string
+	APITokens    []store.APIToken
+	NewToken     string
+	Mon          monView
+	Statuses     map[int64]ServerStatus
+	Hook         string
+	StatusPublic bool
+	Mods         []modEntry
 }
 
 func New(st *store.Store, secure, trustProxy bool, setupToken string) *Server {
@@ -123,6 +141,22 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /security/2fa/start", s.auth(s.twofaStart))
 	mux.HandleFunc("POST /security/2fa/enable", s.auth(s.twofaEnable))
 	mux.HandleFunc("POST /security/2fa/disable", s.auth(s.twofaDisable))
+	mux.HandleFunc("GET /monitor", s.auth(s.monitorPage))
+	mux.HandleFunc("GET /nodes", s.auth(s.gated(license.FeatureMultiNode, s.nodesPage)))
+	mux.HandleFunc("POST /nodes", s.auth(s.gated(license.FeatureMultiNode, s.nodeAdd)))
+	mux.HandleFunc("POST /nodes/{id}/delete", s.auth(s.gated(license.FeatureMultiNode, s.nodeDelete)))
+	mux.HandleFunc("GET /tokens", s.auth(s.gated(license.FeatureAPI, s.tokensPage)))
+	mux.HandleFunc("POST /tokens", s.auth(s.gated(license.FeatureAPI, s.tokenCreate)))
+	mux.HandleFunc("POST /tokens/{id}/delete", s.auth(s.gated(license.FeatureAPI, s.tokenDelete)))
+	mux.HandleFunc("GET /integrations", s.auth(s.integrationsPage))
+	mux.HandleFunc("POST /integrations", s.auth(s.integrationsSave))
+	mux.HandleFunc("GET /servers/{id}/mods", s.auth(s.gated(license.FeatureMods, s.modsPage)))
+	mux.HandleFunc("POST /servers/{id}/mods", s.auth(s.gated(license.FeatureMods, s.modsToggle)))
+	mux.HandleFunc("GET /status", s.statusPublic)
+	mux.HandleFunc("GET /api/v1/servers", s.apiAuth(s.apiServers))
+	mux.HandleFunc("GET /api/v1/servers/{id}", s.apiAuth(s.apiServerOne))
+	mux.HandleFunc("POST /api/v1/servers/{id}/{action}", s.apiAuth(s.apiAction))
+	mux.HandleFunc("GET /api/v1/metrics", s.apiAuth(s.apiMetrics))
 	return s.protect(mux)
 }
 
@@ -217,6 +251,7 @@ func (s *Server) clientIP(r *http.Request) string {
 
 func (s *Server) dashboard(w http.ResponseWriter, r *http.Request, p *page) {
 	p.Servers, _ = s.Store.Servers()
+	s.fillNodes(p)
 	p.CanControl = canControl(p.User.Role)
 	p.Actions = actionLabels
 	s.fillLicense(p)

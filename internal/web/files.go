@@ -22,7 +22,7 @@ func (s *Server) filesPage(w http.ResponseWriter, r *http.Request, p *page) {
 		return
 	}
 	p.ServerName, p.ServerID = sv.Name, sv.ID
-	resp, err := s.callHelper(helper.Request{Op: "files", User: sv.LinuxUser})
+	resp, err := s.callHelperOn(sv.NodeID, helper.Request{Op: "files", User: sv.LinuxUser})
 	if err != nil || !resp.OK {
 		p.Error = tr(p.Lang, "helper_down")
 	} else {
@@ -50,7 +50,7 @@ func (s *Server) editPage(w http.ResponseWriter, r *http.Request, p *page) {
 		return
 	}
 	p.ServerName, p.ServerID, p.FilePath = sv.Name, sv.ID, path
-	resp, err := s.callHelper(helper.Request{Op: "read-file", User: sv.LinuxUser, Path: path})
+	resp, err := s.callHelperOn(sv.NodeID, helper.Request{Op: "read-file", User: sv.LinuxUser, Path: path})
 	switch {
 	case err != nil:
 		p.Error = tr(p.Lang, "helper_down")
@@ -84,7 +84,7 @@ func (s *Server) editSave(w http.ResponseWriter, r *http.Request, p *page) {
 		s.render(w, "edit", p, http.StatusRequestEntityTooLarge)
 		return
 	}
-	resp, err := s.callHelper(helper.Request{Op: "write-file", User: sv.LinuxUser, Path: path, Content: content})
+	resp, err := s.callHelperOn(sv.NodeID, helper.Request{Op: "write-file", User: sv.LinuxUser, Path: path, Content: content})
 	if err != nil || !resp.OK {
 		p.Error = tr(p.Lang, "file_failed")
 		if err != nil {

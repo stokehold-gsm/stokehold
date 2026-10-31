@@ -29,7 +29,7 @@ func newRig(t *testing.T) *rig {
 	}
 	t.Cleanup(func() { st.Close() })
 	g := &rig{t: t, st: st, now: time.Date(2026, 11, 10, 12, 0, 0, 0, time.UTC), resp: helper.Response{OK: true}}
-	g.r = &Runner{S: st, Now: func() time.Time { return g.now }, Helper: func(q helper.Request) (helper.Response, error) {
+	g.r = &Runner{S: st, Now: func() time.Time { return g.now }, Helper: func(_ int64, q helper.Request) (helper.Response, error) {
 		g.calls = append(g.calls, q)
 		return g.resp, g.err
 	}}
@@ -119,7 +119,7 @@ func TestNoHelperMeansNothingRuns(t *testing.T) {
 		t.Errorf("ran %d without a helper", n)
 	}
 	// and nothing was marked as run, so it fires once the helper is back
-	g.r.Helper = func(helper.Request) (helper.Response, error) { return helper.Response{OK: true}, nil }
+	g.r.Helper = func(int64, helper.Request) (helper.Response, error) { return helper.Response{OK: true}, nil }
 	if n := g.r.Tick(); n != 1 {
 		t.Errorf("after the helper returned: %d", n)
 	}

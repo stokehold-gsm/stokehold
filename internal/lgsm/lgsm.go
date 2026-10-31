@@ -110,3 +110,17 @@ func ParseCheckUpdate(out string) (Update, error) {
 
 func ValidName(name string) bool   { return nameRE.MatchString(name) }
 func ValidCommand(cmd string) bool { return allowed[cmd] }
+
+var playersRE = regexp.MustCompile(`(?mi)^[>\s]*(?:Current )?Players:\s*(\d+)\s*/\s*(\d+)`)
+
+// ParsePlayers reads the "Players: 3/20" line that LinuxGSM prints for games
+// with a query port. Games without one print nothing, so ok is false.
+func ParsePlayers(details string) (online, max int, ok bool) {
+	m := playersRE.FindStringSubmatch(Clean(details))
+	if m == nil {
+		return 0, 0, false
+	}
+	fmt.Sscan(m[1], &online)
+	fmt.Sscan(m[2], &max)
+	return online, max, true
+}

@@ -14,9 +14,11 @@
     {{if .User}}
       <span class="muted">{{.User.Email}} ({{.User.Role}})</span>
       <a href="/">{{t . "servers"}}</a>
+      <a href="/monitor">{{t . "monitor"}}</a>
       <a href="/security">{{t . "security"}}</a>
       <a href="/license">{{t . "license"}}</a>
-      {{if eq .User.Role "owner"}}<a href="/users">{{t . "users"}}</a>{{end}}
+      {{if eq .User.Role "owner"}}<a href="/users">{{t . "users"}}</a> <a href="/nodes">{{t . "nodes"}}</a> <a href="/integrations">{{t . "integrations"}}</a>{{end}}
+      <a href="/tokens">{{t . "tokens"}}</a>
       <form class="inline" method="post" action="/logout">
         <input type="hidden" name="csrf" value="{{.CSRF}}">
         <button class="link" type="submit">{{t . "signout"}}</button>
@@ -68,12 +70,12 @@
   {{if .Servers}}
   <table>
     <tr><th>{{t . "name"}}</th><th>{{t . "game"}}</th><th>{{t . "mode"}}</th><th></th></tr>
-    {{range $srv := .Servers}}<tr><td>{{$srv.Name}}</td><td>{{$srv.Game}}</td><td>{{$srv.Mode}}</td><td>
+    {{range $srv := .Servers}}<tr><td>{{$srv.Name}}{{with index $.NodeNames $srv.NodeID}} <span class="muted">({{.}})</span>{{end}}</td><td>{{$srv.Game}}</td><td>{{$srv.Mode}}</td><td>
       {{range $.Actions}}{{if or $.CanControl (eq . "details") (eq . "check-update")}}<form class="inline" method="post" action="/servers/{{$srv.ID}}/run">
         <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="{{.}}">
         <button class="link" type="submit">{{t $ (printf "act_%s" .)}}</button></form>{{end}}{{end}}
       <a href="/servers/{{$srv.ID}}/schedules">{{t $ "schedules"}}</a>
-      {{if $.CanControl}}<a href="/servers/{{$srv.ID}}/files">{{t $ "files"}}</a>{{end}}
+      {{if $.CanControl}}<a href="/servers/{{$srv.ID}}/files">{{t $ "files"}}</a>{{if eq $srv.Game "fctrserver"}} <a href="/servers/{{$srv.ID}}/mods">{{t $ "mods"}}</a>{{end}}{{end}}
     </td></tr>{{end}}
   </table>
   {{else}}<p class="muted">{{t . "no_servers"}}</p>{{end}}
@@ -88,6 +90,7 @@
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   <form method="post" action="/servers/find">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
+    {{template "nodepick" .}}
     <label for="user">{{t . "linux_user"}}</label>
     <input id="user" name="user" type="text" value="{{.AddUser}}" required pattern="[a-z_][a-z0-9_-]*" maxlength="32">
     <button type="submit">{{t . "find"}}</button>
@@ -262,6 +265,7 @@
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <label for="game">{{t . "install_game"}}</label>
     <select id="game" name="game">{{range .Games}}<option value="{{.Script}}">{{.Name}}</option>{{end}}</select>
+    {{template "nodepick" .}}
     <label for="name">{{t . "install_name"}}</label>
     <input id="name" name="name" type="text" maxlength="60">
     <button type="submit">{{t . "install_start"}}</button>
