@@ -10,6 +10,17 @@ Format follows Keep a Changelog. Versions follow semver once there is a first re
 - Discord: detailed logs as embeds from a gateway connection (messages with before and after, members, voice, invites, threads, AutoMod), bot commands and audit events as embeds, numbered moderation cases.
 - Discord: complaint system: /report, a message menu command, and a complaint card with take, warn, resolve and reject buttons.
 
+## 0.2.0 - 2026-11-01
+
+- New interface: full-width layout, light/dark/auto theme, animated RU/EN switch, styled game list with search, server list with state badges and action buttons, step-by-step install progress.
+- Server page: live state (started, starting, stopped), address, players, resources and ports parsed from LinuxGSM details, logs tail, auto-refresh.
+- File manager: browse, create, edit, download, upload, rename and delete inside a server directory, all confined to the server home.
+- Updates page and automatic updates: the root helper verifies the signed release and runs the installer, which rolls back by itself. Off by default.
+- Owner settings: require two-factor for everyone, session lifetime, default language.
+- Licence page: the key on top, a Free / Pro / Hosting comparison table.
+- Pro edition: Minecraft version and core switching, Modrinth plugin and mod search and install, quick settings for Minecraft and Factorio.
+- Fix: form posts no longer fail with "forbidden" in Chromium browsers.
+
 ## 0.1.2 - 2026-10-31
 
 - One command to a working panel: the installer opens HTTPS on port 8443 with a self-signed certificate (new `-tls-listen` flag), opens the port in ufw when it is active, and prints a link with the one-time setup code and the certificate fingerprint. No reverse proxy or tunnel is needed for the first run. The old default `-secure -trust-proxy` is upgraded in place; the forwarded-for header is never trusted on the direct HTTPS listener.

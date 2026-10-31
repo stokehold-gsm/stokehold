@@ -128,6 +128,11 @@ func (f *fake) call(r helper.Request) (helper.Response, error) {
 		return helper.Response{OK: true, Out: `{"n":"x","t":"f","s":` + "400" + `,"m":1762000000}`}, nil
 	case "get":
 		return helper.Response{OK: true, Out: base64.StdEncoding.EncodeToString([]byte(logText))}, nil
+	case "http-get-json":
+		if strings.Contains(r.URL, "modrinth") {
+			return helper.Response{OK: true, Out: `{"hits":[{"project_id":"AANobbMI","title":"Sodium","description":"Modern rendering engine and optimization mod","author":"jellysquid3","downloads":50000000},{"project_id":"P7dR8mSH","title":"Fabric API","description":"Core library for Fabric mods","author":"modmuss50","downloads":90000000}]}`}, nil
+		}
+		return helper.Response{OK: true, Out: `{"latest":{"release":"1.21.4","snapshot":"25w02a"},"versions":[{"id":"25w02a","type":"snapshot"},{"id":"1.21.4","type":"release"},{"id":"1.21.3","type":"release"},{"id":"1.20.6","type":"release"}]}`}, nil
 	case "files":
 		return helper.Response{OK: true, Out: "serverfiles/server-settings.json\n"}, nil
 	case "update-status":
