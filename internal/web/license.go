@@ -65,7 +65,7 @@ func (s *Server) licensePage(w http.ResponseWriter, r *http.Request, p *page) {
 
 func (s *Server) licenseActivate(w http.ResponseWriter, r *http.Request, p *page) {
 	if p.User.Role != store.RoleOwner {
-		s.render(w, "message", &page{Lang: p.Lang, User: p.User, CSRF: p.CSRF, Error: tr(p.Lang, "forbidden")}, http.StatusForbidden)
+		s.denied(w, p)
 		return
 	}
 	if s.Entitlement == nil {
@@ -90,7 +90,7 @@ func (s *Server) licenseActivate(w http.ResponseWriter, r *http.Request, p *page
 
 func (s *Server) licenseRenew(w http.ResponseWriter, r *http.Request, p *page) {
 	if p.User.Role != store.RoleOwner || s.Entitlement == nil {
-		s.render(w, "message", &page{Lang: p.Lang, User: p.User, CSRF: p.CSRF, Error: tr(p.Lang, "forbidden")}, http.StatusForbidden)
+		s.denied(w, p)
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)

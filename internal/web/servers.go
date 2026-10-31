@@ -13,7 +13,6 @@ import (
 	"github.com/stokehold-gsm/stokehold/internal/store"
 )
 
-// HelperFunc sends one request to the privileged helper.
 type HelperFunc func(helper.Request) (helper.Response, error)
 
 const maxOutput = 8 << 10
@@ -32,7 +31,7 @@ func (s *Server) callHelper(r helper.Request) (helper.Response, error) {
 	return s.Helper(r)
 }
 
-// trim keeps pages small and valid UTF-8, whatever a game script prints.
+// режем вывод скрипта, чтобы страница не пухла
 func trim(out string) string {
 	out = strings.ToValidUTF8(lgsm.Clean(out), "")
 	if len(out) > maxOutput {
@@ -48,7 +47,7 @@ func trim(out string) string {
 
 func (s *Server) addForm(w http.ResponseWriter, r *http.Request, p *page) {
 	if !canControl(p.User.Role) {
-		s.render(w, "message", &page{Lang: p.Lang, User: p.User, CSRF: p.CSRF, Error: tr(p.Lang, "forbidden")}, http.StatusForbidden)
+		s.denied(w, p)
 		return
 	}
 	s.render(w, "add", p, http.StatusOK)
@@ -58,7 +57,7 @@ func (s *Server) addForm(w http.ResponseWriter, r *http.Request, p *page) {
 // answers for gs_ accounts and for accounts the owner listed in adopt.conf.
 func (s *Server) find(w http.ResponseWriter, r *http.Request, p *page) {
 	if !canControl(p.User.Role) {
-		s.render(w, "message", &page{Lang: p.Lang, User: p.User, CSRF: p.CSRF, Error: tr(p.Lang, "forbidden")}, http.StatusForbidden)
+		s.denied(w, p)
 		return
 	}
 	user := strings.TrimSpace(r.PostFormValue("user"))
@@ -82,7 +81,7 @@ func (s *Server) find(w http.ResponseWriter, r *http.Request, p *page) {
 
 func (s *Server) addServer(w http.ResponseWriter, r *http.Request, p *page) {
 	if !canControl(p.User.Role) {
-		s.render(w, "message", &page{Lang: p.Lang, User: p.User, CSRF: p.CSRF, Error: tr(p.Lang, "forbidden")}, http.StatusForbidden)
+		s.denied(w, p)
 		return
 	}
 	user, game := strings.TrimSpace(r.PostFormValue("user")), strings.TrimSpace(r.PostFormValue("game"))

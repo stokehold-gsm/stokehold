@@ -22,7 +22,6 @@ func New(max int, window time.Duration) *Limiter {
 	return &Limiter{max: max, window: window, m: map[string]*bucket{}}
 }
 
-// Allow counts one request for key and reports whether it is within the limit.
 func (l *Limiter) Allow(key string, now time.Time) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()

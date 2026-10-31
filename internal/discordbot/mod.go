@@ -64,20 +64,12 @@ var roleRank = map[string]int{
 	discordsetup.RoleShopCurator: rankCurator, discordsetup.RoleOperator: rankMod,
 }
 
-// moderation rank only counts the community roles
-var modRank = map[string]int{
-	discordsetup.RoleFounder: rankFounder, discordsetup.RoleCurator: rankCurator,
-	discordsetup.RoleMod: rankMod, discordsetup.RoleHelper: rankHelper,
-}
-
-// Warning is one recorded warning.
 type Warning struct {
 	At     time.Time `json:"at"`
 	By     string    `json:"by"`
 	Reason string    `json:"reason"`
 }
 
-// Mod holds what the moderation commands need.
 type Mod struct {
 	API       *discordsetup.Client
 	LogName   string // name of the moderation log channel
@@ -122,7 +114,9 @@ func (m *Mod) run(ctx context.Context, in interaction) string {
 	}
 	rank := 0
 	for _, id := range in.Member.Roles {
-		rank = max(rank, modRank[names[id]])
+		if r := roleRank[names[id]]; !shopRole[names[id]] {
+			rank = max(rank, r)
+		}
 	}
 	cmd := in.Data.Name
 	need := map[string]int{"warn": rankMod, "warnings": rankHelper, "timeout": rankHelper, "untimeout": rankMod,
@@ -349,3 +343,6 @@ func (w *Warns) save() {
 	b, _ := json.Marshal(w.data)
 	_ = os.WriteFile(w.path, b, 0o600)
 }
+
+// shop staff are protected from moderators but cannot moderate themselves
+var shopRole = map[string]bool{discordsetup.RoleShopCurator: true, discordsetup.RoleOperator: true}

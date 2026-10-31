@@ -34,7 +34,7 @@ func init() {
 		"sch_last":          "Last run",
 		"sch_never":         "not run yet",
 		"sch_invalid":       "Check the action and the time.",
-		"sch_note":          "Note: a LinuxGSM backup stops the game server and starts it again. Pick a time when nobody is playing. If the panel was off at the scheduled time the action runs once after it starts.",
+		"sch_note":          "A LinuxGSM backup stops the game server while it runs, so pick a quiet hour. If the panel was off at the scheduled time the action runs once after it starts.",
 		"sch_empty":         "No schedules yet.",
 		"sch_delete":        "Delete",
 		"act_check-update":  "Check for update",

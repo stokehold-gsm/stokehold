@@ -1,5 +1,4 @@
-// Package web is the panel's HTTP interface: first-time setup, sign-in with
-// optional TOTP, sessions with CSRF protection, and the server list.
+// Package web is the panel's HTTP UI.
 package web
 
 import (
@@ -127,7 +126,6 @@ func (s *Server) Handler() http.Handler {
 	return s.protect(mux)
 }
 
-// protect adds the security headers and refuses cross-site form posts.
 func (s *Server) protect(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()

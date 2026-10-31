@@ -1,14 +1,13 @@
 package discordsetup
 
-// Texts state what exists today. Nothing here claims users, test counts or
-// release dates the project does not have.
+// Только то, что уже есть. Без обещаний про пользователей и сроки.
 
 const footer = "Stokehold GSM"
 
 var welcomeRU = Message{Embeds: []Embed{{
 	Title: "Добро пожаловать в Stokehold GSM",
 	Description: "Здесь делают и обсуждают панель управления игровыми серверами поверх LinuxGSM.\n\n" +
-		"Проект в разработке, публичного релиза пока нет. Следить за ходом работы, задавать вопросы и предлагать идеи можно здесь.",
+		"Релиза пока нет. Вопросы и баги пишите в {#help} и {#bugs}.",
 	Color: colorBrand,
 	Fields: []Field{
 		{"С чего начать", "1. Прочитайте {#rules}\n2. Выберите роли в {#roles}\n3. Загляните в {#plans}, чтобы узнать, что готово и что будет", false},
