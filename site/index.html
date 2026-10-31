@@ -117,7 +117,7 @@ footer a { color:var(--muted); }
 
 <section id="install">
   <h2>Установка</h2>
-  <p class="muted">Выберите, где у вас будет работать панель. Установщик проверяет подпись релиза до установки, его можно прочитать перед запуском.</p>
+  <p class="muted">Выберите, где будет работать панель, скопируйте команду и запустите её на сервере. В конце установщик покажет ссылку: откройте её и закончите настройку в браузере.</p>
   <div class="tabs" role="tablist" aria-label="Операционная система">
     <button type="button" role="tab" data-os="deb" class="on">Ubuntu / Debian</button>
     <button type="button" role="tab" data-os="linux">Другой Linux</button>
@@ -126,41 +126,33 @@ footer a { color:var(--muted); }
   </div>
 
   <div class="os on" data-os="deb">
-    <p class="muted">Ubuntu 22.04 и новее, Debian 12 и новее. Процессор x86_64 или ARM64, определяется сам.</p>
-    <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>sudo apt update &amp;&amp; sudo apt install -y curl openssl
-curl -fsSL https://dl.stokehold.online/install.sh -o install.sh
-less install.sh        # прочитайте, выход: q
-sudo bash install.sh</code></pre></div>
-    <p>В конце установщик напечатает ссылку вида <code>https://АДРЕС:8443/setup?code=…</code>. Откройте её в браузере: браузер предупредит о сертификате (панель сама его создала, пока нет домена), нажмите «Дополнительно» и продолжите. Дальше создаёте владельца и входите в панель. Если страница не открывается, откройте TCP-порт 8443 у хостинга или в файрволе.</p>
+    <p class="muted">Ubuntu 22.04 и новее, Debian 12 и новее. Процессор x86_64 или ARM64.</p>
+    <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>sudo apt install -y curl openssl &amp;&amp; curl -fsSL https://dl.stokehold.online/install.sh | sudo bash</code></pre></div>
   </div>
 
   <div class="os" data-os="linux">
-    <p class="muted">Подойдёт любой Linux с systemd и OpenSSL 3 (Fedora, Rocky/Alma 9, Arch и другие). Автоустановка зависимостей игр работает только на Ubuntu и Debian, для остальных систем зависимости ставятся по документации LinuxGSM.</p>
-    <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code># Fedora, Rocky, Alma: sudo dnf install -y curl openssl
-# Arch: sudo pacman -S --needed curl openssl
-curl -fsSL https://dl.stokehold.online/install.sh -o install.sh
-less install.sh
-sudo bash install.sh</code></pre></div>
+    <p class="muted">Любой Linux с systemd и OpenSSL 3. Сначала поставьте curl и openssl своим пакетным менеджером (<code>dnf</code>, <code>pacman</code>). Зависимости игр ставятся автоматически только на Ubuntu и Debian.</p>
+    <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>curl -fsSL https://dl.stokehold.online/install.sh | sudo bash</code></pre></div>
   </div>
 
   <div class="os" data-os="win">
-    <p class="muted">Панель работает только на Linux. Два пути: арендовать небольшой VPS с Ubuntu 24.04 и ставить по вкладке «Ubuntu / Debian», либо запустить Linux внутри Windows (WSL2). Для WSL2 нужен Windows 10 22H2 или 11. Команды в PowerShell от имени администратора:</p>
+    <p class="muted">Панель работает только на Linux: арендуйте VPS с Ubuntu 24.04 (вкладка «Ubuntu / Debian») или запустите Linux в Windows через WSL2. Команда для PowerShell от имени администратора:</p>
     <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>wsl --install -d Ubuntu-24.04</code></pre></div>
     <p>После перезагрузки откройте Ubuntu и включите systemd:</p>
     <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>printf '[boot]\nsystemd=true\n' | sudo tee /etc/wsl.conf</code></pre></div>
-    <p>Выполните в PowerShell <code>wsl --shutdown</code>, снова откройте Ubuntu и дальше ставьте по вкладке «Ubuntu / Debian». Ссылку из вывода установщика можно открыть в браузере Windows; если адрес не открывается, замените его на <code>localhost</code>. Игровые серверы в WSL2 недоступны снаружи без проброса портов, поэтому для настоящего сервера выбирайте VPS.</p>
+    <p>Затем в PowerShell выполните <code>wsl --shutdown</code>, снова откройте Ubuntu и запустите команду с вкладки «Ubuntu / Debian». Игровые серверы в WSL2 снаружи недоступны, для настоящего сервера нужен VPS.</p>
   </div>
 
   <div class="os" data-os="mac">
-    <p class="muted">Панель работает только на Linux, поэтому на Mac нужен Linux где-то рядом. Надёжнее всего арендовать небольшой VPS с Ubuntu 24.04 и ставить по вкладке «Ubuntu / Debian». Для пробы подойдёт виртуальная машина с Ubuntu 24.04 (UTM, Multipass): внутри неё команды те же, а адрес панели зависит от сетевых настроек машины.</p>
+    <p class="muted">Панель работает только на Linux. На Mac арендуйте VPS с Ubuntu 24.04, подключитесь к нему и запустите команду с вкладки «Ubuntu / Debian».</p>
     <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>ssh ВАШ_ПОЛЬЗОВАТЕЛЬ@АДРЕС_VPS</code></pre></div>
-    <p class="muted">Дальше ставите так же, как на вкладке «Ubuntu / Debian».</p>
   </div>
 
-  <details><summary>Обновление и удаление</summary>
-    <p class="muted">Обновление: запустите установщик ещё раз, прежняя версия вернётся сама, если новая не запустится. Удаление не трогает ваши игровые серверы.</p>
-    <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>curl -fsSL https://dl.stokehold.online/uninstall.sh -o uninstall.sh
-sudo bash uninstall.sh</code></pre></div>
+  <p class="muted">Браузер предупредит о сертификате: панель создаёт свой, пока у вас нет домена. Нажмите «Дополнительно» и продолжите. Если страница не открывается, откройте TCP-порт 8443 у хостинга.</p>
+
+  <details><summary>Прочитать установщик, обновить, удалить</summary>
+    <p class="muted">Установщик проверяет подпись релиза до установки. Прочитать его перед запуском: скачайте <a href="https://dl.stokehold.online/install.sh">install.sh</a> и запустите через <code>sudo bash install.sh</code>. Обновление: та же команда. Игровые серверы удаление не трогает.</p>
+    <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>curl -fsSL https://dl.stokehold.online/uninstall.sh | sudo bash</code></pre></div>
   </details>
 </section>
 

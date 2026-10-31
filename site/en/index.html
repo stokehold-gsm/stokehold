@@ -116,7 +116,7 @@ footer a { color:var(--muted); }
 
 <section id="install">
   <h2>Install</h2>
-  <p class="muted">Pick where the panel will run. The installer verifies the release signature before installing, and you can read it before running it.</p>
+  <p class="muted">Pick where the panel will run, copy the command and run it on the server. At the end the installer shows a link: open it and finish the setup in your browser.</p>
   <div class="tabs" role="tablist" aria-label="Operating system">
     <button type="button" role="tab" data-os="deb" class="on">Ubuntu / Debian</button>
     <button type="button" role="tab" data-os="linux">Other Linux</button>
@@ -125,41 +125,33 @@ footer a { color:var(--muted); }
   </div>
 
   <div class="os on" data-os="deb">
-    <p class="muted">Ubuntu 22.04 or newer, Debian 12 or newer. x86_64 or ARM64, detected automatically.</p>
-    <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>sudo apt update &amp;&amp; sudo apt install -y curl openssl
-curl -fsSL https://dl.stokehold.online/install.sh -o install.sh
-less install.sh        # read it, quit with q
-sudo bash install.sh</code></pre></div>
-    <p>At the end the installer prints a link like <code>https://ADDRESS:8443/setup?code=…</code>. Open it in your browser: the browser warns about the certificate (the panel made its own, there is no domain yet), choose "Advanced" and continue. Then create the owner and sign in. If the page does not open, open TCP port 8443 at your host or in the firewall.</p>
+    <p class="muted">Ubuntu 22.04 or newer, Debian 12 or newer. x86_64 or ARM64.</p>
+    <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>sudo apt install -y curl openssl &amp;&amp; curl -fsSL https://dl.stokehold.online/install.sh | sudo bash</code></pre></div>
   </div>
 
   <div class="os" data-os="linux">
-    <p class="muted">Any Linux with systemd and OpenSSL 3 (Fedora, Rocky/Alma 9, Arch and others). Automatic game dependencies work on Ubuntu and Debian only; elsewhere install them from the LinuxGSM docs.</p>
-    <div class="cmd"><button type="button" class="copy">Copy</button><pre><code># Fedora, Rocky, Alma: sudo dnf install -y curl openssl
-# Arch: sudo pacman -S --needed curl openssl
-curl -fsSL https://dl.stokehold.online/install.sh -o install.sh
-less install.sh
-sudo bash install.sh</code></pre></div>
+    <p class="muted">Any Linux with systemd and OpenSSL 3. Install curl and openssl with your package manager first (<code>dnf</code>, <code>pacman</code>). Game dependencies are installed automatically on Ubuntu and Debian only.</p>
+    <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>curl -fsSL https://dl.stokehold.online/install.sh | sudo bash</code></pre></div>
   </div>
 
   <div class="os" data-os="win">
-    <p class="muted">The panel runs on Linux only. Either rent a small Ubuntu 24.04 VPS and follow the Ubuntu / Debian tab, or run Linux inside Windows with WSL2 (Windows 10 22H2 or 11). In PowerShell as administrator:</p>
+    <p class="muted">The panel runs on Linux only: rent an Ubuntu 24.04 VPS (Ubuntu / Debian tab) or run Linux inside Windows with WSL2. In PowerShell as administrator:</p>
     <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>wsl --install -d Ubuntu-24.04</code></pre></div>
     <p>After the reboot open Ubuntu and enable systemd:</p>
     <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>printf '[boot]\nsystemd=true\n' | sudo tee /etc/wsl.conf</code></pre></div>
-    <p>Run <code>wsl --shutdown</code> in PowerShell, open Ubuntu again and continue with the Ubuntu / Debian tab. You can open the link from the installer output in the Windows browser; if the address does not open, replace it with <code>localhost</code>. Game servers in WSL2 are not reachable from outside without port forwarding, so use a VPS for a real server.</p>
+    <p>Then run <code>wsl --shutdown</code> in PowerShell, open Ubuntu again and use the command from the Ubuntu / Debian tab. Game servers in WSL2 are not reachable from outside, so use a VPS for a real server.</p>
   </div>
 
   <div class="os" data-os="mac">
-    <p class="muted">The panel runs on Linux only, so a Mac needs a Linux machine nearby. Renting a small Ubuntu 24.04 VPS and following the Ubuntu / Debian tab is the reliable way. For a trial, an Ubuntu 24.04 virtual machine (UTM, Multipass) works: the commands are the same inside it, the panel address depends on the VM's network setup.</p>
+    <p class="muted">The panel runs on Linux only. On a Mac, rent an Ubuntu 24.04 VPS, connect to it and run the command from the Ubuntu / Debian tab.</p>
     <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>ssh YOUR_USER@VPS_ADDRESS</code></pre></div>
-    <p class="muted">Then install as on the Ubuntu / Debian tab.</p>
   </div>
 
-  <details><summary>Update and uninstall</summary>
-    <p class="muted">Update: run the installer again; the previous version comes back by itself if the new one does not start. Uninstalling does not touch your game servers.</p>
-    <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>curl -fsSL https://dl.stokehold.online/uninstall.sh -o uninstall.sh
-sudo bash uninstall.sh</code></pre></div>
+  <p class="muted">The browser warns about the certificate: the panel makes its own until you have a domain. Choose "Advanced" and continue. If the page does not open, open TCP port 8443 at your host.</p>
+
+  <details><summary>Read the installer, update, uninstall</summary>
+    <p class="muted">The installer verifies the release signature before installing. To read it first, download <a href="https://dl.stokehold.online/install.sh">install.sh</a> and run it with <code>sudo bash install.sh</code>. Update: the same command. Uninstalling does not touch your game servers.</p>
+    <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>curl -fsSL https://dl.stokehold.online/uninstall.sh | sudo bash</code></pre></div>
   </details>
 </section>
 
