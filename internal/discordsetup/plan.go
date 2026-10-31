@@ -130,7 +130,7 @@ func Default() Plan {
 		// Order is the hierarchy, highest first (applied to the server by Apply).
 		Roles: []Role{
 			{Name: RoleFounder, Color: colorBrand, Hoist: true},
-			{Name: RoleCurator, Color: 0xe74c3c, Hoist: true, Mentionable: true, Perms: PermManageMessages | PermKickMembers | PermBanMembers | PermModerate | PermManageThreads},
+			{Name: RoleCurator, Color: 0xe74c3c, Hoist: true, Mentionable: true, Perms: PermManageMessages | PermKickMembers | PermModerate},
 			{Name: RoleMod, Color: colorWarn, Hoist: true, Mentionable: true, Perms: PermManageMessages | PermKickMembers | PermModerate},
 			{Name: RoleHelper, Color: 0x1abc9c, Hoist: true, Mentionable: true, Perms: PermModerate},
 			{Name: RoleShopCurator, Color: 0xe67e22, Hoist: true, Mentionable: true},
