@@ -13,7 +13,7 @@ Self-hosted веб-панель для игровых серверов (движ
 Фазы 1-2 закрыты (docs/market.md, spec.md, architecture.md, security-licensing.md, ADR 0001-0004). Идёт фаза 3: готовы прототипы internal/safefs и internal/license, результаты тестового стенда в docs/prototype-findings.md. Дальше: helper, adopt, каркас панели, установщик, CI.
 
 ## Инфраструктура (без секретов)
-- Название: Stokehold. Домены куплены: stokehold.ru, stokehold.online (регистратор reg.ru).
+- Название: Stokehold (на GitHub и в UI: Stokehold GSM). GitHub: организация stokehold-gsm, приватный репозиторий stokehold-gsm/stokehold (публичным делаем только по команде владельца; перед этим вычистить IP серверов из docs). Домены куплены: stokehold.ru, stokehold.online (регистратор reg.ru).
 - VPS: FirstByte, Москва, Ubuntu 24.04, IP stokehold.ru. 1 vCPU, ~700 МБ RAM, 8,8 ГБ диск (мало для игровых серверов, годится для лицензионного сервера и сайта). Доступ: `ssh -i ~/.ssh/stokehold_ed25519 deploy@stokehold.ru` (ключ вне проекта). Пароли и root-вход отключены, ufw открыт на 22/80/443, fail2ban и автообновления включены (2026-10-31).
 
 - Тестовый сервер (test-host, ssh порт 62022, пользователь user, пароль передан в чате): на нём уже стоит Factorio владельца, его не трогать. Ключ хоста сменился после переустановки (подтверждено владельцем), используем отдельный known_hosts. На стенде создан пользователь lgsmtest с LinuxGSM mcserver и Java 25; остановлено, factorio не затронут.
