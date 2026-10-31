@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="nojs">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -39,13 +39,20 @@ details { border-bottom:1px solid var(--line); padding:12px 0; }
 summary { cursor:pointer; font-weight:600; }
 footer { padding:32px 0 48px; color:var(--muted); font-size:.9rem; border-top:1px solid var(--line); }
 footer a { color:var(--muted); }
+.tabs { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 16px; }
+.tabs button { padding:8px 14px; border:1px solid var(--line); border-radius:99px; background:transparent; color:var(--muted); font:inherit; font-size:.95rem; cursor:pointer; }
+.tabs button.on { background:var(--brand); border-color:var(--brand); color:#fff; }
+.os { display:none; } .os.on, .nojs .os { display:block; }
+.cmd { position:relative; margin:0 0 14px; } .cmd pre { margin:0; padding-right:96px; }
+.cmd .copy { position:absolute; top:8px; right:8px; padding:4px 10px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--muted); font:inherit; font-size:.82rem; cursor:pointer; }
+.cmd .copy:hover { color:var(--fg); } .nojs .tabs, .nojs .copy { display:none; }
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
   <a class="logo" href="../"><img src="../logo.svg" alt="" width="28" height="28"> Stokehold GSM</a>
-  <nav><a href="#now">What works</a><a href="#compare">Comparison</a><a href="#plans">Plans</a><a href="../">RU</a></nav>
+  <nav><a href="#now">What works</a><a href="#compare">Comparison</a><a href="#install">Install</a><a href="#plans">Plans</a><a href="../">RU</a></nav>
 </header>
 
 <main>
@@ -107,12 +114,58 @@ footer a { color:var(--muted); }
   </div>
 </section>
 
-<section>
+<section id="install">
   <h2>Install</h2>
-  <p class="muted">The command arrives with the first release. You will be able to read the installer before running it.</p>
-<pre><code>curl -fsSL https://dl.stokehold.online/install.sh -o install.sh
+  <p class="muted">Pick where the panel will run. The installer verifies the release signature before installing, and you can read it before running it.</p>
+  <div class="tabs" role="tablist" aria-label="Operating system">
+    <button type="button" role="tab" data-os="deb" class="on">Ubuntu / Debian</button>
+    <button type="button" role="tab" data-os="linux">Other Linux</button>
+    <button type="button" role="tab" data-os="win">Windows</button>
+    <button type="button" role="tab" data-os="mac">macOS</button>
+  </div>
+
+  <div class="os on" data-os="deb">
+    <p class="muted">Ubuntu 22.04 or newer, Debian 12 or newer. x86_64 or ARM64, detected automatically.</p>
+    <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>sudo apt update &amp;&amp; sudo apt install -y curl openssl
+curl -fsSL https://dl.stokehold.online/install.sh -o install.sh
+less install.sh        # read it, quit with q
+sudo bash install.sh</code></pre></div>
+    <p>The one-time code that creates the owner, and how to open the panel:</p>
+    <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>sudo journalctl -u stokehold | grep "setup code"
+# from your computer, to open the panel without a domain of your own:
+ssh -L 8080:127.0.0.1:8080 YOUR_USER@SERVER_ADDRESS
+# then open http://127.0.0.1:8080 and enter the code</code></pre></div>
+  </div>
+
+  <div class="os" data-os="linux">
+    <p class="muted">Any Linux with systemd and OpenSSL 3 (Fedora, Rocky/Alma 9, Arch and others). Automatic game dependencies work on Ubuntu and Debian only; elsewhere install them from the LinuxGSM docs.</p>
+    <div class="cmd"><button type="button" class="copy">Copy</button><pre><code># Fedora, Rocky, Alma: sudo dnf install -y curl openssl
+# Arch: sudo pacman -S --needed curl openssl
+curl -fsSL https://dl.stokehold.online/install.sh -o install.sh
 less install.sh
-sudo bash install.sh</code></pre>
+sudo bash install.sh
+sudo journalctl -u stokehold | grep "setup code"</code></pre></div>
+  </div>
+
+  <div class="os" data-os="win">
+    <p class="muted">The panel runs on Linux only. Either rent a small Ubuntu 24.04 VPS and follow the Ubuntu / Debian tab, or run Linux inside Windows with WSL2 (Windows 10 22H2 or 11). In PowerShell as administrator:</p>
+    <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>wsl --install -d Ubuntu-24.04</code></pre></div>
+    <p>After the reboot open Ubuntu and enable systemd:</p>
+    <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>printf '[boot]\nsystemd=true\n' | sudo tee /etc/wsl.conf</code></pre></div>
+    <p>Run <code>wsl --shutdown</code> in PowerShell, open Ubuntu again and continue with the Ubuntu / Debian tab. The panel is usually reachable at <code>http://127.0.0.1:8080</code> from the Windows browser. Game servers in WSL2 are not reachable from outside without port forwarding, so use a VPS for a real server.</p>
+  </div>
+
+  <div class="os" data-os="mac">
+    <p class="muted">The panel runs on Linux only, so a Mac needs a Linux machine nearby. Renting a small Ubuntu 24.04 VPS and following the Ubuntu / Debian tab is the reliable way. For a trial, an Ubuntu 24.04 virtual machine (UTM, Multipass) works: the commands are the same inside it, the panel address depends on the VM's network setup.</p>
+    <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>ssh YOUR_USER@VPS_ADDRESS</code></pre></div>
+    <p class="muted">Then install as on the Ubuntu / Debian tab.</p>
+  </div>
+
+  <details><summary>Update and uninstall</summary>
+    <p class="muted">Update: run the installer again; the previous version comes back by itself if the new one does not start. Uninstalling does not touch your game servers.</p>
+    <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>curl -fsSL https://dl.stokehold.online/uninstall.sh -o uninstall.sh
+sudo bash uninstall.sh</code></pre></div>
+  </details>
 </section>
 
 <section>
@@ -126,5 +179,26 @@ sudo bash install.sh</code></pre>
 
 <footer><p>Stokehold GSM. Legal documents are published before sales begin.</p></footer>
 </div>
+<script>
+(function () {
+  document.documentElement.classList.remove('nojs');
+  var tabs = document.querySelectorAll('.tabs button'), blocks = document.querySelectorAll('.os');
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () {
+      tabs.forEach(function (x) { x.classList.toggle('on', x === t); });
+      blocks.forEach(function (b) { b.classList.toggle('on', b.dataset.os === t.dataset.os); });
+    });
+  });
+  document.querySelectorAll('.copy').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var text = b.parentNode.querySelector('code').innerText, label = b.textContent;
+      var done = function () { b.textContent = label === 'Copy' ? 'Copied' : 'Скопировано'; setTimeout(function () { b.textContent = label; }, 1500); };
+      if (navigator.clipboard) { navigator.clipboard.writeText(text).then(done, done); return; }
+      var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta); done();
+    });
+  });
+})();
+</script>
 </body>
 </html>

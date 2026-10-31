@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" class="nojs">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -39,13 +39,20 @@ details { border-bottom:1px solid var(--line); padding:12px 0; }
 summary { cursor:pointer; font-weight:600; }
 footer { padding:32px 0 48px; color:var(--muted); font-size:.9rem; border-top:1px solid var(--line); }
 footer a { color:var(--muted); }
+.tabs { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 16px; }
+.tabs button { padding:8px 14px; border:1px solid var(--line); border-radius:99px; background:transparent; color:var(--muted); font:inherit; font-size:.95rem; cursor:pointer; }
+.tabs button.on { background:var(--brand); border-color:var(--brand); color:#fff; }
+.os { display:none; } .os.on, .nojs .os { display:block; }
+.cmd { position:relative; margin:0 0 14px; } .cmd pre { margin:0; padding-right:96px; }
+.cmd .copy { position:absolute; top:8px; right:8px; padding:4px 10px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--muted); font:inherit; font-size:.82rem; cursor:pointer; }
+.cmd .copy:hover { color:var(--fg); } .nojs .tabs, .nojs .copy { display:none; }
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
   <a class="logo" href="./"><img src="logo.svg" alt="" width="28" height="28"> Stokehold GSM</a>
-  <nav><a href="#now">Что готово</a><a href="#compare">Сравнение</a><a href="#plans">Тарифы</a><a href="en/">EN</a></nav>
+  <nav><a href="#now">Что готово</a><a href="#compare">Сравнение</a><a href="#install">Установка</a><a href="#plans">Тарифы</a><a href="en/">EN</a></nav>
 </header>
 
 <main>
@@ -108,12 +115,58 @@ footer a { color:var(--muted); }
   </div>
 </section>
 
-<section>
+<section id="install">
   <h2>Установка</h2>
-  <p class="muted">Команда появится вместе с первым релизом. Установщик можно будет прочитать до запуска.</p>
-<pre><code>curl -fsSL https://dl.stokehold.online/install.sh -o install.sh
+  <p class="muted">Выберите, где у вас будет работать панель. Установщик проверяет подпись релиза до установки, его можно прочитать перед запуском.</p>
+  <div class="tabs" role="tablist" aria-label="Операционная система">
+    <button type="button" role="tab" data-os="deb" class="on">Ubuntu / Debian</button>
+    <button type="button" role="tab" data-os="linux">Другой Linux</button>
+    <button type="button" role="tab" data-os="win">Windows</button>
+    <button type="button" role="tab" data-os="mac">macOS</button>
+  </div>
+
+  <div class="os on" data-os="deb">
+    <p class="muted">Ubuntu 22.04 и новее, Debian 12 и новее. Процессор x86_64 или ARM64, определяется сам.</p>
+    <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>sudo apt update &amp;&amp; sudo apt install -y curl openssl
+curl -fsSL https://dl.stokehold.online/install.sh -o install.sh
+less install.sh        # прочитайте, выход: q
+sudo bash install.sh</code></pre></div>
+    <p>Одноразовый код для создания владельца и адрес панели:</p>
+    <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>sudo journalctl -u stokehold | grep "setup code"
+# с вашего компьютера, чтобы открыть панель без своего домена:
+ssh -L 8080:127.0.0.1:8080 ВАШ_ПОЛЬЗОВАТЕЛЬ@АДРЕС_СЕРВЕРА
+# затем откройте http://127.0.0.1:8080 и введите код</code></pre></div>
+  </div>
+
+  <div class="os" data-os="linux">
+    <p class="muted">Подойдёт любой Linux с systemd и OpenSSL 3 (Fedora, Rocky/Alma 9, Arch и другие). Автоустановка зависимостей игр работает только на Ubuntu и Debian, для остальных систем зависимости ставятся по документации LinuxGSM.</p>
+    <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code># Fedora, Rocky, Alma: sudo dnf install -y curl openssl
+# Arch: sudo pacman -S --needed curl openssl
+curl -fsSL https://dl.stokehold.online/install.sh -o install.sh
 less install.sh
-sudo bash install.sh</code></pre>
+sudo bash install.sh
+sudo journalctl -u stokehold | grep "setup code"</code></pre></div>
+  </div>
+
+  <div class="os" data-os="win">
+    <p class="muted">Панель работает только на Linux. Два пути: арендовать небольшой VPS с Ubuntu 24.04 и ставить по вкладке «Ubuntu / Debian», либо запустить Linux внутри Windows (WSL2). Для WSL2 нужен Windows 10 22H2 или 11. Команды в PowerShell от имени администратора:</p>
+    <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>wsl --install -d Ubuntu-24.04</code></pre></div>
+    <p>После перезагрузки откройте Ubuntu и включите systemd:</p>
+    <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>printf '[boot]\nsystemd=true\n' | sudo tee /etc/wsl.conf</code></pre></div>
+    <p>Выполните в PowerShell <code>wsl --shutdown</code>, снова откройте Ubuntu и дальше ставьте по вкладке «Ubuntu / Debian». Обычно панель открывается на <code>http://127.0.0.1:8080</code> прямо в браузере Windows. Игровые серверы в WSL2 недоступны снаружи без проброса портов, поэтому для настоящего сервера выбирайте VPS.</p>
+  </div>
+
+  <div class="os" data-os="mac">
+    <p class="muted">Панель работает только на Linux, поэтому на Mac нужен Linux где-то рядом. Надёжнее всего арендовать небольшой VPS с Ubuntu 24.04 и ставить по вкладке «Ubuntu / Debian». Для пробы подойдёт виртуальная машина с Ubuntu 24.04 (UTM, Multipass): внутри неё команды те же, а адрес панели зависит от сетевых настроек машины.</p>
+    <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>ssh ВАШ_ПОЛЬЗОВАТЕЛЬ@АДРЕС_VPS</code></pre></div>
+    <p class="muted">Дальше ставите так же, как на вкладке «Ubuntu / Debian».</p>
+  </div>
+
+  <details><summary>Обновление и удаление</summary>
+    <p class="muted">Обновление: запустите установщик ещё раз, прежняя версия вернётся сама, если новая не запустится. Удаление не трогает ваши игровые серверы.</p>
+    <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>curl -fsSL https://dl.stokehold.online/uninstall.sh -o uninstall.sh
+sudo bash uninstall.sh</code></pre></div>
+  </details>
 </section>
 
 <section>
@@ -129,5 +182,26 @@ sudo bash install.sh</code></pre>
   <p>Stokehold GSM. Документы: <a href="https://github.com/stokehold-gsm/stokehold/blob/main/legal/eula.md">лицензионное соглашение</a>, <a href="https://github.com/stokehold-gsm/stokehold/blob/main/legal/privacy.md">политика обработки персональных данных</a>, <a href="https://github.com/stokehold-gsm/stokehold/blob/main/legal/offer.md">оферта</a> (черновики, до начала продаж их проверит юрист).</p>
 </footer>
 </div>
+<script>
+(function () {
+  document.documentElement.classList.remove('nojs');
+  var tabs = document.querySelectorAll('.tabs button'), blocks = document.querySelectorAll('.os');
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () {
+      tabs.forEach(function (x) { x.classList.toggle('on', x === t); });
+      blocks.forEach(function (b) { b.classList.toggle('on', b.dataset.os === t.dataset.os); });
+    });
+  });
+  document.querySelectorAll('.copy').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var text = b.parentNode.querySelector('code').innerText, label = b.textContent;
+      var done = function () { b.textContent = label === 'Copy' ? 'Copied' : 'Скопировано'; setTimeout(function () { b.textContent = label; }, 1500); };
+      if (navigator.clipboard) { navigator.clipboard.writeText(text).then(done, done); return; }
+      var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta); done();
+    });
+  });
+})();
+</script>
 </body>
 </html>
