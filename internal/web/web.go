@@ -89,7 +89,8 @@ type page struct {
 	Pct              int
 	Elapsed          string
 	JobError         string
-	Need2FA          bool // the owner requires two-factor and this user has none yet
+	UpdTag           string // a newer release, shown as a badge in the owner's header
+	Need2FA          bool   // the owner requires two-factor and this user has none yet
 
 	SetRequire2FA   bool
 	SetSessionHours int
@@ -232,7 +233,11 @@ func (s *Server) auth(h handler) http.HandlerFunc {
 			http.Redirect(w, r, "/security", http.StatusSeeOther)
 			return
 		}
-		h(w, r, &page{Lang: lang(w, r), User: u, CSRF: csrf, Need2FA: need2FA})
+		pg := &page{Lang: lang(w, r), User: u, CSRF: csrf, Need2FA: need2FA}
+		if u.Role == store.RoleOwner {
+			pg.UpdTag = s.UpdateAvailable()
+		}
+		h(w, r, pg)
 	}
 }
 

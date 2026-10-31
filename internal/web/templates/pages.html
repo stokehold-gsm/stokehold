@@ -18,8 +18,9 @@
       <a href="/monitor">{{t . "monitor"}}</a>
       <a href="/security">{{t . "security"}}</a>
       <a href="/license">{{t . "license"}}</a>
-      {{if eq .User.Role "owner"}}<a href="/users">{{t . "users"}}</a><a href="/settings">{{t . "settings"}}</a>{{if pro}} <a href="/nodes">{{t . "nodes"}}</a> <a href="/integrations">{{t . "integrations"}}</a>{{end}}{{end}}
+      {{if eq .User.Role "owner"}}<a href="/users">{{t . "users"}}</a><a href="/settings">{{t . "settings"}}</a><a href="/updates">{{t . "nav_updates"}}</a>{{if pro}} <a href="/nodes">{{t . "nodes"}}</a> <a href="/integrations">{{t . "integrations"}}</a>{{end}}{{end}}
       {{if pro}}<a href="/tokens">{{t . "tokens"}}</a>{{end}}
+      {{if .UpdTag}}<a class="upd-badge" href="/updates" title="{{.UpdTag}}"><span class="pulse" aria-hidden="true"></span>{{t . "upd_badge"}}</a>{{end}}
       <span class="who" title="{{.User.Email}}">{{.User.Email}} ({{.User.Role}})</span>
       <form class="inline" method="post" action="/logout">
         <input type="hidden" name="csrf" value="{{.CSRF}}">
@@ -378,7 +379,7 @@
 <div class="card">
   <h1>{{t . "job_title"}}: {{.ServerName}}</h1>
   {{if eq .Action "done"}}<div class="banner ok"><b>{{t . "job_ok_title"}}</b><p>{{t . "job_ok_text"}}</p><a class="btn primary" href="/">{{t . "job_open"}}</a></div>
-  {{else if eq .Action "failed"}}<div class="banner bad"><b>{{t . "job_fail_title"}}</b>{{if .JobError}}<p><code>{{.JobError}}</code></p>{{end}}<a class="btn primary" href="/servers/new">{{t . "job_retry"}}</a> <a class="btn" href="/">{{t . "back"}}</a></div>
+  {{else if eq .Action "failed"}}<div class="banner bad"><b>{{t . "job_fail_title"}}</b>{{if .JobError}}<p><code>{{.JobError}}</code></p>{{end}}<div class="btns"><a class="btn primary" href="/servers/new">{{t . "job_retry"}}</a><a class="btn" href="/">{{t . "back"}}</a></div></div>
   {{else}}<p class="muted">{{t . "job_running"}}</p>{{end}}
   <div class="job-meta"><span>{{t . "job_progress"}}: <b>{{.Pct}}%</b></span><span>{{t . "job_elapsed"}}: <b>{{.Elapsed}}</b></span></div>
   <progress class="bar{{if eq .Action "failed"}} bad{{end}}" max="100" value="{{.Pct}}">{{.Pct}}%</progress>
@@ -387,18 +388,6 @@
     {{end}}
   </ol>
   <details class="raw"{{if eq .Action "failed"}} open{{end}}><summary>{{t . "job_details"}}</summary><pre>{{.Result}}</pre></details>
-</div>
-{{template "foot" .}}{{end}}
-
-{{define "files"}}{{template "head" .}}
-<div class="card">
-  <h1>{{.ServerName}}: {{t . "files"}}</h1>
-  <p class="muted">{{t . "files_hint"}}</p>
-  {{if .Info}}<p>{{.Info}}</p>{{end}}
-  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
-  {{if .Files}}<div class="scroll"><table>{{range $f := .Files}}<tr><td><code>{{$f}}</code></td><td><a href="/servers/{{$.ServerID}}/edit?path={{$f}}">{{t $ "file_edit"}}</a></td></tr>{{end}}</table></div>
-  {{else if not .Error}}<p class="muted">{{t . "files_empty"}}</p>{{end}}
-  <p><a href="/">{{t . "back"}}</a></p>
 </div>
 {{template "foot" .}}{{end}}
 

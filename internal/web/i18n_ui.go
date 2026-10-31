@@ -75,6 +75,8 @@ func init() {
 // Theme, settings, server list and install progress.
 func init() {
 	merge("ru", map[string]string{
+		"save":             "Сохранить",
+		"nav_updates":      "Обновления",
 		"theme":            "Тема оформления",
 		"theme_auto":       "Тема: как в системе",
 		"theme_light":      "Тема: светлая",
@@ -121,6 +123,8 @@ func init() {
 		"job_state_fail":   "Ошибка",
 	})
 	merge("en", map[string]string{
+		"save":             "Save",
+		"nav_updates":      "Updates",
 		"theme":            "Colour theme",
 		"theme_auto":       "Theme: follow the system",
 		"theme_light":      "Theme: light",
