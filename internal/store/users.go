@@ -40,7 +40,7 @@ func (s *Store) ownerCount() (n int) {
 }
 
 // DeleteUser removes an account and its sessions. The last owner can never be
-// removed, so the panel cannot be locked out by a mis-click.
+// The last owner cannot be deleted.
 func (s *Store) DeleteUser(id int64) error {
 	u, err := s.UserByID(id)
 	if err != nil {

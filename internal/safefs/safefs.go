@@ -1,6 +1,6 @@
 // Package safefs is the only way the panel touches files inside a game server
 // directory. Everything goes through os.Root, which refuses to leave the root
-// even via symlinks (see docs/architecture.md, CVE-2024-27102 lesson).
+// even via symlinks (see docs/architecture.md, CVE-2024-27102).
 package safefs
 
 import (

@@ -13,7 +13,7 @@ A web panel for game servers on top of [LinuxGSM](https://linuxgsm.com). One Go 
 - An installer that verifies an ed25519 signature and SHA-256 sums before installing, rolls back a failed upgrade, and has an uninstaller that never touches game servers.
 - A licence server (key issuing, signed short-lived tokens, hash-chained audit log).
 
-Not yet: mod manager, scheduled backups and wipes, S3 backups, update rollback for games, public status page, Discord notifications, paid tiers.
+Not yet: mod manager, wipes, S3 backups, update rollback for games, public status page, Discord notifications, paid tiers.
 
 ## Why another panel
 

@@ -282,7 +282,7 @@ func (s *Server) setupForm(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "setup", &page{Lang: lang(w, r)}, http.StatusOK)
 }
 
-// setup creates the first user. It only works while the database has no
+// setup: first owner only, needs the code from the service log.
 // users, and only with the code printed in the service log at startup.
 func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 	p := &page{Lang: lang(w, r)}

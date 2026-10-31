@@ -63,7 +63,6 @@ type Verifier struct {
 	LastSeen int64
 }
 
-// Sign is used by the license server and by tests.
 func Sign(priv ed25519.PrivateKey, c Claims) string {
 	c.V = tokenVer
 	payload, _ := json.Marshal(c)

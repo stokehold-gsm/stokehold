@@ -13,7 +13,7 @@ func certMessage(c Cert) []byte {
 	return []byte(certDomain + c.Root + "\x00" + c.KID + "\x00" + c.Pub + "\x00" + strconv.FormatInt(c.NotAfter, 10))
 }
 
-// IssueCert is run where the root key lives (offline) to authorise an online
+// IssueCert signs an online key with the offline root.
 // signing key for a limited time.
 func IssueCert(rootID string, root ed25519.PrivateKey, kid string, pub ed25519.PublicKey, notAfter time.Time) Cert {
 	c := Cert{Root: rootID, KID: kid, Pub: base64.RawStdEncoding.EncodeToString(pub), NotAfter: notAfter.Unix()}

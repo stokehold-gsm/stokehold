@@ -22,7 +22,7 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
-// Parameters follow the OWASP minimum for argon2id with some headroom. The
+// OWASP minimum-ish, memory kept small for a 1 GB VPS.
 // target is a small VPS, so memory stays moderate.
 const (
 	argonTime    = 3
