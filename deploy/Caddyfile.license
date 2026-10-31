@@ -1,0 +1,20 @@
+# Public token API: only /v1/*
+api.stokehold.online {
+	handle /v1/* {
+		reverse_proxy 127.0.0.1:8090
+	}
+	handle {
+		respond "not found" 404
+	}
+}
+
+# Admin interface on its own host name. Restrict it to known addresses.
+admin.stokehold.online {
+	@allowed remote_ip 203.0.113.10/32
+	handle @allowed {
+		reverse_proxy 127.0.0.1:8091
+	}
+	handle {
+		respond "forbidden" 403
+	}
+}

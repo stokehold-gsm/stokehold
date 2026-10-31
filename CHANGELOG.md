@@ -9,5 +9,6 @@ Format follows Keep a Changelog. Versions follow semver once there is a first re
 - Panel core: SQLite store, setup code, sign-in with TOTP, sessions, CSRF, RU/EN interface.
 - Installer with signature and checksum verification, rollback on failed upgrade, uninstaller.
 - Licence server: key format with checksum, hashed key storage, one licence per order, token issuing with a root-certified online key, replay protection, hash-chained audit log.
+- Licence server admin interface: owner and issuer roles, mandatory two-factor, one key per order, daily limit for issuers, hash-chained audit view.
 - Licensing in the panel: licence page, activation, daily renewal, grace period, Free tier limited to one server (existing servers are never stopped).
 - Server management in the panel: find and add LinuxGSM servers (adopt mode through a root-owned list), start/stop/restart/backup/status through the helper, viewer role is read-only.

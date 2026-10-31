@@ -1,7 +1,9 @@
 // stokehold-license runs the licence server and manages licences from the shell.
 //
 //	stokehold-license online-key -root root.key -root-id root1 -kid online-2026-11 [-days 90] -out online.json   (offline machine)
-//	stokehold-license serve  -db lic.db -online online.json [-listen 127.0.0.1:8090] [-trust-proxy]
+//	stokehold-license serve  -db lic.db -online online.json [-listen 127.0.0.1:8090] [-admin-listen 127.0.0.1:8091] [-trust-proxy]
+//	stokehold-license admin-add -db lic.db -name NAME -role owner|issuer    (prints a one-time password)
+//	stokehold-license admin-reset-2fa -db lic.db -name NAME
 //	stokehold-license issue  -db lic.db -order FP-1001 [-plan pro] [-servers 10] [-days 365] [-contact who] [-actor name]
 //	stokehold-license list   -db lic.db
 //	stokehold-license revoke|reset-binding -db lic.db -order FP-1001
@@ -25,6 +27,7 @@ import (
 	"os"
 	"time"
 
+	"stokehold/internal/auth"
 	"stokehold/internal/license"
 	"stokehold/internal/licsrv"
 	"stokehold/internal/sign"
@@ -53,11 +56,15 @@ func main() {
 	servers := fs.Int("servers", 10, "game server limit")
 	days := fs.Int("days", 365, "validity or extension in days")
 	contact := fs.String("contact", "", "buyer contact (nick or email), optional")
-	actor := fs.String("actor", os.Getenv("USER"), "who is doing this, for the audit log")
+	actor := fs.String("actor", firstEnv("USER", "USERNAME"), "who is doing this, for the audit log")
 	root := fs.String("root", "", "root private key PEM (online-key)")
 	rootID := fs.String("root-id", "root1", "id of the root key (online-key)")
 	kid := fs.String("kid", "", "id of the new online key (online-key)")
 	out := fs.String("out", "online.json", "output file (online-key)")
+	name := fs.String("name", "", "admin name (admin-add, admin-reset-2fa)")
+	role := fs.String("role", "issuer", "owner or issuer (admin-add)")
+	adminListen := fs.String("admin-listen", "127.0.0.1:8091", "admin interface address (serve)")
+	secure := fs.Bool("secure", true, "mark admin cookies Secure; turn off only for local testing over http (serve)")
 	online := fs.String("online", "online.json", "online key file (serve)")
 	listen := fs.String("listen", "127.0.0.1:8090", "listen address (serve)")
 	proxy := fs.Bool("trust-proxy", false, "use the last X-Forwarded-For entry as client address (serve)")
@@ -78,7 +85,7 @@ func main() {
 
 	switch cmd {
 	case "serve":
-		serve(st, *online, *listen, *proxy)
+		serve(st, *online, *listen, *adminListen, *proxy, *secure)
 	case "issue":
 		key, err := st.Issue(*actor, *order, *plan, *servers, time.Now().AddDate(0, 0, *days), *contact)
 		if err != nil {
@@ -111,6 +118,18 @@ func main() {
 			base = time.Now()
 		}
 		must(st.Extend(*actor, *order, base.AddDate(0, 0, *days)))
+	case "admin-add":
+		if *name == "" || (*role != licsrv.RoleOwner && *role != licsrv.RoleIssuer) {
+			die(fmt.Errorf("-name and -role owner|issuer are required"))
+		}
+		pw, _ := auth.NewToken()
+		pw = pw[:20]
+		must(st.AdminCreate(*name, pw, *role))
+		st.AdminAudit(*actor, "admin.add", *name+" "+*role)
+		fmt.Printf("Admin %q (%s) created. One-time password, shown once; sign-in then forces setting up two-factor:\n%s\n", *name, *role, pw)
+	case "admin-reset-2fa":
+		must(st.AdminResetTOTP(*name))
+		fmt.Println("two-factor reset; the admin sets it up again at the next sign-in")
 	case "reset-binding":
 		must(st.ResetBinding(*actor, *order))
 	case "audit":
@@ -160,7 +179,7 @@ func onlineKey(rootPath, rootID, kid string, days int, outPath string) {
 	fmt.Printf("wrote %s: online key %q, certified by %q until %s\n", outPath, kid, rootID, time.Unix(cert.NotAfter, 0).UTC().Format("2006-01-02"))
 }
 
-func serve(st *licsrv.Store, onlinePath, listen string, proxy bool) {
+func serve(st *licsrv.Store, onlinePath, listen, adminListen string, proxy, secure bool) {
 	b, err := os.ReadFile(onlinePath)
 	must(err)
 	var f onlineFile
@@ -176,6 +195,23 @@ func serve(st *licsrv.Store, onlinePath, listen string, proxy bool) {
 		Addr: listen, Handler: s.Handler(),
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second,
 	}
+	ui := licsrv.NewAdminUI(st, secure, proxy)
+	if st.AdminCount() == 0 {
+		log.Print("no admin users yet: run  stokehold-license admin-add -name NAME -role owner")
+	}
+	admin := &http.Server{Addr: adminListen, Handler: ui.Handler(),
+		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
+	go func() { log.Fatal(admin.ListenAndServe()) }()
+	log.Printf("admin interface on %s", adminListen)
 	log.Printf("licence server on %s, online key %q valid until %s", listen, f.Cert.KID, time.Unix(f.Cert.NotAfter, 0).UTC().Format("2006-01-02"))
 	log.Fatal(srv.ListenAndServe())
+}
+
+func firstEnv(names ...string) string {
+	for _, n := range names {
+		if v := os.Getenv(n); v != "" {
+			return v
+		}
+	}
+	return ""
 }
