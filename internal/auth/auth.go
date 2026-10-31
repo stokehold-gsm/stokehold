@@ -125,6 +125,10 @@ func totpCode(secret string, step int64) (string, error) {
 	return fmt.Sprintf("%06d", n%1_000_000), nil
 }
 
+// Code returns the TOTP code valid at t. The panel only verifies codes; this
+// exists so tests (and later a CLI) can produce one.
+func Code(secret string, t time.Time) (string, error) { return totpCode(secret, t.Unix()/totpPeriod) }
+
 // VerifyTOTP accepts the current step and one on each side for clock drift.
 // It returns the matching step so the caller can refuse to accept it twice.
 func VerifyTOTP(secret, code string, now time.Time) (step int64, ok bool) {

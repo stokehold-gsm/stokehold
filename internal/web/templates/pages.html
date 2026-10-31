@@ -1,0 +1,108 @@
+{{define "head"}}<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t . "app"}}</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header>
+  <p class="brand">{{t . "app"}}</p>
+  <nav>
+    {{if .User}}
+      <span class="muted">{{.User.Email}} ({{.User.Role}})</span>
+      <a href="/">{{t . "servers"}}</a>
+      <a href="/security">{{t . "security"}}</a>
+      <form class="inline" method="post" action="/logout">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <button class="link" type="submit">{{t . "signout"}}</button>
+      </form>
+    {{end}}
+    <a href="?lang=ru">RU</a> <a href="?lang=en">EN</a>
+  </nav>
+</header>
+<main>{{end}}
+
+{{define "foot"}}</main></body></html>{{end}}
+
+{{define "login"}}{{template "head" .}}
+<div class="card">
+  <h1>{{t . "login"}}</h1>
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <form method="post" action="/login" autocomplete="on">
+    <label for="email">{{t . "email"}}</label>
+    <input id="email" name="email" type="email" required autofocus>
+    <label for="password">{{t . "password"}}</label>
+    <input id="password" name="password" type="password" required>
+    <label for="code">{{t . "code"}}</label>
+    <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6">
+    <button type="submit">{{t . "signin"}}</button>
+  </form>
+</div>
+{{template "foot" .}}{{end}}
+
+{{define "setup"}}{{template "head" .}}
+<div class="card">
+  <h1>{{t . "setup"}}</h1>
+  <p class="muted">{{t . "setup_hint"}}</p>
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <form method="post" action="/setup">
+    <label for="token">{{t . "setup_token"}}</label>
+    <input id="token" name="token" type="text" required autocomplete="off">
+    <label for="email">{{t . "email"}}</label>
+    <input id="email" name="email" type="email" required>
+    <label for="password">{{t . "password"}}</label>
+    <input id="password" name="password" type="password" required minlength="10" autocomplete="new-password">
+    <button type="submit">{{t . "create_owner"}}</button>
+  </form>
+</div>
+{{template "foot" .}}{{end}}
+
+{{define "dashboard"}}{{template "head" .}}
+<div class="card">
+  <h1>{{t . "servers"}}</h1>
+  {{if .Servers}}
+  <table>
+    <tr><th>{{t . "name"}}</th><th>{{t . "game"}}</th><th>{{t . "mode"}}</th></tr>
+    {{range .Servers}}<tr><td>{{.Name}}</td><td>{{.Game}}</td><td>{{.Mode}}</td></tr>{{end}}
+  </table>
+  {{else}}<p class="muted">{{t . "no_servers"}}</p>{{end}}
+</div>
+{{template "foot" .}}{{end}}
+
+{{define "security"}}{{template "head" .}}
+<div class="card">
+  <h1>{{t . "twofa"}}</h1>
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  {{if .User.TOTPEnabled}}
+    <p>{{t . "twofa_on"}}</p>
+    <form method="post" action="/security/2fa/disable">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <label for="password">{{t . "password"}}</label>
+      <input id="password" name="password" type="password" required>
+      <button type="submit">{{t . "twofa_disable"}}</button>
+    </form>
+  {{else if .Secret}}
+    <p><b>{{t . "twofa_secret"}}</b></p>
+    <p><code>{{.Secret}}</code></p>
+    <p class="muted">{{t . "twofa_uri"}}: <code>{{.URI}}</code></p>
+    <form method="post" action="/security/2fa/enable">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <label for="code">{{t . "twofa_confirm"}}</label>
+      <input id="code" name="code" type="text" inputmode="numeric" maxlength="6" required autofocus>
+      <button type="submit">{{t . "twofa_enable"}}</button>
+    </form>
+  {{else}}
+    <p>{{t . "twofa_off"}}</p>
+    <form method="post" action="/security/2fa/start">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <button type="submit">{{t . "twofa_start"}}</button>
+    </form>
+  {{end}}
+</div>
+{{template "foot" .}}{{end}}
+
+{{define "message"}}{{template "head" .}}
+<div class="card"><p>{{.Error}}</p><p><a href="/">{{t . "back"}}</a></p></div>
+{{template "foot" .}}{{end}}
