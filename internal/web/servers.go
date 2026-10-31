@@ -34,11 +34,7 @@ func (s *Server) callHelperOn(node int64, r helper.Request) (helper.Response, er
 		}
 		return s.Helper(r)
 	}
-	n, err := s.Store.NodeByID(node)
-	if err != nil {
-		return helper.Response{}, err
-	}
-	return helper.Remote{Addr: n.Addr, Fingerprint: n.Fingerprint, Secret: n.Secret}.Call(r)
+	return s.callNode(node, r)
 }
 
 // режем вывод скрипта, чтобы страница не пухла

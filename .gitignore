@@ -7,3 +7,4 @@
 *.test
 /dist-*/
 !internal/entitlement/roots/*.pem
+.claude/

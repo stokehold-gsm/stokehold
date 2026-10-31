@@ -142,8 +142,17 @@ func (s *Store) migrate() error {
 			return err
 		}
 	}
+	for _, q := range editionTables {
+		if _, err := s.db.Exec(q); err != nil {
+			return err
+		}
+	}
 	return nil
 }
+
+// editionTables are created on every open, idempotently, so that an edition can
+// add tables without taking a slot in the numbered migrations.
+var editionTables []string
 
 func now() int64 { return time.Now().Unix() }
 

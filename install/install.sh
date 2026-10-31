@@ -20,7 +20,6 @@ VERSION=""
 NO_START=0
 LOCAL_DIR=""
 PUBKEY_FILE=""
-AGENT=0
 
 # The release public key.
 read -r -d '' BUILTIN_PUBKEY <<'PEM' || true
@@ -39,7 +38,6 @@ while [ $# -gt 0 ]; do
     --no-start) NO_START=1; shift ;;
     --local-dir) LOCAL_DIR="${2:-}"; shift 2 ;;
     --pubkey) PUBKEY_FILE="${2:-}"; shift 2 ;;
-    --agent) AGENT=1; shift ;;
     -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
     *) die "unknown option $1" ;;
   esac
@@ -76,8 +74,7 @@ fi
 # --- fetch ---
 BIN_PANEL="stokehold-linux-$ARCH"
 BIN_HELPER="stokehold-helper-linux-$ARCH"
-BIN_AGENT="stokehold-agent-linux-$ARCH"
-if [ "$AGENT" = 1 ]; then FILES="$BIN_AGENT"; else FILES="$BIN_PANEL $BIN_HELPER"; fi
+FILES="$BIN_PANEL $BIN_HELPER"
 PATTERN=$(printf "%s" "$FILES" | tr " " "|")
 if [ -n "$LOCAL_DIR" ]; then
   say "using release files from $LOCAL_DIR"
@@ -114,36 +111,6 @@ say "verifying checksums"
 [ "$(cd "$WORK" && grep -cE " \*?($PATTERN)\$" SHA256SUMS)" -eq "$(echo $FILES | wc -w)" ] || die "SHA256SUMS does not list the binaries"
 
 
-# --- agent only: a second machine that the panel on another host manages ---
-if [ "$AGENT" = 1 ]; then
-  systemctl stop stokehold-agent.service 2>/dev/null || true
-  install -m 755 "$WORK/$BIN_AGENT" /usr/local/bin/stokehold-agent
-  install -d -m 755 /etc/stokehold
-  [ -f /etc/stokehold/adopt.conf ] || : > /etc/stokehold/adopt.conf
-  cat > /etc/systemd/system/stokehold-agent.service <<UNIT
-[Unit]
-Description=Stokehold agent (helper for a panel on another machine)
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-ExecStart=/usr/local/bin/stokehold-agent -listen :9443 -dir /var/lib/stokehold-agent
-StateDirectory=stokehold-agent
-StateDirectoryMode=0700
-Restart=on-failure
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-UNIT
-  systemctl daemon-reload
-  systemctl enable stokehold-agent.service >/dev/null 2>&1
-  [ "$NO_START" = 1 ] || systemctl restart stokehold-agent.service
-  say "agent installed ($TAG). Open TCP 9443 for the panel's address only."
-  say "fingerprint and secret for the panel: journalctl -u stokehold-agent -n 5; the secret is in /var/lib/stokehold-agent/secret"
-  exit 0
-fi
-# --- install (with rollback) ---
 PREV=/usr/local/lib/stokehold/previous
 mkdir -p "$PREV"
 UPGRADE=0

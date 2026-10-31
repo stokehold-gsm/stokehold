@@ -19,7 +19,6 @@ import (
 	"github.com/stokehold-gsm/stokehold/internal/metrics"
 	"github.com/stokehold-gsm/stokehold/internal/store"
 	"github.com/stokehold-gsm/stokehold/pkg/auth"
-	"github.com/stokehold-gsm/stokehold/pkg/license"
 	"github.com/stokehold-gsm/stokehold/pkg/ratelimit"
 )
 
@@ -86,23 +85,18 @@ type page struct {
 	NewEmail    string
 	NewPassword string
 
-	Nodes        []store.Node
-	NodeNames    map[int64]string
-	NodeID       int64
-	Locked       string
-	APITokens    []store.APIToken
-	NewToken     string
-	Mon          monView
-	Statuses     map[int64]ServerStatus
-	Hook         string
-	StatusPublic bool
-	Mods         []modEntry
+	proPage
+	NodeNames map[int64]string
+	NodeID    int64
+	Mon       monView
+	Statuses  map[int64]ServerStatus
 }
 
 func New(st *store.Store, secure, trustProxy bool, setupToken string) *Server {
 	s := &Server{Distro: helper.CurrentDistro(), Store: st, Secure: secure, TrustProxy: trustProxy, SetupToken: setupToken, Now: time.Now, limiter: ratelimit.New(10, time.Minute)}
 	s.tmpl = template.Must(template.New("").Funcs(template.FuncMap{
-		"t": func(p page, key string) string { return tr(p.Lang, key) },
+		"t":   func(p page, key string) string { return tr(p.Lang, key) },
+		"pro": func() bool { return proBuild },
 	}).ParseFS(templatesFS, "templates/*.html"))
 	return s
 }
@@ -142,21 +136,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /security/2fa/enable", s.auth(s.twofaEnable))
 	mux.HandleFunc("POST /security/2fa/disable", s.auth(s.twofaDisable))
 	mux.HandleFunc("GET /monitor", s.auth(s.monitorPage))
-	mux.HandleFunc("GET /nodes", s.auth(s.gated(license.FeatureMultiNode, s.nodesPage)))
-	mux.HandleFunc("POST /nodes", s.auth(s.gated(license.FeatureMultiNode, s.nodeAdd)))
-	mux.HandleFunc("POST /nodes/{id}/delete", s.auth(s.gated(license.FeatureMultiNode, s.nodeDelete)))
-	mux.HandleFunc("GET /tokens", s.auth(s.gated(license.FeatureAPI, s.tokensPage)))
-	mux.HandleFunc("POST /tokens", s.auth(s.gated(license.FeatureAPI, s.tokenCreate)))
-	mux.HandleFunc("POST /tokens/{id}/delete", s.auth(s.gated(license.FeatureAPI, s.tokenDelete)))
-	mux.HandleFunc("GET /integrations", s.auth(s.integrationsPage))
-	mux.HandleFunc("POST /integrations", s.auth(s.integrationsSave))
-	mux.HandleFunc("GET /servers/{id}/mods", s.auth(s.gated(license.FeatureMods, s.modsPage)))
-	mux.HandleFunc("POST /servers/{id}/mods", s.auth(s.gated(license.FeatureMods, s.modsToggle)))
-	mux.HandleFunc("GET /status", s.statusPublic)
-	mux.HandleFunc("GET /api/v1/servers", s.apiAuth(s.apiServers))
-	mux.HandleFunc("GET /api/v1/servers/{id}", s.apiAuth(s.apiServerOne))
-	mux.HandleFunc("POST /api/v1/servers/{id}/{action}", s.apiAuth(s.apiAction))
-	mux.HandleFunc("GET /api/v1/metrics", s.apiAuth(s.apiMetrics))
+	s.proRoutes(mux)
 	return s.protect(mux)
 }
 

@@ -17,8 +17,8 @@
       <a href="/monitor">{{t . "monitor"}}</a>
       <a href="/security">{{t . "security"}}</a>
       <a href="/license">{{t . "license"}}</a>
-      {{if eq .User.Role "owner"}}<a href="/users">{{t . "users"}}</a> <a href="/nodes">{{t . "nodes"}}</a> <a href="/integrations">{{t . "integrations"}}</a>{{end}}
-      <a href="/tokens">{{t . "tokens"}}</a>
+      {{if eq .User.Role "owner"}}<a href="/users">{{t . "users"}}</a>{{if pro}} <a href="/nodes">{{t . "nodes"}}</a> <a href="/integrations">{{t . "integrations"}}</a>{{end}}{{end}}
+      {{if pro}}<a href="/tokens">{{t . "tokens"}}</a>{{end}}
       <form class="inline" method="post" action="/logout">
         <input type="hidden" name="csrf" value="{{.CSRF}}">
         <button class="link" type="submit">{{t . "signout"}}</button>
@@ -75,7 +75,7 @@
         <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="{{.}}">
         <button class="link" type="submit">{{t $ (printf "act_%s" .)}}</button></form>{{end}}{{end}}
       <a href="/servers/{{$srv.ID}}/schedules">{{t $ "schedules"}}</a>
-      {{if $.CanControl}}<a href="/servers/{{$srv.ID}}/files">{{t $ "files"}}</a>{{if eq $srv.Game "fctrserver"}} <a href="/servers/{{$srv.ID}}/mods">{{t $ "mods"}}</a>{{end}}{{end}}
+      {{if $.CanControl}}<a href="/servers/{{$srv.ID}}/files">{{t $ "files"}}</a>{{if and pro (eq $srv.Game "fctrserver")}} <a href="/servers/{{$srv.ID}}/mods">{{t $ "mods"}}</a>{{end}}{{end}}
     </td></tr>{{end}}
   </table>
   {{else}}<p class="muted">{{t . "no_servers"}}</p>{{end}}
@@ -307,3 +307,28 @@
   <p><a href="/servers/{{.ServerID}}/files">{{t . "back"}}</a></p>
 </div>
 {{template "foot" .}}{{end}}
+
+{{define "monitor"}}{{template "head" .}}
+<div class="card">
+  <h1>{{t . "monitor"}}</h1>
+  {{if .Mon.Have}}
+  <table>
+    <tr><th>{{t . "mon_cpu"}}</th><td>{{printf "%.0f" .Mon.CPU}}%</td><td>{{if .Mon.CPUPoints}}<svg class="spark" viewBox="0 0 120 30" aria-hidden="true"><polyline points="{{.Mon.CPUPoints}}"/></svg>{{end}}</td></tr>
+    <tr><th>{{t . "mon_mem"}}</th><td>{{printf "%.0f" .Mon.Mem}}% ({{.Mon.MemText}})</td><td>{{if .Mon.MemPoints}}<svg class="spark" viewBox="0 0 120 30" aria-hidden="true"><polyline points="{{.Mon.MemPoints}}"/></svg>{{end}}</td></tr>
+    <tr><th>{{t . "mon_disk"}}</th><td>{{printf "%.0f" .Mon.Disk}}% ({{.Mon.DiskText}})</td><td></td></tr>
+    <tr><th>{{t . "mon_load"}}</th><td>{{printf "%.2f" .Mon.Load1}}</td><td></td></tr>
+  </table>
+  <p class="muted">{{t . "mon_note"}}</p>
+  {{else}}<p class="muted">{{t . "mon_none"}}</p>{{end}}
+</div>
+<div class="card">
+  <h1>{{t . "servers"}}</h1>
+  {{if .Servers}}<table>
+    <tr><th>{{t . "name"}}</th><th>{{t . "mon_state"}}</th><th>{{t . "mon_players"}}</th></tr>
+    {{range $srv := .Servers}}{{$st := index $.Statuses $srv.ID}}<tr><td>{{$srv.Name}}{{with index $.NodeNames $srv.NodeID}} <span class="muted">({{.}})</span>{{end}}</td>
+      <td>{{if $st.State}}{{$st.State}}{{else}}-{{end}}</td><td>{{if $st.HasPlayers}}{{$st.Players}}/{{$st.Max}}{{else}}-{{end}}</td></tr>{{end}}
+  </table>{{else}}<p class="muted">{{t . "no_servers"}}</p>{{end}}
+</div>
+{{template "foot" .}}{{end}}
+
+{{define "nodepick"}}{{end}}

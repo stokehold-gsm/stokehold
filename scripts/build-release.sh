@@ -9,8 +9,6 @@ rm -rf dist && mkdir dist
 for arch in amd64 arm64; do
   CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -trimpath -ldflags "-s -w -X main.version=$VERSION" -o "dist/stokehold-linux-$arch" ./cmd/stokehold
   CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -trimpath -ldflags "-s -w" -o "dist/stokehold-helper-linux-$arch" ./cmd/stokehold-helper
-  CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -trimpath -ldflags "-s -w" -o "dist/stokehold-agent-linux-$arch" ./cmd/stokehold-agent
 done
 cp install/install.sh install/uninstall.sh dist/
-( cd dist && sha256sum stokehold-linux-* stokehold-helper-linux-* stokehold-agent-linux-* install.sh uninstall.sh > SHA256SUMS )
 echo "built $VERSION:"; cat dist/SHA256SUMS
