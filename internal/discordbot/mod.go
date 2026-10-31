@@ -36,7 +36,7 @@ func Commands() []map[string]any {
 			"dm_permission":              false,
 		}
 	}
-	return append(ReportCommands(),
+	return append(append(ReportCommands(), AppealCommands()...),
 		cmd("warn", "Выдать предупреждение", user, reason),
 		cmd("warnings", "Показать предупреждения участника", user),
 		cmd("timeout", "Отправить в таймаут", user,
@@ -76,6 +76,7 @@ type Mod struct {
 	Warns     *Warns
 	Now       func() time.Time
 	Cases     func() int // numbers log entries as «Дело #N»; nil leaves them unnumbered
+	Record    func(Case) // remembers numbered warnings, timeouts, kicks and bans for appeals; nil skips it
 	logChanID string
 }
 
@@ -171,9 +172,10 @@ func (m *Mod) run(ctx context.Context, in interaction) string {
 	g := "/guilds/" + in.GuildID
 	switch cmd {
 	case "warn":
-		n := m.Warns.Add(target, Warning{At: m.now(), By: by, Reason: reason})
+		at := m.now()
+		n := m.Warns.Add(target, Warning{At: at, By: by, Reason: reason})
 		recent := m.Warns.Count(target, m.now().AddDate(0, 0, -30))
-		m.log(ctx, in.GuildID, "⚠️ Предупреждение", target, by, reason, fmt.Sprintf("всего %d, за 30 дней %d", n, recent))
+		m.punished(ctx, in.GuildID, m.nextCase(), "⚠️ Предупреждение", fmt.Sprintf("всего %d, за 30 дней %d", n, recent), Case{Kind: kindWarn, Target: target, By: by, Reason: reason, At: at})
 		hint := ""
 		switch {
 		case recent >= 5:
@@ -208,7 +210,7 @@ func (m *Mod) run(ctx context.Context, in interaction) string {
 		if err := m.API.Do(ctx, "PATCH", g+"/members/"+target, map[string]any{"communication_disabled_until": until}, nil); err != nil {
 			return "Не удалось выдать таймаут."
 		}
-		m.log(ctx, in.GuildID, "🔇 Таймаут", target, by, reason, fmt.Sprintf("%d мин", mins))
+		m.punished(ctx, in.GuildID, m.nextCase(), "🔇 Таймаут", fmt.Sprintf("%d мин", mins), Case{Kind: kindTimeout, Target: target, By: by, Reason: reason, At: m.now(), Minutes: mins})
 		return fmt.Sprintf("Таймаут на %d мин выдан.", mins)
 	case "untimeout":
 		if err := m.API.Do(ctx, "PATCH", g+"/members/"+target, map[string]any{"communication_disabled_until": nil}, nil); err != nil {
@@ -217,16 +219,20 @@ func (m *Mod) run(ctx context.Context, in interaction) string {
 		m.log(ctx, in.GuildID, "🔈 Таймаут снят", target, by, "", "")
 		return "Таймаут снят."
 	case "kick":
+		// The member must hear the case number before they lose the shared server.
+		c, n := Case{Kind: kindKick, Target: target, By: by, Reason: reason, At: m.now()}, m.nextCase()
+		m.dmCase(ctx, n, c)
 		if err := m.API.Do(ctx, "DELETE", g+"/members/"+target, nil, nil); err != nil {
 			return "Не удалось исключить участника."
 		}
-		m.log(ctx, in.GuildID, "👢 Исключение", target, by, reason, "")
+		m.logN(ctx, in.GuildID, n, "👢 Исключение", target, by, reason, "")
+		m.record(n, c)
 		return "Участник исключён."
 	default: // ban
 		if err := m.API.Do(ctx, "PUT", g+"/bans/"+target, map[string]any{}, nil); err != nil {
 			return "Бан не прошёл: у бота нет права Ban Members или его роль ниже."
 		}
-		m.log(ctx, in.GuildID, "🔨 Бан", target, by, reason, "")
+		m.record(m.log(ctx, in.GuildID, "🔨 Бан", target, by, reason, ""), Case{Kind: kindBan, Target: target, By: by, Reason: reason, At: m.now()})
 		return "Участник забанен."
 	}
 }
@@ -259,7 +265,36 @@ func (m *Mod) purge(ctx context.Context, in interaction, countStr string) string
 
 // log writes one entry to the moderation log channel. A failure to log never
 // undoes the action, it only shows up in the bot's own log.
-func (m *Mod) log(ctx context.Context, guildID, what, target, by, reason, extra string) {
+// It returns the case number, 0 when entries are not numbered.
+func (m *Mod) log(ctx context.Context, guildID, what, target, by, reason, extra string) int {
+	return m.logN(ctx, guildID, m.nextCase(), what, target, by, reason, extra)
+}
+
+func (m *Mod) nextCase() int {
+	if m.Cases == nil {
+		return 0
+	}
+	return m.Cases()
+}
+
+// punished logs a numbered punishment, remembers it for appeals and tells the member.
+func (m *Mod) punished(ctx context.Context, guildID string, n int, title, extra string, c Case) {
+	m.logN(ctx, guildID, n, title, c.Target, c.By, c.Reason, extra)
+	m.record(n, c)
+	m.dmCase(ctx, n, c)
+}
+
+// dmCase gives the member the case number they need for /appeal. A ban is
+// not announced: a banned member shares no server with the bot.
+func (m *Mod) dmCase(ctx context.Context, n int, c Case) {
+	if n == 0 || c.Kind == kindBan {
+		return
+	}
+	dmUser(ctx, m.API, c.Target, fmt.Sprintf("На сервере вам вынесено наказание: %s (дело #%d).\nПричина: %s\nЕсли не согласны, подайте апелляцию командой /appeal в течение 14 дней, номер дела %d.",
+		strings.ToLower(kindLabel[c.Kind]), n, c.Reason, n))
+}
+
+func (m *Mod) logN(ctx context.Context, guildID string, n int, what, target, by, reason, extra string) int {
 	fields := []map[string]any{{"name": "Кто", "value": "<@" + by + ">", "inline": true}}
 	if target != "" {
 		fields = append(fields, map[string]any{"name": "Участник", "value": "<@" + target + "> (" + target + ")", "inline": true})
@@ -270,10 +305,19 @@ func (m *Mod) log(ctx context.Context, guildID, what, target, by, reason, extra 
 	if extra != "" {
 		fields = append(fields, map[string]any{"name": "Детали", "value": extra})
 	}
-	if m.Cases != nil {
-		what = fmt.Sprintf("Дело #%d · %s", m.Cases(), what)
+	if n > 0 {
+		what = fmt.Sprintf("Дело #%d · %s", n, what)
 	}
 	m.logEmbed(ctx, guildID, embed(what, colYellow, m.now(), fields...))
+	return n
+}
+
+// record keeps a numbered punishment so that it can be appealed later.
+func (m *Mod) record(n int, c Case) {
+	if n > 0 && m.Record != nil {
+		c.N = n
+		m.Record(c)
+	}
 }
 
 // logEmbed posts a ready embed to the moderation log.
@@ -343,6 +387,20 @@ func (w *Warns) List(user string, since time.Time) []Warning {
 }
 
 func (w *Warns) Count(user string, since time.Time) int { return len(w.List(user, since)) }
+
+// Remove drops one warning, found by who gave it and when; false if it is gone.
+func (w *Warns) Remove(user, by string, at time.Time) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	for i, x := range w.data[user] {
+		if x.By == by && x.At.Equal(at) {
+			w.data[user] = append(w.data[user][:i:i], w.data[user][i+1:]...)
+			w.save()
+			return true
+		}
+	}
+	return false
+}
 
 func (w *Warns) save() {
 	if w.path == "" {

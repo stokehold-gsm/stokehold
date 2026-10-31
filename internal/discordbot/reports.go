@@ -51,7 +51,17 @@ type Report struct {
 	Status       string    `json:"status"`
 	By           string    `json:"by,omitempty"`
 	At           time.Time `json:"at"`
+	Staff        bool      `json:"staff,omitempty"` // the target is staff: Curator and above handle it
+	Note         string    `json:"note,omitempty"`  // why it was rejected
+	MsgID        string    `json:"msg_id,omitempty"`
+	ChanID       string    `json:"chan_id,omitempty"`
+	Late         int       `json:"late,omitempty"` // 1: not taken within 24 h was flagged, 2: not closed within 72 h
 }
+
+const (
+	reportTake  = 24 * time.Hour
+	reportClose = 72 * time.Hour
+)
 
 const (
 	stNew      = "new"
@@ -86,8 +96,10 @@ type Reports struct {
 	Sink    *Sink
 	Mod     *Mod   // warnings and the moderation log
 	Channel string // channel name for new complaints
-	Path    string // "" keeps everything in memory
-	Now     func() time.Time
+	// StaffChannel takes complaints about staff, which only Curator and Founder see; empty uses Channel.
+	StaffChannel string
+	Path         string // "" keeps everything in memory
+	Now          func() time.Time
 
 	mu     sync.Mutex
 	st     reportState
@@ -186,31 +198,94 @@ func (r *Reports) run(ctx context.Context, in interaction) string {
 		r.mu.Unlock()
 		return fmt.Sprintf("Слишком часто: не больше %d жалоб в час и не чаще раза в полминуты.", reportsPerHour)
 	}
+	r.mu.Unlock()
+	rep.Staff = r.Mod.isStaff(ctx, in.GuildID, rep.Target)
+	r.mu.Lock()
 	r.st.Next++
 	rep.N = r.st.Next
 	r.st.Items[rep.N] = &rep
 	r.save()
 	r.mu.Unlock()
 
+	// Complaints about staff go to the curators' channel and ping only them.
+	channel, pingRole, to := r.Channel, discordsetup.RoleMod, "модераторам"
+	if rep.Staff && r.StaffChannel != "" {
+		channel, pingRole, to = r.StaffChannel, discordsetup.RoleCurator, "кураторам"
+	}
 	var roles []struct{ ID, Name string }
 	r.API.Do(ctx, "GET", "/guilds/"+in.GuildID+"/roles", nil, &roles)
 	body := map[string]any{"embeds": []map[string]any{r.embed(rep)}, "components": buttons(rep)}
 	for _, ro := range roles {
-		if ro.Name == discordsetup.RoleMod {
+		if ro.Name == pingRole {
 			body["content"] = "<@&" + ro.ID + ">"
 			body["allowed_mentions"] = map[string]any{"roles": []string{ro.ID}}
 		}
 	}
-	chans := r.Sink.channelID(ctx, r.Channel)
+	chans := r.Sink.channelID(ctx, channel)
 	if chans == "" {
 		return "Канал жалоб ещё не настроен, напишите модераторам напрямую."
 	}
-	if err := r.API.Do(ctx, "POST", "/channels/"+chans+"/messages", body, nil); err != nil {
+	var posted struct {
+		ID string `json:"id"`
+	}
+	if err := r.API.Do(ctx, "POST", "/channels/"+chans+"/messages", body, &posted); err != nil {
 		return "Не удалось отправить жалобу, попробуйте позже."
 	}
+	r.mu.Lock()
+	rep.MsgID, rep.ChanID = posted.ID, chans
+	r.save()
+	r.mu.Unlock()
 	r.Mod.logEmbed(ctx, in.GuildID, embed(fmt.Sprintf("📣 Новая жалоба #%d", rep.N), colYellow, r.now(),
 		field("От", who(rep.Reporter, rep.ReporterName), true), field("На", who(rep.Target, rep.TargetName), true), field("Причина", rep.Reason, false)))
-	return fmt.Sprintf("Жалоба #%d отправлена модераторам. Спасибо.", rep.N)
+	return fmt.Sprintf("Жалоба #%d отправлена %s. Спасибо.", rep.N, to)
+}
+
+// Sweep flags open complaints that outlived their targets: red card, a ping,
+// once per level. The bot calls it every few minutes.
+func (r *Reports) Sweep(ctx context.Context, guild string) {
+	r.mu.Lock()
+	r.load()
+	var late []Report
+	for _, rep := range r.st.Items {
+		age := r.now().Sub(rep.At)
+		switch {
+		case rep.open() && age > reportClose && rep.Late < 2:
+			rep.Late = 2
+		case rep.Status == stNew && age > reportTake && rep.Late < 1:
+			rep.Late = 1
+		default:
+			continue
+		}
+		late = append(late, *rep)
+	}
+	if len(late) > 0 {
+		r.save()
+	}
+	r.mu.Unlock()
+	for _, rep := range late {
+		if rep.MsgID == "" {
+			continue
+		}
+		r.API.Do(ctx, "PATCH", "/channels/"+rep.ChanID+"/messages/"+rep.MsgID, map[string]any{"embeds": []map[string]any{r.embed(rep)}, "components": buttons(rep)}, nil)
+		what := "не взята в работу за 24 часа"
+		if rep.Late == 2 {
+			what = "не закрыта за 72 часа"
+		}
+		role := discordsetup.RoleMod
+		if rep.Staff {
+			role = discordsetup.RoleCurator
+		}
+		var roles []struct{ ID, Name string }
+		r.API.Do(ctx, "GET", "/guilds/"+guild+"/roles", nil, &roles)
+		body := map[string]any{"content": fmt.Sprintf("⏰ Жалоба #%d %s.", rep.N, what), "allowed_mentions": map[string]any{"parse": []string{}}}
+		for _, ro := range roles {
+			if ro.Name == role {
+				body["content"] = "<@&" + ro.ID + "> " + body["content"].(string)
+				body["allowed_mentions"] = map[string]any{"roles": []string{ro.ID}}
+			}
+		}
+		r.API.Do(ctx, "POST", "/channels/"+rep.ChanID+"/messages", body, nil)
+	}
 }
 
 func (r *Reports) embed(rep Report) map[string]any {
@@ -229,7 +304,22 @@ func (r *Reports) embed(rep Report) map[string]any {
 	if rep.By != "" {
 		f = append(f, field("Обработал", "<@"+rep.By+">", true))
 	}
-	return embed(fmt.Sprintf("Жалоба #%d · %s", rep.N, look.Label), look.Color, rep.At, f...)
+	if rep.Note != "" {
+		f = append(f, field("Причина отказа", rep.Note, false))
+	}
+	color := look.Color
+	e := embed(fmt.Sprintf("Жалоба #%d · %s", rep.N, look.Label), color, rep.At, f...)
+	if rep.open() {
+		text := "Срок: взять в работу в течение 24 ч, закрыть в течение 72 ч"
+		if rep.Late > 0 {
+			text, e["color"] = "⏰ Просрочена. "+text, colRed
+		}
+		if rep.Staff {
+			text += ". Жалоба на сотрудника: решают кураторы"
+		}
+		e["footer"] = map[string]any{"text": text}
+	}
+	return e
 }
 
 func buttons(rep Report) []map[string]any {
@@ -288,15 +378,22 @@ func (r *Reports) press(ctx context.Context, in interaction) string {
 	if !rep.open() {
 		return "Жалоба уже закрыта: " + statusLook[rep.Status].Label + "."
 	}
+	if rep.Staff && rank < rankCurator {
+		return "Жалобы на сотрудников разбирают кураторы."
+	}
 	by := in.Member.User.ID
 	reply := ""
 	next := ""
+	note := strings.TrimSpace(modalValue(in, "reason"))
 	switch act {
 	case "take":
 		next, reply = stTaken, fmt.Sprintf("Жалоба #%d за вами.", n)
 	case "done":
 		next, reply = stDone, fmt.Sprintf("Жалоба #%d закрыта как решённая.", n)
-	case "reject":
+	case "reject", "rejectm":
+		if note == "" {
+			return "Нужна причина отказа: её увидит автор жалобы."
+		}
 		next, reply = stRejected, fmt.Sprintf("Жалоба #%d отклонена.", n)
 	case "warn":
 		if rank < rankMod {
@@ -312,19 +409,28 @@ func (r *Reports) press(ctx context.Context, in interaction) string {
 			return "Это сотрудник. Решения о персонале принимают кураторы."
 		}
 		reason := fmt.Sprintf("жалоба #%d: %s", n, rep.Reason)
-		total := r.Mod.Warns.Add(rep.Target, Warning{At: r.now(), By: by, Reason: reason})
+		at := r.now()
+		total := r.Mod.Warns.Add(rep.Target, Warning{At: at, By: by, Reason: reason})
 		recent := r.Mod.Warns.Count(rep.Target, r.now().AddDate(0, 0, -30))
-		r.Mod.log(ctx, in.GuildID, "⚠️ Предупреждение", rep.Target, by, reason, fmt.Sprintf("всего %d, за 30 дней %d", total, recent))
-		r.dm(ctx, rep.Target, "Вам выдано предупреждение на сервере по жалобе: "+rep.Reason+"\nЕсли не согласны, напишите куратору: решение можно обжаловать.")
+		r.Mod.punished(ctx, in.GuildID, r.Mod.nextCase(), "⚠️ Предупреждение", fmt.Sprintf("всего %d, за 30 дней %d", total, recent),
+			Case{Kind: kindWarn, Target: rep.Target, By: by, Reason: reason, At: at})
 		next, reply = stWarned, fmt.Sprintf("Предупреждение выдано (за 30 дней: %d).", recent)
 	default:
 		return "Эта кнопка не поддерживается."
 	}
 	r.mu.Lock()
-	rep.Status, rep.By = next, by
+	rep.Status, rep.By, rep.Note = next, by, note
 	r.save()
 	snapshot := *rep
 	r.mu.Unlock()
+	// The reporter hears the outcome, never what the punishment was.
+	if next != stTaken {
+		text := fmt.Sprintf("Жалоба #%d рассмотрена, меры приняты. Спасибо, что сообщили.", n)
+		if next == stRejected {
+			text = fmt.Sprintf("Жалоба #%d рассмотрена и отклонена. Причина: %s", n, note)
+		}
+		dmUser(ctx, r.API, snapshot.Reporter, text)
+	}
 	if err := r.API.Do(ctx, "PATCH", "/channels/"+in.ChannelID+"/messages/"+in.Message.ID, map[string]any{
 		"embeds": []map[string]any{r.embed(snapshot)}, "components": buttons(snapshot),
 	}, nil); err != nil {
@@ -337,11 +443,33 @@ func (r *Reports) press(ctx context.Context, in interaction) string {
 	return reply
 }
 
-// dm tells a member about a decision; closed DMs are normal and ignored.
-func (r *Reports) dm(ctx context.Context, user, text string) {
+// dmUser tells a member about a decision; closed DMs are normal and ignored.
+func dmUser(ctx context.Context, api *discordsetup.Client, user, text string) {
 	var ch struct{ ID string }
-	if r.API.Do(ctx, "POST", "/users/@me/channels", map[string]any{"recipient_id": user}, &ch) != nil || ch.ID == "" {
+	if api.Do(ctx, "POST", "/users/@me/channels", map[string]any{"recipient_id": user}, &ch) != nil || ch.ID == "" {
 		return
 	}
-	r.API.Do(ctx, "POST", "/channels/"+ch.ID+"/messages", map[string]any{"content": text, "allowed_mentions": map[string]any{"parse": []string{}}}, nil)
+	api.Do(ctx, "POST", "/channels/"+ch.ID+"/messages", map[string]any{"content": text, "allowed_mentions": map[string]any{"parse": []string{}}}, nil)
+}
+
+// isStaff reports whether the user holds any staff role, shop roles included.
+func (m *Mod) isStaff(ctx context.Context, guild, user string) bool {
+	var member struct {
+		Roles []string `json:"roles"`
+	}
+	var roles []struct{ ID, Name string }
+	if m.API.Do(ctx, "GET", "/guilds/"+guild+"/members/"+user, nil, &member) != nil ||
+		m.API.Do(ctx, "GET", "/guilds/"+guild+"/roles", nil, &roles) != nil {
+		return false
+	}
+	names := map[string]string{}
+	for _, ro := range roles {
+		names[ro.ID] = ro.Name
+	}
+	for _, id := range member.Roles {
+		if roleRank[names[id]] > 0 {
+			return true
+		}
+	}
+	return false
 }
