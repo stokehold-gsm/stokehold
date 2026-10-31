@@ -17,7 +17,10 @@ import (
 	"stokehold/internal/web"
 )
 
+var version = "dev" // set by -ldflags "-X main.version=..." at release
+
 const usage = `usage:
+  stokehold version
   stokehold serve [-db panel.db] [-listen 127.0.0.1:8080] [-secure] [-trust-proxy]
   stokehold scan <home>
   stokehold call <socket> <json>`
@@ -28,6 +31,8 @@ func main() {
 		os.Exit(2)
 	}
 	switch os.Args[1] {
+	case "version":
+		fmt.Println(version)
 	case "serve":
 		serve(os.Args[2:])
 	case "scan":

@@ -1,0 +1,32 @@
+name: release
+
+# Builds the release files and attaches them to a DRAFT release. Signing is done
+# by the owner on their own machine (docs/release.md); the private key is never
+# available to CI.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: test
+        run: go test -count=1 ./...
+      - name: build
+        run: scripts/build-release.sh "${GITHUB_REF_NAME}"
+      - name: draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags="--draft --title ${GITHUB_REF_NAME}"
+          case "${GITHUB_REF_NAME}" in *-*) flags="$flags --prerelease" ;; esac
+          gh release create "${GITHUB_REF_NAME}" $flags --generate-notes dist/*

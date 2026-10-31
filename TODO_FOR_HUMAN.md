@@ -13,3 +13,5 @@
 10. **Почта проекта:** сейчас пересылка на rnsknae@gmail.com через ImprovMX ждёт DNS (пункт 2).
 
 Сделано: домены, VPS, GitHub-организация stokehold-gsm, Discord-сервер и бот, Go и git.
+
+11. **Ключ подписи релизов (до первого релиза):** на своей машине выполнить `go run ./cmd/stokehold-sign keygen release.key release.pub` (см. docs/release.md), приватный ключ хранить офлайн в двух копиях, публичный вставить в install/install.sh. Без этого установщик работает только с --pubkey.
