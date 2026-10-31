@@ -105,6 +105,7 @@
             <a class="menu-item" href="/servers/{{$r.ID}}/schedules">{{t $ "schedules"}}</a>
             <a class="menu-item" href="/servers/{{$r.ID}}/files">{{t $ "files"}}</a>
             {{if and pro (eq $r.Game "fctrserver")}}<a class="menu-item" href="/servers/{{$r.ID}}/mods">{{t $ "mods"}}</a>{{end}}
+            {{if and pro (or (eq $r.Game "mcserver") (eq $r.Game "pmcserver") (eq $r.Game "fctrserver"))}}<a class="menu-item" href="/servers/{{$r.ID}}/game">{{t $ "g_menu"}}</a>{{end}}
           </div>
         </details>
         {{else}}
