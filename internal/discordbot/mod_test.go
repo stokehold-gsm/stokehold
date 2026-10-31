@@ -47,7 +47,7 @@ func (g *guild) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == "GET" && p == "/guilds/g/channels":
 		out := `[{"id":"cLog","name":"` + discordsetup.LogChannel + `"},{"id":"cCat","name":"` + discordsetup.TicketCategory + `","type":4},` +
 			`{"id":"cNew","name":"` + discordsetup.TicketNotify + `"},{"id":"cOrd","name":"` + discordsetup.TicketOrders + `"},` +
-			`{"id":"cRep","name":"` + discordsetup.ReportsChannel + `"},{"id":"cBot","name":"` + discordsetup.BotLogChannel + `"},{"id":"cLm","name":"` + discordsetup.LogMessages + `"},` +
+			`{"id":"cRep","name":"` + discordsetup.ReportsChannel + `"},{"id":"cCur","name":"` + discordsetup.CuratorsChannel + `"},{"id":"cBot","name":"` + discordsetup.BotLogChannel + `"},{"id":"cLm","name":"` + discordsetup.LogMessages + `"},` +
 			`{"id":"cLmem","name":"` + discordsetup.LogMembers + `"},{"id":"cLv","name":"` + discordsetup.LogVoice + `"},{"id":"cLs","name":"` + discordsetup.LogServer + `"},{"id":"cLa","name":"` + discordsetup.LogAutomod + `"}`
 		for id, topic := range g.topics {
 			out += `,{"id":"` + id + `","name":"ticket-x","topic":"` + topic + `","parent_id":"cCat"}`
@@ -63,6 +63,9 @@ func (g *guild) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == "POST" && p == "/users/@me/channels":
 		rec()
 		w.Write([]byte(`{"id":"dm1"}`))
+	case r.Method == "POST" && strings.HasPrefix(p, "/channels/") && strings.HasSuffix(p, "/messages"):
+		rec()
+		w.Write([]byte(`{"id":"m1"}`))
 	case r.Method == "GET" && p == "/users/@me":
 		w.Write([]byte(`{"id":"bot"}`))
 	case r.Method == "GET":

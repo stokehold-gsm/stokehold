@@ -4,6 +4,9 @@ Format follows Keep a Changelog. Versions follow semver once there is a first re
 
 ## Unreleased
 
+- Discord: report flow follows the spec: a rejection asks for a reason in a window, the reporter gets a short DM summary, complaints about staff go to the curators channel, 24 h and 72 h targets are shown on the card and overdue cards are flagged.
+- Discord: /appeal for warnings, timeouts and kicks within 14 days, one per case, decided by a curator who did not issue the punishment; accepting cancels the punishment. Punished members get the case number by DM.
+- Discord: an install channel with the panel installation steps.
 - Discord: detailed logs as embeds from a gateway connection (messages with before and after, members, voice, invites, threads, AutoMod), bot commands and audit events as embeds, numbered moderation cases.
 - Discord: complaint system: /report, a message menu command, and a complaint card with take, warn, resolve and reject buttons.
 

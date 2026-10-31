@@ -44,8 +44,17 @@ func main() {
 		h.Tickets = &discordbot.Tickets{Category: discordsetup.TicketCategory, Notify: discordsetup.TicketNotify, Orders: discordsetup.TicketOrders}
 		if guild := os.Getenv("DISCORD_GUILD_ID"); guild != "" {
 			sink := &discordbot.Sink{API: api, GuildID: guild}
-			h.Reports = &discordbot.Reports{API: api, Sink: sink, Mod: h.Mod, Channel: discordsetup.ReportsChannel, Path: os.Getenv("STOKEHOLD_BOT_REPORTS")}
+			h.Reports = &discordbot.Reports{API: api, Sink: sink, Mod: h.Mod, Channel: discordsetup.ReportsChannel, StaffChannel: discordsetup.CuratorsChannel, Path: os.Getenv("STOKEHOLD_BOT_REPORTS")}
 			h.Mod.Cases = h.Reports.NextCase
+			h.Appeals = &discordbot.Appeals{API: api, Sink: sink, Mod: h.Mod, Channel: discordsetup.CuratorsChannel, Path: os.Getenv("STOKEHOLD_BOT_APPEALS")}
+			h.Mod.Record = h.Appeals.Record
+			go func() { // complaints that outlive their 24 h / 72 h targets get flagged
+				for range time.Tick(10 * time.Minute) {
+					ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+					h.Reports.Sweep(ctx, guild)
+					cancel()
+				}
+			}()
 			h.Logs = &discordbot.Logs{Sink: sink, Log: log.Printf}
 		}
 	}

@@ -2,6 +2,8 @@ package discordbot
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/stokehold-gsm/stokehold/internal/discordsetup"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -12,7 +14,7 @@ func reportRig(t *testing.T) (*Handler, *guild, *time.Time) {
 	h, g := modRig(t)
 	clock := now
 	h.Reports = &Reports{API: h.API, Sink: &Sink{API: h.API, GuildID: "g", Now: func() time.Time { return clock }}, Mod: h.Mod,
-		Channel: "📣・жалобы", Now: func() time.Time { return clock }}
+		Channel: discordsetup.ReportsChannel, StaffChannel: discordsetup.CuratorsChannel, Now: func() time.Time { return clock }}
 	h.Mod.Cases = h.Reports.NextCase
 	return h, g, &clock
 }
@@ -122,7 +124,10 @@ func TestReportButtonsNeedStaffAndFollowTheStatus(t *testing.T) {
 	if h.Mod.Warns.Count("victim", now.AddDate(0, 0, -1)) != 1 {
 		t.Error("the warning must go through the usual warning list")
 	}
-	mustContain(t, g.byPath["/channels/dm1/messages"], "предупреждение")
+	dms := strings.Join(g.byPath["/channels/dm1/messages"], "")
+	if !strings.Contains(dms, "предупреждение (дело #") || !strings.Contains(dms, "Жалоба #1 рассмотрена, меры приняты") || strings.Contains(dms[strings.Index(dms, "Жалоба #1"):], "предупреждение") {
+		t.Errorf("the target must get the case number, the reporter a summary without the punishment: %s", dms)
+	}
 	mustContain(t, g.posted("cLog"), "Жалоба #1")
 	if !strings.Contains(strings.Join(g.byPath["/channels/cLog/messages"], ""), "Дело #") {
 		t.Error("moderation entries should be numbered")
@@ -139,23 +144,80 @@ func TestReportDoneRejectAndStaffTargets(t *testing.T) {
 	h, g, clock := reportRig(t)
 	ctx := context.Background()
 	h.Reports.run(ctx, report("victim", "а"))
-	if out := h.Reports.press(ctx, press("reject", "1", "rH")); !strings.Contains(out, "отклонена") {
+	if out := h.Reports.press(ctx, press("rejectm", "1", "rH")); !strings.Contains(out, "причина") {
+		t.Errorf("a rejection needs a reason: %q", out)
+	}
+	if out := h.Reports.press(ctx, withReason(press("rejectm", "1", "rH"), "не нарушение")); !strings.Contains(out, "отклонена") {
 		t.Errorf("%q", out)
 	}
+	mustContain(t, g.posted("dm1"), "Жалоба #1 рассмотрена и отклонена", "не нарушение")
 	*clock = clock.Add(time.Minute)
 	h.Reports.run(ctx, report("victim", "б"))
 	if out := h.Reports.press(ctx, press("done", "2", "rM")); !strings.Contains(out, "решённая") {
 		t.Errorf("%q", out)
 	}
-	*clock = clock.Add(time.Minute)
-	h.Reports.run(ctx, report("mod2", "на модератора"))
-	h.Mod.Warns, _ = OpenWarns("")
-	if out := h.Reports.press(ctx, press("warn", "3", "rM")); !strings.Contains(out, "сотрудник") || h.Mod.Warns.Count("mod2", now.AddDate(0, 0, -1)) != 0 {
-		t.Errorf("a moderator warned an equal: %q", out)
-	}
 	if !strings.Contains(strings.Join(g.posted("cLog"), ""), "Жалоба #2") {
-		t.Error("the rejected complaint was not logged")
+		t.Error("the closed complaint was not logged")
 	}
+}
+
+func TestComplaintAboutStaffGoesToCuratorsOnly(t *testing.T) {
+	h, g, clock := reportRig(t)
+	ctx := context.Background()
+	h.Mod.Warns, _ = OpenWarns("")
+	if out := h.Reports.run(ctx, report("mod2", "на модератора")); !strings.Contains(out, "кураторам") {
+		t.Fatalf("%q", out)
+	}
+	if len(g.posted("cRep")) != 0 {
+		t.Fatal("a complaint about staff reached the moderators' channel")
+	}
+	mustContain(t, g.posted("cCur"), "Жалоба #1", "<@&rC>", "решают кураторы")
+	*clock = clock.Add(time.Minute)
+	h.Reports.run(ctx, report("shopie", "на оператора шопа"))
+	if len(g.posted("cCur")) != 2 {
+		t.Errorf("shop staff count as staff too: %d", len(g.posted("cCur")))
+	}
+	if out := h.Reports.press(ctx, press("warn", "1", "rM")); !strings.Contains(out, "кураторы") || h.Mod.Warns.Count("mod2", now.AddDate(0, 0, -1)) != 0 {
+		t.Errorf("a moderator handled a complaint about a colleague: %q", out)
+	}
+	if out := h.Reports.press(ctx, press("warn", "1", "rC")); !strings.Contains(out, "Предупреждение выдано") {
+		t.Errorf("a curator must be able to: %q", out)
+	}
+}
+
+func TestReporterGetsASummaryWithoutDetails(t *testing.T) {
+	h, g, _ := reportRig(t)
+	ctx := context.Background()
+	h.Mod.Warns, _ = OpenWarns("")
+	h.Reports.run(ctx, report("victim", "спам"))
+	h.Reports.press(ctx, press("warn", "1", "rM"))
+	mustContain(t, g.posted("dm1"), "Жалоба #1 рассмотрена, меры приняты")
+	if last := g.posted("dm1"); strings.Contains(last[len(last)-1], "предупреждение") {
+		t.Error("the reporter must not learn what the punishment was")
+	}
+}
+
+func TestSweepFlagsLateComplaintsOnce(t *testing.T) {
+	h, g, clock := reportRig(t)
+	ctx := context.Background()
+	h.Reports.run(ctx, report("victim", "долго"))
+	h.Reports.Sweep(ctx, "g")
+	if g.wrote("PATCH /channels/cRep/messages/m1") {
+		t.Fatal("a fresh complaint was flagged")
+	}
+	*clock = clock.Add(25 * time.Hour)
+	h.Reports.Sweep(ctx, "g")
+	h.Reports.Sweep(ctx, "g")
+	if got := strings.Count(strings.Join(g.posted("cRep"), ""), "не взята в работу за 24 часа"); got != 1 {
+		t.Errorf("the late ping must go once, went %d times", got)
+	}
+}
+
+// withReason fills in the text input of a submitted modal.
+func withReason(in interaction, reason string) interaction {
+	b, _ := json.Marshal(map[string]any{"components": []map[string]any{{"components": []map[string]any{{"custom_id": "reason", "value": reason}}}}})
+	json.Unmarshal(b, &in.Data)
+	return in
 }
 
 func TestReportsSurviveARestart(t *testing.T) {

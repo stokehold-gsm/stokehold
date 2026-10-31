@@ -160,6 +160,7 @@ func Default() Plan {
 				{Key: "news", Name: "📢・новости", Topic: "Новости проекта", ReadOnly: true, Messages: []Message{newsRU}},
 				{Key: "releases", Name: "🚀・релизы", Topic: "Релизы и список изменений", ReadOnly: true, Messages: []Message{releasesRU}},
 				{Key: "faq", Name: "❓・faq", Topic: "Частые вопросы", ReadOnly: true, Messages: []Message{faqRU}},
+				{Key: "install", Name: "🛠・установка", Topic: "Как поставить панель на Linux-сервер", ReadOnly: true, Messages: []Message{installRU}},
 				{Key: "plans", Name: "🗺・планы", Topic: "Что делаем и что дальше", ReadOnly: true, Messages: []Message{plansRU}},
 			}},
 			{Name: "💬 СООБЩЕСТВО", Channels: []Channel{
@@ -198,7 +199,7 @@ func Default() Plan {
 				{Key: "staff", Name: "📘・устав-персонала", Topic: "Структура, права и порядок наказаний", ReadOnly: true, OnlyFor: allStaff, Messages: staffRU},
 				{Key: "mods", Name: "🛡・модераторы", Topic: "Только для модераторов и кураторов", OnlyFor: modTeam, Messages: []Message{modsRU}},
 				{Key: "helpers", Name: "🤝・хелперы", Topic: "Хелперы, модераторы и кураторы: разбор вопросов поддержки", OnlyFor: helpTeam, Messages: []Message{helpersRU}},
-				{Key: "curators", Name: "🧭・кураторы", Topic: "Обсуждение персонала, жалобы на модераторов, апелляции", OnlyFor: []string{RoleFounder, RoleCurator}},
+				{Key: "curators", Name: CuratorsChannel, Topic: "Жалобы на персонал, апелляции и обсуждение персонала", OnlyFor: []string{RoleFounder, RoleCurator}},
 				{Key: "log", Name: LogChannel, Topic: "Журнал модерации: каждое наказание одной записью", OnlyFor: modTeam, Messages: []Message{logRU}},
 				{Key: "events", Name: EventsChannel, Topic: "События сервера из журнала аудита Discord", OnlyFor: modTeam},
 				{Key: "reports", Name: ReportsChannel, Topic: "Жалобы участников: кнопки под каждой жалобой", OnlyFor: helpTeam},
@@ -237,7 +238,9 @@ const (
 	LogChannel     = "📋・журнал"
 	EventsChannel  = "📜・события"
 	ReportsChannel = "📣・жалобы"
-	BotLogChannel  = "🤖・бот"
+	// CuratorsChannel receives complaints about staff and appeals; only Curator and Founder see it.
+	CuratorsChannel = "🧭・кураторы"
+	BotLogChannel   = "🤖・бот"
 
 	// Detailed logs the bot fills from the gateway (docs/discord.md).
 	LogMessages = "💬・сообщения"

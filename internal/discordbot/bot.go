@@ -21,11 +21,13 @@ import (
 const maxBody = 64 << 10
 
 const (
-	typePing      = 1
-	typeComponent = 3
-	respPong      = 1
-	respMessage   = 4
-	flagEphemeral = 64
+	typePing        = 1
+	typeComponent   = 3
+	typeModalSubmit = 5
+	respPong        = 1
+	respMessage     = 4
+	respModal       = 9
+	flagEphemeral   = 64
 )
 
 type Handler struct {
@@ -37,6 +39,7 @@ type Handler struct {
 	Tickets   *Tickets          // shop tickets; nil switches them off
 	Panel     PanelRunner       // /servers, /server, /metrics against a Stokehold panel (Pro); nil switches them off
 	Reports   *Reports          // /report and the complaint buttons; nil switches them off
+	Appeals   *Appeals          // /appeal and its buttons; nil switches them off
 	Logs      *Logs             // writes every command into the bot log; nil switches that off
 	Now       func() time.Time  // tests only
 
@@ -63,6 +66,13 @@ type interaction struct {
 		Name     string   `json:"name"`
 		Options  []option `json:"options"`
 		TargetID string   `json:"target_id"` // message menu commands
+		// Components of a submitted modal: rows of text inputs.
+		Components []struct {
+			Components []struct {
+				CustomID string `json:"custom_id"`
+				Value    string `json:"value"`
+			} `json:"components"`
+		} `json:"components"`
 		Resolved struct {
 			Users    map[string]resolvedUser `json:"users"`
 			Messages map[string]struct {
@@ -102,11 +112,31 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.deferred(w, in, h.ticket)
 			return
 		}
+		// «Отклонить» asks for a reason first: a window must be the immediate answer.
+		for _, p := range []string{"rep:reject:", "apl:reject:"} {
+			if strings.HasPrefix(in.Data.CustomID, p) {
+				reply(w, rejectModal(strings.TrimSuffix(p, "reject:")+"rejectm:"+strings.TrimPrefix(in.Data.CustomID, p)))
+				return
+			}
+		}
 		if strings.HasPrefix(in.Data.CustomID, "rep:") && h.Reports != nil {
 			h.deferred(w, in, h.Reports.press)
 			return
 		}
+		if strings.HasPrefix(in.Data.CustomID, "apl:") && h.Appeals != nil {
+			h.deferred(w, in, h.Appeals.press)
+			return
+		}
 		reply(w, h.component(r.Context(), in))
+	case typeModalSubmit:
+		switch {
+		case strings.HasPrefix(in.Data.CustomID, "rep:") && h.Reports != nil:
+			h.deferred(w, in, h.Reports.press)
+		case strings.HasPrefix(in.Data.CustomID, "apl:") && h.Appeals != nil:
+			h.deferred(w, in, h.Appeals.press)
+		default:
+			http.Error(w, "unsupported interaction", http.StatusBadRequest)
+		}
 	case typeCommand:
 		if h.Logs != nil {
 			h.wg.Add(1)
@@ -119,6 +149,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if h.Reports != nil && h.Reports.handles(in.Data.Name) {
 			h.deferred(w, in, h.Reports.run)
+			return
+		}
+		if h.Appeals != nil && h.Appeals.handles(in.Data.Name) {
+			h.deferred(w, in, h.Appeals.run)
 			return
 		}
 		if h.Panel != nil && h.Panel.handles(in.Data.Name) {
