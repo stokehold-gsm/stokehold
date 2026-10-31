@@ -1,0 +1,49 @@
+{{define "updates"}}{{template "head" .}}
+<div class="card">
+  <h1>{{t . "upd_title"}}</h1>
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <table>
+    <tr><th>{{t . "upd_current"}}</th><td><code>{{.Upd.Current}}</code></td></tr>
+    <tr><th>{{t . "upd_latest"}}</th><td>{{if .Upd.Latest}}<code>{{.Upd.Latest.Tag}}</code>{{if .Upd.Latest.Prerelease}} <span class="muted">(beta)</span>{{end}}{{else}}<span class="muted">{{t . "upd_unknown"}}</span>{{end}}</td></tr>
+    <tr><th>{{t . "upd_checked"}}</th><td>{{if .Upd.Checked}}{{.Upd.Checked}}{{else}}<span class="muted">{{t . "upd_never"}}</span>{{end}}</td></tr>
+  </table>
+  {{if .Upd.CheckErr}}<p class="error">{{t . "upd_check_failed"}} <code>{{.Upd.CheckErr}}</code></p>{{end}}
+  {{if .Upd.Dev}}<p class="muted">{{t . "upd_dev"}}</p>
+  {{else if .Upd.Active}}<p><b>{{t . "upd_running"}}</b></p>
+  {{else if .Upd.Started}}<p><b>{{t . "upd_started"}}</b></p>
+  {{else if .Upd.Newer}}
+    <p><b>{{t . "upd_available"}} <code>{{.Upd.Latest.Tag}}</code></b></p>
+    {{if .Upd.Latest.Notes}}<pre>{{.Upd.Latest.Notes}}</pre>{{end}}
+    <p class="muted">{{t . "upd_how"}}</p>
+    <form method="post" action="/updates/apply" class="inline">
+      <input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="version" value="{{.Upd.Latest.Tag}}">
+      <button type="submit">{{t . "upd_apply"}}</button>
+    </form>
+  {{else if .Upd.Latest}}<p>{{t . "upd_uptodate"}}</p>{{end}}
+  <form method="post" action="/updates/check" class="inline"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">{{t . "upd_check"}}</button></form>
+</div>
+
+<div class="card">
+  <h1>{{t . "upd_auto"}}</h1>
+  <p class="muted">{{t . "upd_privacy"}}</p>
+  <form method="post" action="/updates/settings">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="mode">{{t . "upd_mode"}}</label>
+    <select id="mode" name="mode">
+      <option value="off"{{if eq .Upd.Mode "off"}} selected{{end}}>{{t . "upd_mode_off"}}</option>
+      <option value="notify"{{if eq .Upd.Mode "notify"}} selected{{end}}>{{t . "upd_mode_notify"}}</option>
+      <option value="auto"{{if eq .Upd.Mode "auto"}} selected{{end}}>{{t . "upd_mode_auto"}}</option>
+    </select>
+    <label for="channel">{{t . "upd_channel"}}</label>
+    <select id="channel" name="channel">
+      <option value="stable"{{if eq .Upd.Channel "stable"}} selected{{end}}>stable</option>
+      <option value="beta"{{if eq .Upd.Channel "beta"}} selected{{end}}>beta</option>
+    </select>
+    <label for="hour">{{t . "upd_hour"}}</label>
+    <input id="hour" name="hour" type="text" inputmode="numeric" value="{{.Upd.Hour}}" required>
+    <button type="submit">{{t . "save"}}</button>
+  </form>
+</div>
+
+{{if .Upd.Log}}<div class="card"><h1>{{t . "upd_log"}}</h1><pre>{{.Upd.Log}}</pre></div>{{end}}
+{{template "foot" .}}{{end}}

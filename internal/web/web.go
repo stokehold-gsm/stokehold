@@ -2,6 +2,7 @@
 package web
 
 import (
+	"context"
 	"crypto/subtle"
 	"embed"
 	"errors"
@@ -17,6 +18,7 @@ import (
 	"github.com/stokehold-gsm/stokehold/internal/entitlement"
 	"github.com/stokehold-gsm/stokehold/internal/helper"
 	"github.com/stokehold-gsm/stokehold/internal/metrics"
+	"github.com/stokehold-gsm/stokehold/internal/selfupdate"
 	"github.com/stokehold-gsm/stokehold/internal/store"
 	"github.com/stokehold-gsm/stokehold/pkg/auth"
 	"github.com/stokehold-gsm/stokehold/pkg/ratelimit"
@@ -39,8 +41,11 @@ type Server struct {
 	Entitlement Entitlements // nil means Free only
 	Distro      string       // e.g. ubuntu-22.04, selects the LinuxGSM package list
 
-	Metrics    *metrics.Collector // nil: no monitoring
-	HookClient *http.Client       // nil: a default client; tests replace it
+	Metrics    *metrics.Collector                                                     // nil: no monitoring
+	HookClient *http.Client                                                           // nil: a default client; tests replace it
+	Version    string                                                                 // this build, for the updates page
+	Releases   func(ctx context.Context, channel string) (*selfupdate.Release, error) // nil: ask GitHub; tests replace it
+	upd        updState
 	status     statusCache
 
 	jobs jobTracker
@@ -79,6 +84,7 @@ type page struct {
 	Games       []catalog.Game
 	Files       []string
 	FM          *fmView
+	Upd         *updView
 	FilePath    string
 	FileContent string
 	Refresh     bool
@@ -139,6 +145,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /security/2fa/disable", s.auth(s.twofaDisable))
 	mux.HandleFunc("GET /monitor", s.auth(s.monitorPage))
 	s.fmRoutes(mux)
+	s.updRoutes(mux)
 	s.proRoutes(mux)
 	return s.protect(mux)
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/stokehold-gsm/stokehold/internal/lgsm"
 	"github.com/stokehold-gsm/stokehold/internal/safefs"
+	"github.com/stokehold-gsm/stokehold/internal/selfupdate"
 )
 
 // Game users carry a prefix so the helper can never touch a real account
@@ -27,7 +28,7 @@ var (
 const maxPackages = 64 // LinuxGSM lists run past 20 packages for some games
 
 type Request struct {
-	Op       string   `json:"op"` // create-user | install | deps | run | discover | files | read-file | write-file | file manager ops (fm.go) | fetch | http-get-json
+	Op       string   `json:"op"` // update | update-status | create-user | install | deps | run | discover | files | read-file | write-file | file manager ops (fm.go) | fetch | http-get-json
 	User     string   `json:"user"`
 	Game     string   `json:"game,omitempty"`
 	Cmd      string   `json:"cmd,omitempty"`
@@ -42,6 +43,7 @@ type Request struct {
 	URL      string   `json:"url,omitempty"`     // fetch, http-get-json
 	SHA256   string   `json:"sha256,omitempty"`  // fetch: expected checksum
 	SHA1     string   `json:"sha1,omitempty"`    // fetch: expected checksum
+	Version  string   `json:"version,omitempty"` // update: the release tag to install
 }
 
 type Response struct {
@@ -68,6 +70,13 @@ func ValidateWith(r Request, adopted Adopted) error {
 		}
 	case "http-get-json":
 		return validateFM(r) // downloads for the panel run as root without a game user
+	case "update":
+		if !selfupdate.ValidTag(r.Version) {
+			return bad("version")
+		}
+		return nil // runs as root without a game user
+	case "update-status":
+		return nil
 	case "read-file", "write-file":
 		if len(r.Path) == 0 || len(r.Path) > 300 || !inTree(r.Path) || !safefs.Editable(r.Path) || strings.ContainsAny(r.Path, "\\\x00") || strings.Contains(r.Path, "..") {
 			return bad("path")
@@ -124,6 +133,7 @@ type Backend struct {
 	Run     Runner
 	Adopted Adopted
 	Files   Files
+	Update  bool // allow the panel to update itself; only the main helper sets it, not the agent
 }
 
 func HandleFull(r Request, b Backend) Response {
@@ -138,6 +148,18 @@ func HandleFull(r Request, b Backend) Response {
 		return handleFM(r, b.Files)
 	case "http-get-json":
 		return handleJSON(r)
+	case "update", "update-status":
+		if !b.Update {
+			return Response{Err: "updates are not available through this helper"}
+		}
+		if r.Op == "update" {
+			if err := StartUpdate(r.Version); err != nil {
+				return Response{Err: err.Error()}
+			}
+			return Response{OK: true, Out: "update started"}
+		}
+		active, tail := UpdateStatus()
+		return Response{OK: true, Out: map[bool]string{true: "active", false: "idle"}[active] + "\n" + tail}
 	}
 	var out string
 	var err error

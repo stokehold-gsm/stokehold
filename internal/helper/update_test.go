@@ -55,3 +55,17 @@ func TestStartUpdateDoesNotRunAnythingWhenTheReleaseDoesNotVerify(t *testing.T) 
 		}
 	}
 }
+
+func TestUpdateOpsNeedTheMainHelper(t *testing.T) {
+	calls := stubUpdate(t, nil)
+	r := HandleFull(Request{Op: "update", Version: "v1.2.3"}, Backend{})
+	if r.OK || !strings.Contains(r.Err, "not available") || len(*calls) != 0 {
+		t.Fatalf("an agent must not update the panel: %+v %v", r, *calls)
+	}
+	if r := HandleFull(Request{Op: "update", Version: "v1.2.3"}, Backend{Update: true}); !r.OK {
+		t.Fatalf("the main helper starts the update: %+v", r)
+	}
+	if r := HandleFull(Request{Op: "update", Version: "latest"}, Backend{Update: true}); r.OK {
+		t.Fatal("an odd version must be refused")
+	}
+}
