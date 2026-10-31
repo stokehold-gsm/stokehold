@@ -19,7 +19,11 @@ var editable = map[string]bool{
 	".yml": true, ".toml": true, ".properties": true, ".conf": true,
 }
 
-type FS struct{ root *os.Root }
+type FS struct {
+	root     *os.Root
+	uid, gid int
+	owned    bool
+}
 
 func Open(dir string) (*FS, error) {
 	r, err := os.OpenRoot(dir)

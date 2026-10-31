@@ -68,6 +68,7 @@ footer { padding:24px 0 48px; color:var(--muted); font-size:.9rem; border-top:1p
   <a href="#actions">Actions</a>
   <a href="#schedules">Schedules</a>
   <a href="#files">Config editor</a>
+  <a href="#filemanager">File manager</a>
   <a href="#monitor">Monitoring</a>
   <b>Access</b>
   <a href="#roles">Users and roles</a>
@@ -163,6 +164,18 @@ footer { padding:24px 0 48px; color:var(--muted); font-size:.9rem; border-top:1p
 <section id="files">
   <h2>Config editor</h2>
   <p>The Files link of a server opens config editing. Only <code>serverfiles</code> and <code>lgsm/config-lgsm</code> are reachable, and only text files up to 256 KB. Before saving the panel keeps a copy of the previous version next to the file (<code>.stokehold-bak</code>). Changes take effect after the server restarts. The editor creates no new files and does not follow symbolic links. Only owners and admins see and change files: configs often hold passwords.</p>
+</section>
+
+<section id="filemanager">
+  <h2>File manager</h2>
+  <p>The Files link of a server opens the whole folder of the game user: walk through folders, create folders and empty files, upload and download files, rename, move and delete. It is available to owners and admins. The table sorts by name, size and modification date, folders always come first.</p>
+  <ul>
+    <li><b>Upload:</b> several files at once, up to 256 MB per go. A file appears in place only after the last part, so a broken upload never damages the old version.</li>
+    <li><b>Download:</b> streamed, no size limit.</li>
+    <li><b>Editing:</b> text files inside <code>serverfiles</code> and <code>lgsm/config-lgsm</code> (up to 256 KB) have an Edit link that keeps the previous version as <code>.stokehold-bak</code>.</li>
+    <li><b>Delete:</b> always with a separate confirmation, several items can be selected (up to 200). There is no recycle bin and folders go with everything inside.</li>
+  </ul>
+  <div class="note">The manager sees only the game user's home folder and cannot leave it, neither through <code>..</code> nor through symbolic links. <code>.ssh</code>, <code>.bashrc</code>, <code>.profile</code> and <code>authorized_keys</code> are hidden. Every change and download is written to the log.</div>
 </section>
 
 <section id="monitor">

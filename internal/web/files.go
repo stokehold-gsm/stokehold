@@ -9,35 +9,9 @@ import (
 	"github.com/stokehold-gsm/stokehold/internal/safefs"
 )
 
-// Config files can hold secrets such as RCON passwords, so only people who
-// may control the server can see or change them.
-func (s *Server) filesPage(w http.ResponseWriter, r *http.Request, p *page) {
-	if !canControl(p.User.Role) {
-		s.denied(w, p)
-		return
-	}
-	sv := s.loadServer(r)
-	if sv == nil {
-		s.render(w, "message", &page{Lang: p.Lang, User: p.User, CSRF: p.CSRF, Error: tr(p.Lang, "not_found")}, http.StatusNotFound)
-		return
-	}
-	p.ServerName, p.ServerID = sv.Name, sv.ID
-	resp, err := s.callHelperOn(sv.NodeID, helper.Request{Op: "files", User: sv.LinuxUser})
-	if err != nil || !resp.OK {
-		p.Error = tr(p.Lang, "helper_down")
-	} else {
-		for _, f := range strings.Split(resp.Out, "\n") {
-			if f = strings.TrimSpace(f); f != "" {
-				p.Files = append(p.Files, f)
-			}
-		}
-	}
-	if r.URL.Query().Get("saved") != "" {
-		p.Info = tr(p.Lang, "file_saved")
-	}
-	s.render(w, "files", p, http.StatusOK)
-}
-
+// The file browser is in filemanager.go. Config files can hold secrets such as
+// RCON passwords, so only people who may control the server can see or change
+// anything here.
 func (s *Server) editPage(w http.ResponseWriter, r *http.Request, p *page) {
 	if !canControl(p.User.Role) {
 		s.denied(w, p)
