@@ -20,6 +20,7 @@ VERSION=""
 NO_START=0
 LOCAL_DIR=""
 PUBKEY_FILE=""
+AGENT=0
 
 # The release public key.
 read -r -d '' BUILTIN_PUBKEY <<'PEM' || true
@@ -38,6 +39,7 @@ while [ $# -gt 0 ]; do
     --no-start) NO_START=1; shift ;;
     --local-dir) LOCAL_DIR="${2:-}"; shift 2 ;;
     --pubkey) PUBKEY_FILE="${2:-}"; shift 2 ;;
+    --agent) AGENT=1; shift ;;
     -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
     *) die "unknown option $1" ;;
   esac
@@ -74,9 +76,12 @@ fi
 # --- fetch ---
 BIN_PANEL="stokehold-linux-$ARCH"
 BIN_HELPER="stokehold-helper-linux-$ARCH"
+BIN_AGENT="stokehold-agent-linux-$ARCH"
+if [ "$AGENT" = 1 ]; then FILES="$BIN_AGENT"; else FILES="$BIN_PANEL $BIN_HELPER"; fi
+PATTERN=$(printf "%s" "$FILES" | tr " " "|")
 if [ -n "$LOCAL_DIR" ]; then
   say "using release files from $LOCAL_DIR"
-  for f in SHA256SUMS SHA256SUMS.sig "$BIN_PANEL" "$BIN_HELPER"; do
+  for f in SHA256SUMS SHA256SUMS.sig $FILES; do
     [ -f "$LOCAL_DIR/$f" ] || die "$LOCAL_DIR/$f is missing"
     cp "$LOCAL_DIR/$f" "$WORK/$f"
   done
@@ -94,7 +99,7 @@ else
   TAG="$VERSION"
   say "installing $TAG ($CHANNEL)"
   base="https://github.com/$REPO/releases/download/$TAG"
-  for f in SHA256SUMS SHA256SUMS.sig "$BIN_PANEL" "$BIN_HELPER"; do
+  for f in SHA256SUMS SHA256SUMS.sig $FILES; do
     curl -fsSL "$base/$f" -o "$WORK/$f" || die "download of $f failed"
   done
 fi
@@ -104,10 +109,40 @@ say "verifying signature"
 openssl pkeyutl -verify -pubin -inkey "$WORK/pub.pem" -rawin -in "$WORK/SHA256SUMS" -sigfile "$WORK/SHA256SUMS.sig" >/dev/null 2>&1 \
   || die "signature check FAILED, nothing was installed"
 say "verifying checksums"
-( cd "$WORK" && grep -E " \*?($BIN_PANEL|$BIN_HELPER)\$" SHA256SUMS | sha256sum -c - >/dev/null ) \
+( cd "$WORK" && grep -E " \*?($PATTERN)\$" SHA256SUMS | sha256sum -c - >/dev/null ) \
   || die "checksum mismatch, nothing was installed"
-[ "$(cd "$WORK" && grep -cE " \*?($BIN_PANEL|$BIN_HELPER)\$" SHA256SUMS)" -eq 2 ] || die "SHA256SUMS does not list both binaries"
+[ "$(cd "$WORK" && grep -cE " \*?($PATTERN)\$" SHA256SUMS)" -eq "$(echo $FILES | wc -w)" ] || die "SHA256SUMS does not list the binaries"
 
+
+# --- agent only: a second machine that the panel on another host manages ---
+if [ "$AGENT" = 1 ]; then
+  systemctl stop stokehold-agent.service 2>/dev/null || true
+  install -m 755 "$WORK/$BIN_AGENT" /usr/local/bin/stokehold-agent
+  install -d -m 755 /etc/stokehold
+  [ -f /etc/stokehold/adopt.conf ] || : > /etc/stokehold/adopt.conf
+  cat > /etc/systemd/system/stokehold-agent.service <<UNIT
+[Unit]
+Description=Stokehold agent (helper for a panel on another machine)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/stokehold-agent -listen :9443 -dir /var/lib/stokehold-agent
+StateDirectory=stokehold-agent
+StateDirectoryMode=0700
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+  systemctl daemon-reload
+  systemctl enable stokehold-agent.service >/dev/null 2>&1
+  [ "$NO_START" = 1 ] || systemctl restart stokehold-agent.service
+  say "agent installed ($TAG). Open TCP 9443 for the panel's address only."
+  say "fingerprint and secret for the panel: journalctl -u stokehold-agent -n 5; the secret is in /var/lib/stokehold-agent/secret"
+  exit 0
+fi
 # --- install (with rollback) ---
 PREV=/usr/local/lib/stokehold/previous
 mkdir -p "$PREV"
