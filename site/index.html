@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stokehold GSM: панель для игровых серверов на LinuxGSM</title>
+<meta name="description" content="Лёгкая панель управления игровыми серверами поверх LinuxGSM. Один бинарник, SQLite, без Docker. Подхватывает уже установленные серверы. Проект в разработке.">
+<style>
+:root { color-scheme: dark light; --bg:#14161c; --card:#1c1f27; --fg:#e6e8eb; --muted:#9aa3b0; --brand:#e8451a; --line:#2c313c; }
+@media (prefers-color-scheme: light) { :root { --bg:#f6f7f9; --card:#fff; --fg:#1d2127; --muted:#6b7380; --line:#dde1e6; } }
+* { box-sizing: border-box; }
+body { margin:0; font:17px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--fg); }
+.wrap { max-width:960px; margin:0 auto; padding:0 16px; }
+header { padding:18px 0; display:flex; justify-content:space-between; align-items:center; }
+header a { color:var(--muted); text-decoration:none; margin-left:16px; }
+.logo { font-weight:800; color:var(--brand); letter-spacing:.3px; }
+.hero { padding:56px 0 40px; }
+h1 { font-size:clamp(2rem,5vw,3.2rem); line-height:1.1; margin:0 0 16px; }
+.lead { font-size:1.2rem; color:var(--muted); max-width:640px; }
+.badge { display:inline-block; padding:3px 10px; border:1px solid var(--line); border-radius:99px; color:var(--muted); font-size:.85rem; margin-bottom:16px; }
+.btns { margin-top:26px; display:flex; gap:12px; flex-wrap:wrap; }
+.btn { padding:12px 20px; border-radius:10px; text-decoration:none; font-weight:600; border:1px solid var(--line); color:var(--fg); }
+.btn.primary { background:var(--brand); border-color:var(--brand); color:#fff; }
+section { padding:32px 0; border-top:1px solid var(--line); }
+h2 { font-size:1.6rem; margin:0 0 18px; }
+.grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; }
+.card h3 { margin:0 0 8px; font-size:1.1rem; }
+.muted { color:var(--muted); }
+ul { padding-left:20px; }
+table { width:100%; border-collapse:collapse; font-size:.95rem; }
+th,td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+.scroll { overflow-x:auto; }
+code,pre { font-family:ui-monospace,Consolas,monospace; }
+pre { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; overflow-x:auto; }
+details { border-bottom:1px solid var(--line); padding:12px 0; }
+summary { cursor:pointer; font-weight:600; }
+footer { padding:32px 0 48px; color:var(--muted); font-size:.9rem; border-top:1px solid var(--line); }
+footer a { color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <span class="logo">Stokehold GSM</span>
+  <nav><a href="#now">Что готово</a><a href="#compare">Сравнение</a><a href="#plans">Тарифы</a><a href="en/">EN</a></nav>
+</header>
+
+<main>
+<div class="hero">
+  <span class="badge">В разработке, публичного релиза пока нет</span>
+  <h1>Панель для игровых серверов поверх LinuxGSM</h1>
+  <p class="lead">Один бинарник и SQLite вместо PHP, MySQL, Redis и Docker. Подхватывает серверы LinuxGSM, которые у вас уже стоят, без переустановки. Для админов сообществ на одном VPS.</p>
+  <div class="btns">
+    <a class="btn primary" href="DISCORD_INVITE_URL">Обсудить в Discord</a>
+    <a class="btn" href="GITHUB_URL">GitHub</a>
+  </div>
+  <p class="muted">Discord из России открывается через обход блокировок. Баги и вопросы можно оставлять и в GitHub.</p>
+</div>
+
+<section>
+  <h2>Зачем это</h2>
+  <div class="grid">
+    <div class="card"><h3>Подхват, а не переустановка</h3><p class="muted">Панель находит скрипты LinuxGSM у выбранного пользователя и управляет ими. Чужие аккаунты она не трогает, пока владелец сам не внесёт их в список.</p></div>
+    <div class="card"><h3>Лёгкая установка</h3><p class="muted">Установщик проверяет подпись релиза и контрольные суммы до установки, а если новая версия не запустилась, возвращает прежнюю. Работает на одном маленьком VPS.</p></div>
+    <div class="card"><h3>Безопасность по умолчанию</h3><p class="muted">Привилегированная часть выполняет только фиксированный набор операций. Файлы серверов открываются через один модуль с защитой от выхода за каталог. Вход с двухфакторной защитой.</p></div>
+  </div>
+</section>
+
+<section id="now">
+  <h2>Что уже работает</h2>
+  <p class="muted">Проверено на Ubuntu 22.04. Это не релиз, а прототип; список короткий и точный.</p>
+  <ul>
+    <li>запуск, остановка, перезапуск, статус, проверка обновления и бэкап сервера LinuxGSM из веб-интерфейса;</li>
+    <li>поиск и добавление уже установленных серверов (режим подхвата);</li>
+    <li>вход по паролю (argon2id), двухфакторная защита TOTP, роли owner, admin и viewer, защита от CSRF;</li>
+    <li>русский и английский интерфейс;</li>
+    <li>установщик с проверкой подписи, откатом при неудачном обновлении и удалением.</li>
+  </ul>
+  <p><b>Пока нет:</b> менеджер модов, расписание бэкапов и вайпов, бэкапы в S3, откат обновления игры, публичная страница статуса, уведомления в Discord, платные лицензии.</p>
+</section>
+
+<section id="compare">
+  <h2>Чем отличается от других</h2>
+  <div class="scroll"><table>
+    <tr><th></th><th>Установка и стек</th><th>Игры</th><th>Из России</th><th>Лицензия</th></tr>
+    <tr><td>Pterodactyl</td><td>PHP/Laravel + MySQL + Redis, демон Wings, Docker</td><td>через eggs</td><td>да</td><td>MIT</td></tr>
+    <tr><td>Pelican</td><td>форк Pterodactyl, веб-установщик, SQLite или Postgres</td><td>через eggs</td><td>да</td><td>AGPL-3.0</td></tr>
+    <tr><td>PufferPanel</td><td>один Go-бинарник</td><td>шаблоны</td><td>да</td><td>Apache-2.0</td></tr>
+    <tr><td>Crafty Controller</td><td>Python, один узел</td><td>только Minecraft</td><td>да</td><td>GPL</td></tr>
+    <tr><td>AMP</td><td>проприетарная, простая установка</td><td>много</td><td>нет, покупка недоступна</td><td>платная</td></tr>
+    <tr><td><b>Stokehold GSM</b></td><td>один Go-бинарник + SQLite, поверх LinuxGSM</td><td>143 игры через LinuxGSM</td><td>да</td><td>[решение ещё не принято]</td></tr>
+  </table></div>
+  <p class="muted">Данные собраны в октябре 2026 по репозиториям проектов и их документации; у Pterodactyl были критические уязвимости (CVE-2025-49132, CVE-2024-27102). Источники и детали: <a href="MARKET_URL">разбор рынка</a>.</p>
+</section>
+
+<section id="plans">
+  <h2>Тарифы (план)</h2>
+  <div class="grid">
+    <div class="card"><h3>Free</h3><p class="muted">Один игровой сервер, все базовые функции. Не обращается к нашему серверу и не требует ключа.</p></div>
+    <div class="card"><h3>Pro</h3><p class="muted">Больше серверов, бэкапы в S3, откат обновлений, роли для нескольких администраторов. Цена пока не названа.</p></div>
+    <div class="card"><h3>Hosting</h3><p class="muted">Несколько машин и клиентский доступ. Позже, после первой версии.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Установка</h2>
+  <p class="muted">Команда появится вместе с первым релизом. Установщик можно будет прочитать до запуска.</p>
+<pre><code>curl -fsSL https://dl.stokehold.online/install.sh -o install.sh
+less install.sh
+sudo bash install.sh</code></pre>
+</section>
+
+<section>
+  <h2>Вопросы</h2>
+  <details><summary>Нужен ли Discord, чтобы панель работала?</summary><p class="muted">Нет. Панель, лицензии и обновления от Discord не зависят.</p></details>
+  <details><summary>Бесплатно ли это?</summary><p class="muted">Планируется бесплатный тариф на один игровой сервер и платный Pro. Цены не объявлены.</p></details>
+  <details><summary>Что отправляется на ваш сервер?</summary><p class="muted">Free ничего не отправляет. У Pro для проверки ключа уходят ключ, отпечаток экземпляра и версия панели. Подробности будут в политике обработки данных.</p></details>
+  <details><summary>Кто это делает?</summary><p class="muted">Один разработчик, который сам администрирует сервер Factorio. Проект написан с помощью ИИ-ассистента, решения и релизы принимает человек.</p></details>
+</section>
+</main>
+
+<footer>
+  <p>Stokehold GSM. Документы: <a href="EULA_URL">лицензионное соглашение</a>, <a href="PRIVACY_URL">политика обработки персональных данных</a>, <a href="OFFER_URL">оферта</a> (публикуются перед началом продаж).</p>
+</footer>
+</div>
+</body>
+</html>

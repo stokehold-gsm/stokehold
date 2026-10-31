@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stokehold GSM: a game server panel on top of LinuxGSM</title>
+<meta name="description" content="A lightweight panel for game servers on top of LinuxGSM. One binary, SQLite, no Docker. Adopts servers you already run. Under development.">
+<style>
+:root { color-scheme: dark light; --bg:#14161c; --card:#1c1f27; --fg:#e6e8eb; --muted:#9aa3b0; --brand:#e8451a; --line:#2c313c; }
+@media (prefers-color-scheme: light) { :root { --bg:#f6f7f9; --card:#fff; --fg:#1d2127; --muted:#6b7380; --line:#dde1e6; } }
+* { box-sizing: border-box; }
+body { margin:0; font:17px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--fg); }
+.wrap { max-width:960px; margin:0 auto; padding:0 16px; }
+header { padding:18px 0; display:flex; justify-content:space-between; align-items:center; }
+header a { color:var(--muted); text-decoration:none; margin-left:16px; }
+.logo { font-weight:800; color:var(--brand); letter-spacing:.3px; }
+.hero { padding:56px 0 40px; }
+h1 { font-size:clamp(2rem,5vw,3.2rem); line-height:1.1; margin:0 0 16px; }
+.lead { font-size:1.2rem; color:var(--muted); max-width:640px; }
+.badge { display:inline-block; padding:3px 10px; border:1px solid var(--line); border-radius:99px; color:var(--muted); font-size:.85rem; margin-bottom:16px; }
+.btns { margin-top:26px; display:flex; gap:12px; flex-wrap:wrap; }
+.btn { padding:12px 20px; border-radius:10px; text-decoration:none; font-weight:600; border:1px solid var(--line); color:var(--fg); }
+.btn.primary { background:var(--brand); border-color:var(--brand); color:#fff; }
+section { padding:32px 0; border-top:1px solid var(--line); }
+h2 { font-size:1.6rem; margin:0 0 18px; }
+.grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; }
+.card h3 { margin:0 0 8px; font-size:1.1rem; }
+.muted { color:var(--muted); }
+ul { padding-left:20px; }
+table { width:100%; border-collapse:collapse; font-size:.95rem; }
+th,td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+.scroll { overflow-x:auto; }
+code,pre { font-family:ui-monospace,Consolas,monospace; }
+pre { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; overflow-x:auto; }
+details { border-bottom:1px solid var(--line); padding:12px 0; }
+summary { cursor:pointer; font-weight:600; }
+footer { padding:32px 0 48px; color:var(--muted); font-size:.9rem; border-top:1px solid var(--line); }
+footer a { color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <span class="logo">Stokehold GSM</span>
+  <nav><a href="#now">What works</a><a href="#compare">Comparison</a><a href="#plans">Plans</a><a href="../">RU</a></nav>
+</header>
+
+<main>
+<div class="hero">
+  <span class="badge">Under development, no public release yet</span>
+  <h1>A game server panel on top of LinuxGSM</h1>
+  <p class="lead">One binary and SQLite instead of PHP, MySQL, Redis and Docker. It adopts the LinuxGSM servers you already run, no reinstall. Built for community admins on a single VPS.</p>
+  <div class="btns">
+    <a class="btn primary" href="DISCORD_INVITE_URL">Join the Discord</a>
+    <a class="btn" href="GITHUB_URL">GitHub</a>
+  </div>
+</div>
+
+<section>
+  <h2>Why</h2>
+  <div class="grid">
+    <div class="card"><h3>Adopt, don't reinstall</h3><p class="muted">The panel finds LinuxGSM scripts for a chosen user and drives them. It never touches other accounts until the owner lists them.</p></div>
+    <div class="card"><h3>Light to install</h3><p class="muted">The installer verifies the release signature and checksums before installing, and rolls back if the new version fails to start. Runs on one small VPS.</p></div>
+    <div class="card"><h3>Secure by default</h3><p class="muted">The privileged part runs a fixed set of operations only. Server files go through one module that cannot escape the server directory. Two-factor sign-in.</p></div>
+  </div>
+</section>
+
+<section id="now">
+  <h2>What works today</h2>
+  <p class="muted">Verified on Ubuntu 22.04. This is a prototype, not a release; the list is short and exact.</p>
+  <ul>
+    <li>start, stop, restart, status, update check and backup of a LinuxGSM server from the web UI;</li>
+    <li>finding and adding servers that are already installed (adopt mode);</li>
+    <li>sign-in with argon2id passwords, TOTP two-factor, owner/admin/viewer roles, CSRF protection;</li>
+    <li>Russian and English interface;</li>
+    <li>an installer with signature verification, rollback on a failed upgrade, and uninstall.</li>
+  </ul>
+  <p><b>Not yet:</b> a mod manager, scheduled backups and wipes, S3 backups, game update rollback, a public status page, Discord notifications, paid licences.</p>
+</section>
+
+<section id="compare">
+  <h2>How it differs</h2>
+  <div class="scroll"><table>
+    <tr><th></th><th>Install and stack</th><th>Games</th><th>Available in Russia</th><th>Licence</th></tr>
+    <tr><td>Pterodactyl</td><td>PHP/Laravel + MySQL + Redis, Wings daemon, Docker</td><td>via eggs</td><td>yes</td><td>MIT</td></tr>
+    <tr><td>Pelican</td><td>Pterodactyl fork, web installer, SQLite or Postgres</td><td>via eggs</td><td>yes</td><td>AGPL-3.0</td></tr>
+    <tr><td>PufferPanel</td><td>single Go binary</td><td>templates</td><td>yes</td><td>Apache-2.0</td></tr>
+    <tr><td>Crafty Controller</td><td>Python, single node</td><td>Minecraft only</td><td>yes</td><td>GPL</td></tr>
+    <tr><td>AMP</td><td>proprietary, easy install</td><td>many</td><td>no, not sold there</td><td>paid</td></tr>
+    <tr><td><b>Stokehold GSM</b></td><td>single Go binary + SQLite, on top of LinuxGSM</td><td>143 games via LinuxGSM</td><td>yes</td><td>[not decided yet]</td></tr>
+  </table></div>
+  <p class="muted">Collected in October 2026 from project repositories and docs. Pterodactyl has had critical vulnerabilities (CVE-2025-49132, CVE-2024-27102).</p>
+</section>
+
+<section id="plans">
+  <h2>Plans (intended)</h2>
+  <div class="grid">
+    <div class="card"><h3>Free</h3><p class="muted">One game server, all basic features. Makes no requests to our server and needs no key.</p></div>
+    <div class="card"><h3>Pro</h3><p class="muted">More servers, S3 backups, update rollback, roles for several admins. No price announced yet.</p></div>
+    <div class="card"><h3>Hosting</h3><p class="muted">Several machines and customer access. Later, after the first version.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Install</h2>
+  <p class="muted">The command arrives with the first release. You will be able to read the installer before running it.</p>
+<pre><code>curl -fsSL https://dl.stokehold.online/install.sh -o install.sh
+less install.sh
+sudo bash install.sh</code></pre>
+</section>
+
+<section>
+  <h2>FAQ</h2>
+  <details><summary>Do I need Discord for the panel to work?</summary><p class="muted">No. The panel, licences and updates do not depend on Discord.</p></details>
+  <details><summary>Is it free?</summary><p class="muted">The plan is a free tier for one game server and a paid Pro tier. Prices are not announced.</p></details>
+  <details><summary>What is sent to your server?</summary><p class="muted">Free sends nothing. Pro sends the key, an instance fingerprint and the panel version to verify the licence. Details will be in the privacy policy.</p></details>
+  <details><summary>Who builds it?</summary><p class="muted">One developer who runs a Factorio server. The project is written with an AI assistant; a human makes the decisions and releases.</p></details>
+</section>
+</main>
+
+<footer><p>Stokehold GSM. Legal documents are published before sales begin.</p></footer>
+</div>
+</body>
+</html>
