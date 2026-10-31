@@ -70,7 +70,7 @@ var faqRU = Message{Embeds: []Embed{{
 	Fields: []Field{
 		{"Что это?", "Веб-панель для игровых серверов. Игровой движок: LinuxGSM.", false},
 		{"Что уже готово?", "Прототипы отдельных модулей. Установщика и релиза пока нет.", false},
-		{"Сколько стоит?", "Цены не объявлены. Планируется бесплатный тариф на один игровой сервер и платный с расширенными функциями.", false},
+		{"Сколько стоит?", "Цены не объявлены. Ядро панели открыто (AGPL-3.0) и бесплатно, без лимита серверов. Платный тариф добавляет расширенные функции.", false},
 		{"Нужен ли Discord для работы панели?", "Нет. Панель, лицензии и обновления от Discord не зависят.", false},
 		{"Где задать вопрос?", "В {#help}. Ошибки в {#bugs}, идеи в {#ideas}.", false},
 	},
@@ -143,7 +143,7 @@ var startEN = Message{Embeds: []Embed{
 		Color: colorInfo,
 		Fields: []Field{
 			{"What is ready?", "Prototypes of individual modules. No installer or release yet.", false},
-			{"How much does it cost?", "Prices are not announced. The plan is a free tier for one game server and a paid tier with extra features.", false},
+			{"How much does it cost?", "Prices are not announced. The core is open source (AGPL-3.0) and free with no server limit. A paid tier adds extra features.", false},
 			{"Do I need Discord to run the panel?", "No. The panel, licences and updates do not depend on Discord.", false},
 		},
 		Footer: footer,

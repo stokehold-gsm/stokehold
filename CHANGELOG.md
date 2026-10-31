@@ -13,5 +13,5 @@ Format follows Keep a Changelog. Versions follow semver once there is a first re
 - Install a new game server from the LinuxGSM catalogue (background job with a live log); config editor with safe replace, backup of the previous version, and path/symlink protection.
 - Schedules: backups, restarts and update checks daily at a UTC time or every N hours, with catch-up after downtime and the last result shown.
 - Users page for owners (create with one-time password, reset password and 2FA, delete), change-own-password.
-- Licensing in the panel: licence page, activation, daily renewal, grace period, Free tier limited to one server (existing servers are never stopped).
+- Licensing in the panel: licence page, activation, daily renewal, grace period, licence tokens carry named features (open core, no server limit).
 - Server management in the panel: find and add LinuxGSM servers (adopt mode through a root-owned list), start/stop/restart/backup/status through the helper, viewer role is read-only.
