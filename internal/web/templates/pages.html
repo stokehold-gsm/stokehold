@@ -14,6 +14,7 @@
       <span class="muted">{{.User.Email}} ({{.User.Role}})</span>
       <a href="/">{{t . "servers"}}</a>
       <a href="/security">{{t . "security"}}</a>
+      <a href="/license">{{t . "license"}}</a>
       <form class="inline" method="post" action="/logout">
         <input type="hidden" name="csrf" value="{{.CSRF}}">
         <button class="link" type="submit">{{t . "signout"}}</button>
@@ -61,7 +62,7 @@
 
 {{define "dashboard"}}{{template "head" .}}
 <div class="card">
-  <h1>{{t . "servers"}}</h1>
+  <h1>{{t . "servers"}} ({{.Count}} / {{.Lic.MaxServers}})</h1>
   {{if .Servers}}
   <table>
     <tr><th>{{t . "name"}}</th><th>{{t . "game"}}</th><th>{{t . "mode"}}</th><th></th></tr>
@@ -141,4 +142,33 @@
 
 {{define "message"}}{{template "head" .}}
 <div class="card"><p>{{.Error}}</p><p><a href="/">{{t . "back"}}</a></p></div>
+{{template "foot" .}}{{end}}
+
+{{define "license"}}{{template "head" .}}
+<div class="card">
+  <h1>{{t . "license"}}</h1>
+  {{if .Info}}<p>{{.Info}}</p>{{end}}
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <table>
+    <tr><th>{{t . "lic_plan"}}</th><td>{{if .Lic.Plan}}{{t . "lic_pro"}} ({{.Lic.Plan}}){{else}}{{t . "lic_free"}}{{end}}</td></tr>
+    <tr><th>{{t . "lic_limit"}}</th><td>{{.Count}} / {{.Lic.MaxServers}}</td></tr>
+    {{if .LicExpires}}<tr><th>{{t . "lic_until"}}</th><td>{{.LicExpires}}</td></tr>{{end}}
+  </table>
+  {{if .IsGrace}}<p class="muted">{{t . "lic_grace"}}</p>{{end}}
+  {{if .Lic.LastError}}<p class="muted">{{t . "lic_last_error"}}: {{.Lic.LastError}}</p>{{end}}
+  {{if .CanChangeLicense}}
+  <form method="post" action="/license/activate">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label for="key">{{t . "lic_key"}}</label>
+    <input id="key" name="key" type="text" required autocomplete="off" spellcheck="false" placeholder="SKH-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX">
+    <button type="submit">{{t . "lic_activate"}}</button>
+  </form>
+  {{if .Lic.HasKey}}<form method="post" action="/license/renew">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button type="submit">{{t . "lic_renew"}}</button>
+  </form>{{end}}
+  {{end}}
+  <h2>{{t . "lic_sent_title"}}</h2>
+  <p class="muted">{{t . "lic_sent"}}</p>
+</div>
 {{template "foot" .}}{{end}}

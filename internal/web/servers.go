@@ -103,6 +103,11 @@ func (s *Server) addServer(w http.ResponseWriter, r *http.Request, p *page) {
 		s.render(w, "add", p, http.StatusBadRequest)
 		return
 	}
+	if existing, _ := s.Store.Servers(); len(existing) >= s.limit() {
+		p.Error = tr(p.Lang, "limit_reached")
+		s.render(w, "add", p, http.StatusForbidden)
+		return
+	}
 	mode := "adopted"
 	if strings.HasPrefix(user, "gs_") {
 		mode = "managed"

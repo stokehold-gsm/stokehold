@@ -10,7 +10,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -27,7 +26,6 @@ var (
 
 const (
 	maxClockSkew = 5 * time.Minute
-	requestLabel = "stokehold-token-v1\x00"
 )
 
 type Server struct {
@@ -45,20 +43,14 @@ func NewServer(st *Store, key ed25519.PrivateKey, cert license.Cert) *Server {
 	return &Server{Store: st, Key: key, Cert: cert, TTL: 7 * 24 * time.Hour, Now: time.Now, limiter: ratelimit.New(30, time.Minute)}
 }
 
-func requestMessage(norm string, ts int64, inst string) []byte {
-	return []byte(requestLabel + norm + "\x00" + strconv.FormatInt(ts, 10) + "\x00" + inst)
-}
-
-// SignRequest is what a panel does: its instance key signs the licence key and
-// the current time. It returns the instance id (public key) and the signature.
+// SignRequest is kept here for the server tests and tools; panels use the
+// same function from the license package.
 func SignRequest(priv ed25519.PrivateKey, key string, ts int64) (inst, sig string, err error) {
-	norm, ok := ParseKey(key)
-	if !ok {
-		return "", "", ErrInvalid
+	inst, sig, err = license.SignRequest(priv, key, ts)
+	if errors.Is(err, license.ErrBadKey) {
+		err = ErrInvalid
 	}
-	inst = base64.RawStdEncoding.EncodeToString(priv.Public().(ed25519.PublicKey))
-	sig = base64.RawStdEncoding.EncodeToString(ed25519.Sign(priv, requestMessage(norm, ts, inst)))
-	return inst, sig, nil
+	return
 }
 
 // Token answers an activation or renewal. Every failure that could be caused
@@ -72,7 +64,7 @@ func (s *Server) Token(key, inst string, ts int64, sig string) (string, int64, e
 	pub, err := base64.RawStdEncoding.DecodeString(inst)
 	rawSig, err2 := base64.RawStdEncoding.DecodeString(sig)
 	if err != nil || err2 != nil || len(pub) != ed25519.PublicKeySize ||
-		!ed25519.Verify(ed25519.PublicKey(pub), requestMessage(norm, ts, inst), rawSig) {
+		!ed25519.Verify(ed25519.PublicKey(pub), license.RequestMessage(norm, ts, inst), rawSig) {
 		return "", 0, ErrInvalid
 	}
 	now := s.Now()

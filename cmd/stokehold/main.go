@@ -8,20 +8,26 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"stokehold/internal/auth"
+	"stokehold/internal/entitlement"
 	"stokehold/internal/helper"
 	"stokehold/internal/lgsm"
+	"stokehold/internal/license"
 	"stokehold/internal/store"
 	"stokehold/internal/web"
 )
 
 var version = "dev" // set by -ldflags "-X main.version=..." at release
 
+const defaultLicenseURL = "https://api.stokehold.online"
+
 const usage = `usage:
   stokehold version
-  stokehold serve [-db panel.db] [-listen 127.0.0.1:8080] [-helper /run/stokehold/helper.sock] [-secure] [-trust-proxy]
+  stokehold serve [-db panel.db] [-listen 127.0.0.1:8080] [-helper /run/stokehold/helper.sock] [-license-url URL] [-secure] [-trust-proxy]
   stokehold scan <home>
   stokehold call <socket> <json>`
 
@@ -58,6 +64,8 @@ func serve(args []string) {
 	dbPath := fs.String("db", "panel.db", "SQLite database path")
 	listen := fs.String("listen", "127.0.0.1:8080", "listen address (put a TLS proxy in front)")
 	secure := fs.Bool("secure", false, "mark cookies Secure (use when served over HTTPS)")
+	licURL := fs.String("license-url", "", "licence server URL (default: the project server once a root key is built in)")
+	rootPub := fs.String("root-pub", "", "extra trusted root public key PEM (testing); the id is the file name without .pem")
 	helperSock := fs.String("helper", "/run/stokehold/helper.sock", "privileged helper socket")
 	proxy := fs.Bool("trust-proxy", false, "use the last X-Forwarded-For entry as the client address")
 	fs.Parse(args)
@@ -81,7 +89,29 @@ func serve(args []string) {
 		}
 	}()
 
+	roots := entitlement.EmbeddedRoots()
+	if *rootPub != "" {
+		b, err := os.ReadFile(*rootPub)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pub, err := entitlement.ParsePublicPEM(b)
+		if err != nil {
+			log.Fatal(err)
+		}
+		roots[strings.TrimSuffix(filepath.Base(*rootPub), ".pem")] = pub
+	}
+	if *licURL == "" && len(roots) > 0 {
+		*licURL = defaultLicenseURL
+	}
+	mgr := &entitlement.Manager{S: st, V: &license.Verifier{Roots: roots}, URL: *licURL, Panel: version}
+	if *licURL != "" {
+		go mgr.RenewLoop(context.Background(), 24*time.Hour)
+	} else {
+		log.Print("no licence root key is built in: the panel runs as Free only")
+	}
 	panel := web.New(st, *secure, *proxy, setupToken)
+	panel.Entitlement = mgr
 	panel.Helper = func(r helper.Request) (helper.Response, error) { return helper.Call(*helperSock, r) }
 	srv := &http.Server{
 		Addr:              *listen,

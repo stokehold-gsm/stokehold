@@ -176,6 +176,7 @@ func TestHelperProblemsAreShownNotHidden(t *testing.T) {
 
 func TestAddingAServerAsksTheHelperTwice(t *testing.T) {
 	r := newRig(t)
+	r.s.Entitlement = pro(10) // several servers need a paid plan
 	r.setup()
 	r.login("")
 	f := &fakeHelper{ok: true, out: "fctrserver\nmcserver"}

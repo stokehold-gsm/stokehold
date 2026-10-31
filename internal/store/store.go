@@ -89,6 +89,10 @@ create table servers(
   dir text not null,
   mode text not null check (mode in ('managed','adopted')),
   created_at integer not null
+);`, `
+create table settings(
+  key text primary key,
+  value text not null
 );`}
 
 func Open(path string) (*Store, error) {

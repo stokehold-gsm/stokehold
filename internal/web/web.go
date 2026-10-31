@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"stokehold/internal/auth"
+	"stokehold/internal/entitlement"
 	"stokehold/internal/ratelimit"
 	"stokehold/internal/store"
 )
@@ -28,12 +29,13 @@ var staticFS embed.FS
 const cookieName = "sh_session"
 
 type Server struct {
-	Store      *store.Store
-	Secure     bool   // mark cookies Secure; set when served over HTTPS
-	TrustProxy bool   // take the client address from the last X-Forwarded-For entry
-	SetupToken string // required by /setup while there are no users
-	Helper     HelperFunc
-	Now        func() time.Time
+	Store       *store.Store
+	Secure      bool   // mark cookies Secure; set when served over HTTPS
+	TrustProxy  bool   // take the client address from the last X-Forwarded-For entry
+	SetupToken  string // required by /setup while there are no users
+	Helper      HelperFunc
+	Entitlement Entitlements // nil means Free only
+	Now         func() time.Time
 
 	tmpl    *template.Template
 	limiter *ratelimit.Limiter
@@ -55,6 +57,13 @@ type page struct {
 	Action     string
 	Actions    []string
 	CanControl bool
+
+	Lic              entitlement.Status
+	LicExpires       string
+	IsGrace          bool
+	Count            int
+	Info             string
+	CanChangeLicense bool
 }
 
 func New(st *store.Store, secure, trustProxy bool, setupToken string) *Server {
@@ -79,6 +88,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /servers/find", s.auth(s.find))
 	mux.HandleFunc("POST /servers/add", s.auth(s.addServer))
 	mux.HandleFunc("POST /servers/{id}/run", s.auth(s.runAction))
+	mux.HandleFunc("GET /license", s.auth(s.licensePage))
+	mux.HandleFunc("POST /license/activate", s.auth(s.licenseActivate))
+	mux.HandleFunc("POST /license/renew", s.auth(s.licenseRenew))
 	mux.HandleFunc("GET /security", s.auth(s.security))
 	mux.HandleFunc("POST /security/2fa/start", s.auth(s.twofaStart))
 	mux.HandleFunc("POST /security/2fa/enable", s.auth(s.twofaEnable))
@@ -180,6 +192,7 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request, p *page) {
 	p.Servers, _ = s.Store.Servers()
 	p.CanControl = canControl(p.User.Role)
 	p.Actions = actionLabels
+	s.fillLicense(p)
 	s.render(w, "dashboard", p, http.StatusOK)
 }
 
