@@ -28,6 +28,7 @@ type overwrite struct {
 
 type Options struct {
 	CleanDefaults bool // remove the empty channels Discord creates with a new server
+	RemoveLegacy  bool // remove channels and categories of earlier layouts (Plan.Legacy)
 	Log           func(format string, args ...any)
 }
 
@@ -47,7 +48,7 @@ func Overwrites(ch Channel, guildID, botID string, roleIDs map[string]string) []
 			}
 		}
 	case ch.ReadOnly:
-		ow = append(ow, overwrite{ID: guildID, Allow: "0", Deny: perm(PermSendMessages)})
+		ow = append(ow, overwrite{ID: guildID, Allow: "0", Deny: perm(PermSendMessages | PermAddReactions)})
 		if id, ok := roleIDs[RoleMod]; ok {
 			ow = append(ow, overwrite{ID: id, Allow: perm(PermSendMessages), Deny: "0"})
 		}
@@ -55,8 +56,8 @@ func Overwrites(ch Channel, guildID, botID string, roleIDs map[string]string) []
 	return ow
 }
 
-// Apply creates what is missing. It never edits or deletes existing things
-// except the explicit CleanDefaults case.
+// Apply creates what is missing. It never edits existing things and deletes
+// only what the options explicitly ask for.
 func Apply(ctx context.Context, c *Client, guildID string, p Plan, o Options) error {
 	logf := o.Log
 	if logf == nil {
@@ -65,12 +66,12 @@ func Apply(ctx context.Context, c *Client, guildID string, p Plan, o Options) er
 	var me struct {
 		ID string `json:"id"`
 	}
-	if err := c.do(ctx, "GET", "/users/@me", nil, &me); err != nil {
+	if err := c.Do(ctx, "GET", "/users/@me", nil, &me); err != nil {
 		return err
 	}
 
 	var roles []role
-	if err := c.do(ctx, "GET", "/guilds/"+guildID+"/roles", nil, &roles); err != nil {
+	if err := c.Do(ctx, "GET", "/guilds/"+guildID+"/roles", nil, &roles); err != nil {
 		return err
 	}
 	roleIDs := map[string]string{}
@@ -82,8 +83,8 @@ func Apply(ctx context.Context, c *Client, guildID string, p Plan, o Options) er
 			continue
 		}
 		var made role
-		body := map[string]any{"name": r.Name, "color": r.Color, "hoist": r.Hoist, "permissions": perm(r.Perms)}
-		if err := c.do(ctx, "POST", "/guilds/"+guildID+"/roles", body, &made); err != nil {
+		body := map[string]any{"name": r.Name, "color": r.Color, "hoist": r.Hoist, "mentionable": r.Mentionable, "permissions": perm(r.Perms)}
+		if err := c.Do(ctx, "POST", "/guilds/"+guildID+"/roles", body, &made); err != nil {
 			return err
 		}
 		roleIDs[r.Name] = made.ID
@@ -91,19 +92,23 @@ func Apply(ctx context.Context, c *Client, guildID string, p Plan, o Options) er
 	}
 
 	var chans []channel
-	if err := c.do(ctx, "GET", "/guilds/"+guildID+"/channels", nil, &chans); err != nil {
+	if err := c.Do(ctx, "GET", "/guilds/"+guildID+"/channels", nil, &chans); err != nil {
 		return err
 	}
-	if o.CleanDefaults {
+	if o.CleanDefaults || o.RemoveLegacy {
+		legacy := map[string]bool{}
+		for _, n := range p.Legacy {
+			legacy[strings.ToLower(n)] = true
+		}
 		for _, ch := range chans {
-			if isDefault(ch) {
-				if err := c.do(ctx, "DELETE", "/channels/"+ch.ID, nil, nil); err != nil {
+			if (o.CleanDefaults && isDefault(ch)) || (o.RemoveLegacy && legacy[strings.ToLower(ch.Name)]) {
+				if err := c.Do(ctx, "DELETE", "/channels/"+ch.ID, nil, nil); err != nil {
 					return err
 				}
-				logf("default removed: %s", ch.Name)
+				logf("removed: %s", ch.Name)
 			}
 		}
-		if err := c.do(ctx, "GET", "/guilds/"+guildID+"/channels", nil, &chans); err != nil {
+		if err := c.Do(ctx, "GET", "/guilds/"+guildID+"/channels", nil, &chans); err != nil {
 			return err
 		}
 	}
@@ -118,10 +123,16 @@ func Apply(ctx context.Context, c *Client, guildID string, p Plan, o Options) er
 	}
 	create := func(body map[string]any) (string, error) {
 		var made channel
-		err := c.do(ctx, "POST", "/guilds/"+guildID+"/channels", body, &made)
+		err := c.Do(ctx, "POST", "/guilds/"+guildID+"/channels", body, &made)
 		return made.ID, err
 	}
 
+	type placed struct {
+		id string
+		ch Channel
+	}
+	var todo []placed
+	byKey := map[string]string{}
 	for _, cat := range p.Categories {
 		catID := find(cat.Name, 4, "")
 		if catID == "" {
@@ -132,21 +143,36 @@ func Apply(ctx context.Context, c *Client, guildID string, p Plan, o Options) er
 			logf("category created: %s", cat.Name)
 		}
 		for _, ch := range cat.Channels {
-			id := find(ch.Name, 0, catID)
+			typ := 0
+			if ch.Voice {
+				typ = 2
+			}
+			id := find(ch.Name, typ, catID)
 			if id == "" {
-				var err error
-				id, err = create(map[string]any{
-					"name": ch.Name, "type": 0, "parent_id": catID, "topic": ch.Topic,
+				body := map[string]any{
+					"name": ch.Name, "type": typ, "parent_id": catID,
 					"permission_overwrites": Overwrites(ch, guildID, me.ID, roleIDs),
-				})
-				if err != nil {
+				}
+				if !ch.Voice {
+					body["topic"] = ch.Topic
+				}
+				var err error
+				if id, err = create(body); err != nil {
 					return err
 				}
-				logf("channel created: %s/%s", cat.Name, ch.Name)
+				logf("channel created: %s / %s", cat.Name, ch.Name)
 			}
-			if err := pin(ctx, c, id, ch.Pins, logf); err != nil {
-				return err
-			}
+			byKey[ch.Key] = id
+			todo = append(todo, placed{id, ch})
+		}
+	}
+	// Messages go out after every channel exists so {#key} can resolve.
+	for _, t := range todo {
+		if len(t.ch.Messages) == 0 {
+			continue
+		}
+		if err := post(ctx, c, t.id, t.ch.Messages, byKey, logf); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -164,31 +190,83 @@ func isDefault(ch channel) bool {
 	return false
 }
 
-// pin posts the texts only when the channel has no pins, so reruns stay quiet.
-func pin(ctx context.Context, c *Client, channelID string, texts []string, logf func(string, ...any)) error {
-	if len(texts) == 0 {
-		return nil
+func resolve(s string, byKey map[string]string) string {
+	for k, id := range byKey {
+		s = strings.ReplaceAll(s, "{#"+k+"}", "<#"+id+">")
 	}
+	return s
+}
+
+// payload renders a Message into the JSON Discord expects.
+func payload(m Message, byKey map[string]string) map[string]any {
+	out := map[string]any{}
+	if m.Content != "" {
+		out["content"] = resolve(m.Content, byKey)
+	}
+	var embeds []map[string]any
+	for _, e := range m.Embeds {
+		em := map[string]any{"color": e.Color}
+		if e.Title != "" {
+			em["title"] = e.Title
+		}
+		if e.Description != "" {
+			em["description"] = resolve(e.Description, byKey)
+		}
+		if e.Footer != "" {
+			em["footer"] = map[string]string{"text": e.Footer}
+		}
+		var fields []map[string]any
+		for _, f := range e.Fields {
+			fields = append(fields, map[string]any{"name": f.Name, "value": resolve(f.Value, byKey), "inline": f.Inline})
+		}
+		if len(fields) > 0 {
+			em["fields"] = fields
+		}
+		embeds = append(embeds, em)
+	}
+	if len(embeds) > 0 {
+		out["embeds"] = embeds
+	}
+	var rows []map[string]any
+	for _, row := range m.Rows {
+		var comps []map[string]any
+		for _, b := range row {
+			c := map[string]any{"type": 2, "style": 2, "label": b.Label, "custom_id": "role:" + b.Key}
+			if b.Emoji != "" {
+				c["emoji"] = map[string]string{"name": b.Emoji}
+			}
+			comps = append(comps, c)
+		}
+		rows = append(rows, map[string]any{"type": 1, "components": comps})
+	}
+	if len(rows) > 0 {
+		out["components"] = rows
+	}
+	return out
+}
+
+// post sends the messages only when the channel has no pins, so reruns stay quiet.
+func post(ctx context.Context, c *Client, channelID string, msgs []Message, byKey map[string]string, logf func(string, ...any)) error {
 	var pins struct {
 		Items []any `json:"items"`
 	}
-	if err := c.do(ctx, "GET", "/channels/"+channelID+"/messages/pins", nil, &pins); err != nil {
+	if err := c.Do(ctx, "GET", "/channels/"+channelID+"/messages/pins", nil, &pins); err != nil {
 		return err
 	}
 	if len(pins.Items) > 0 {
 		return nil
 	}
-	for _, t := range texts {
+	for _, m := range msgs {
 		var msg struct {
 			ID string `json:"id"`
 		}
-		if err := c.do(ctx, "POST", "/channels/"+channelID+"/messages", map[string]any{"content": t}, &msg); err != nil {
+		if err := c.Do(ctx, "POST", "/channels/"+channelID+"/messages", payload(m, byKey), &msg); err != nil {
 			return err
 		}
-		if err := c.do(ctx, "PUT", fmt.Sprintf("/channels/%s/messages/pins/%s", channelID, msg.ID), nil, nil); err != nil {
+		if err := c.Do(ctx, "PUT", fmt.Sprintf("/channels/%s/messages/pins/%s", channelID, msg.ID), nil, nil); err != nil {
 			return err
 		}
 	}
-	logf("pinned %d message(s) in %s", len(texts), channelID)
+	logf("posted %d message(s) in %s", len(msgs), channelID)
 	return nil
 }

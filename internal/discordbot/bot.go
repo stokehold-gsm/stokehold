@@ -1,0 +1,141 @@
+// Package discordbot answers Discord interactions over HTTP: the role buttons
+// in the roles channel. There is no gateway connection, so the service stays
+// tiny and only needs one public HTTPS endpoint.
+package discordbot
+
+import (
+	"context"
+	"crypto/ed25519"
+	"encoding/hex"
+	"encoding/json"
+	"io"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"stokehold/internal/discordsetup"
+)
+
+const maxBody = 64 << 10
+
+const (
+	typePing      = 1
+	typeComponent = 3
+	respPong      = 1
+	respMessage   = 4
+	flagEphemeral = 64
+)
+
+type Handler struct {
+	PublicKey ed25519.PublicKey
+	API       *discordsetup.Client
+	SelfRoles map[string]string // button key -> role name; only these can be toggled
+	Now       func() time.Time  // tests only
+}
+
+type interaction struct {
+	Type    int    `json:"type"`
+	GuildID string `json:"guild_id"`
+	Member  struct {
+		User  struct{ ID string } `json:"user"`
+		Roles []string            `json:"roles"`
+	} `json:"member"`
+	Data struct {
+		CustomID string `json:"custom_id"`
+	} `json:"data"`
+}
+
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxBody))
+	if err != nil || !h.verified(r, body) {
+		http.Error(w, "invalid request signature", http.StatusUnauthorized)
+		return
+	}
+	var in interaction
+	if json.Unmarshal(body, &in) != nil {
+		http.Error(w, "bad json", http.StatusBadRequest)
+		return
+	}
+	switch in.Type {
+	case typePing:
+		reply(w, map[string]any{"type": respPong})
+	case typeComponent:
+		reply(w, h.component(r.Context(), in))
+	default:
+		http.Error(w, "unsupported interaction", http.StatusBadRequest)
+	}
+}
+
+// verified checks the ed25519 signature Discord puts on every request, and
+// rejects stale timestamps so a captured request cannot be replayed later.
+func (h *Handler) verified(r *http.Request, body []byte) bool {
+	sig, err := hex.DecodeString(r.Header.Get("X-Signature-Ed25519"))
+	ts := r.Header.Get("X-Signature-Timestamp")
+	if err != nil || len(sig) != ed25519.SignatureSize || ts == "" {
+		return false
+	}
+	sec, err := strconv.ParseInt(ts, 10, 64)
+	if err != nil {
+		return false
+	}
+	now := time.Now
+	if h.Now != nil {
+		now = h.Now
+	}
+	if d := now().Unix() - sec; d > 300 || d < -300 {
+		return false
+	}
+	return ed25519.Verify(h.PublicKey, append([]byte(ts), body...), sig)
+}
+
+func reply(w http.ResponseWriter, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(v)
+}
+
+func message(text string) map[string]any {
+	return map[string]any{"type": respMessage, "data": map[string]any{"content": text, "flags": flagEphemeral}}
+}
+
+// component toggles a self-assignable role for the member who clicked.
+func (h *Handler) component(ctx context.Context, in interaction) map[string]any {
+	key, ok := strings.CutPrefix(in.Data.CustomID, "role:")
+	roleName, listed := h.SelfRoles[key]
+	if !ok || !listed || in.GuildID == "" || in.Member.User.ID == "" {
+		return message("Эта кнопка не поддерживается.")
+	}
+	ctx, cancel := context.WithTimeout(ctx, 2500*time.Millisecond) // Discord gives us 3 seconds
+	defer cancel()
+
+	var roles []struct{ ID, Name string }
+	if err := h.API.Do(ctx, "GET", "/guilds/"+in.GuildID+"/roles", nil, &roles); err != nil {
+		return message("Не удалось получить роли, попробуйте позже.")
+	}
+	roleID := ""
+	for _, r := range roles {
+		if r.Name == roleName {
+			roleID = r.ID
+		}
+	}
+	if roleID == "" {
+		return message("Такой роли на сервере нет.")
+	}
+	has := false
+	for _, id := range in.Member.Roles {
+		has = has || id == roleID
+	}
+	path := "/guilds/" + in.GuildID + "/members/" + in.Member.User.ID + "/roles/" + roleID
+	method, done := "PUT", "Роль выдана: "
+	if has {
+		method, done = "DELETE", "Роль снята: "
+	}
+	if err := h.API.Do(ctx, method, path, nil, nil); err != nil {
+		return message("Не удалось изменить роль, попробуйте позже.")
+	}
+	return message(done + roleName)
+}

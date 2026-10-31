@@ -19,9 +19,9 @@ type Client struct {
 	HTTP  *http.Client
 }
 
-// do sends one request and decodes the JSON answer into out (may be nil).
+// Do sends one request and decodes the JSON answer into out (may be nil).
 // A 429 is retried after the delay Discord asks for.
-func (c *Client) do(ctx context.Context, method, path string, body, out any) error {
+func (c *Client) Do(ctx context.Context, method, path string, body, out any) error {
 	var payload []byte
 	if body != nil {
 		var err error

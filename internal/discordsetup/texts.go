@@ -1,50 +1,170 @@
 package discordsetup
 
-// Texts are plain statements of what exists today. Nothing here claims
-// users, test counts or release dates the project does not have.
+// Texts state what exists today. Nothing here claims users, test counts or
+// release dates the project does not have.
 
-const welcomeRU = `**Stokehold GSM**
+const footer = "Stokehold GSM"
 
-Это сервер проекта Stokehold: панель управления игровыми серверами поверх LinuxGSM. Её делает один человек, на основе собственного опыта с Factorio.
+var welcomeRU = Message{Embeds: []Embed{{
+	Title: "Добро пожаловать в Stokehold GSM",
+	Description: "Здесь делают и обсуждают панель управления игровыми серверами поверх LinuxGSM.\n\n" +
+		"Проект в разработке, публичного релиза пока нет. Следить за ходом работы, задавать вопросы и предлагать идеи можно здесь.",
+	Color: colorBrand,
+	Fields: []Field{
+		{"С чего начать", "1. Прочитайте {#rules}\n2. Выберите роли в {#roles}\n3. Загляните в {#plans}, чтобы узнать, что готово и что будет", false},
+		{"Нужна помощь", "Пишите в {#help}. Укажите версию панели, ОС и игру.", true},
+		{"Нашли ошибку", "Опишите её в {#bugs}.", true},
+		{"Есть идея", "Расскажите в {#ideas}.", true},
+		{"Кто это делает", "Один разработчик, который сам администрирует сервер Factorio. Сервер помогают вести модераторы. Бот сервера помечен как бот.", false},
+		{"English", "English-speaking? Start in {#start}.", false},
+	},
+	Footer: footer,
+}}}
 
-Сейчас проект в разработке, публичного релиза пока нет. Здесь можно следить за прогрессом, задавать вопросы и предлагать идеи.
+var rulesRU = Message{Embeds: []Embed{{
+	Title: "Правила сервера",
+	Color: colorWarn,
+	Description: "**1. Уважение.** Без оскорблений, травли и дискриминации.\n\n" +
+		"**2. Нужный канал.** Вопросы по установке в {#help}, ошибки в {#bugs}, идеи в {#ideas}.\n\n" +
+		"**3. Данные.** В сообщении об ошибке указывайте версию панели, ОС, шаги и логи. Не публикуйте пароли, токены и лицензионные ключи.\n\n" +
+		"**4. Без рекламы и спама.** Нельзя ссылки на пиратское ПО, читы и сторонние серверы с рекламой.\n\n" +
+		"**5. Модерация.** Модераторы могут удалять сообщения и ограничивать доступ. Если не согласны с решением, напишите модератору лично.",
+	Footer: footer,
+}}}
 
-Русский раздел: категория RU. Правила: #rules. Частые вопросы: #faq.
-Это сообщество поддерживает бот проекта, он помечен как бот.`
+var rolesRU = Message{
+	Embeds: []Embed{{
+		Title: "Выберите роли",
+		Description: "Нажмите на кнопку, чтобы получить роль. Нажмите ещё раз, чтобы снять.\n\n" +
+			"**Язык**: показывает, на каком языке вам удобнее общаться.\n" +
+			"**Уведомления**: 🔔 Releases пингуется при выходе релизов, 📣 News при важных новостях.\n" +
+			"**Игры**: какие серверы вам интересны.\n\n" +
+			"Роли **Pro**, **Hosting** и **Beta tester** выдаются отдельно, их нельзя взять кнопкой.",
+		Color:  colorInfo,
+		Footer: footer,
+	}},
+	Rows: [][]Button{
+		{{"ru", "Русский", "🇷🇺"}, {"en", "English", "🇬🇧"}},
+		{{"releases", "Releases", "🔔"}, {"news", "News", "📣"}},
+		{{"factorio", "Factorio", ""}, {"minecraft", "Minecraft", ""}, {"rust", "Rust", ""}, {"valheim", "Valheim", ""}, {"cs2", "CS2", ""}},
+	},
+}
 
-const welcomeEN = `**Stokehold GSM**
+var newsRU = Message{Embeds: []Embed{{
+	Title:       "Новости проекта",
+	Description: "Здесь выходят анонсы. Писать в канал могут только модераторы. Чтобы получать пинг о важном, возьмите роль 📣 News в {#roles}.",
+	Color:       colorInfo,
+	Footer:      footer,
+}}}
 
-This is the server for Stokehold, a web panel for managing game servers on top of LinuxGSM. It is built by one developer who runs a Factorio server and wanted something simpler than a shell.
+var releasesRU = Message{Embeds: []Embed{{
+	Title:       "Релизы",
+	Description: "Публичных релизов пока нет. Когда они появятся, список изменений будет публиковаться здесь и в GitHub Releases. Роль 🔔 Releases в {#roles} даст пинг при выходе.",
+	Color:       colorOK,
+	Footer:      footer,
+}}}
 
-The project is under development and there is no public release yet. You can follow progress here, ask questions and suggest ideas.
+var faqRU = Message{Embeds: []Embed{{
+	Title: "Частые вопросы",
+	Color: colorInfo,
+	Fields: []Field{
+		{"Что это?", "Веб-панель для игровых серверов. Игровой движок: LinuxGSM.", false},
+		{"Что уже готово?", "Прототипы отдельных модулей. Установщика и релиза пока нет.", false},
+		{"Сколько стоит?", "Цены не объявлены. Планируется бесплатный тариф на один игровой сервер и платный с расширенными функциями.", false},
+		{"Нужен ли Discord для работы панели?", "Нет. Панель, лицензии и обновления от Discord не зависят.", false},
+		{"Где задать вопрос?", "В {#help}. Ошибки в {#bugs}, идеи в {#ideas}.", false},
+	},
+	Footer: footer,
+}}}
 
-English section: the EN category. Rules: #rules. FAQ: #faq.
-The community is looked after by the project's bot, which is marked as a bot.`
+var plansRU = Message{Embeds: []Embed{{
+	Title:       "Что делаем и что дальше",
+	Description: "Сроков нет. План может меняться.",
+	Color:       colorBrand,
+	Fields: []Field{
+		{"Сделано (прототипы)", "• безопасная работа с файлами игровых серверов\n• проверка лицензионных токенов\n• управление LinuxGSM-серверами и подхват уже установленных\n• служебный процесс с узким набором операций", false},
+		{"Первая версия", "• установка одной командой на Ubuntu и Debian\n• запуск, остановка, консоль, редактор конфигов\n• бэкапы по расписанию, в том числе во внешнее S3\n• обновление с откатом из снимка\n• пользователи, роли, двухфакторная защита\n• публичная страница статуса\n• русский и английский интерфейс", false},
+		{"Позже", "• команды в Discord\n• менеджер модов\n• мониторинг ресурсов\n• публичный REST API\n• несколько машин и тариф для хостингов", false},
+	},
+	Footer: footer,
+}}}
 
-const rulesRU = `**Правила**
-1. Уважайте других. Без оскорблений, травли и дискриминации.
-2. Пишите в подходящий канал. Вопросы по установке в support, ошибки в bugs, идеи в ideas.
-3. Для багов указывайте версию панели, ОС, шаги и логи. Не публикуйте пароли, токены и ключи лицензий.
-4. Без рекламы, спама и ссылок на пиратский софт или читы.
-5. Модераторы могут удалять сообщения и ограничивать доступ. Спорные случаи пишите модераторам в личные сообщения.`
+var helpRU = Message{Embeds: []Embed{{
+	Title: "Как задать вопрос",
+	Description: "Чем больше деталей, тем быстрее ответ:\n" +
+		"• версия панели и ОС\n• игра и версия игры\n• что делали и что получили\n• фрагмент лога (без паролей и токенов)",
+	Color:  colorInfo,
+	Footer: footer,
+}}}
 
-const rulesEN = `**Rules**
-1. Be respectful. No insults, harassment or discrimination.
-2. Use the right channel: install questions in support, errors in bugs, ideas in ideas.
-3. For bugs include panel version, OS, steps and logs. Never post passwords, tokens or licence keys.
-4. No advertising, spam, or links to pirated software or cheats.
-5. Moderators may delete messages and restrict access. Message a moderator privately about disputes.`
+var bugsRU = Message{Embeds: []Embed{{
+	Title: "Как сообщить об ошибке",
+	Description: "Опишите по шагам:\n" +
+		"1. что вы сделали\n2. что ожидали\n3. что получили\n4. версия панели, ОС, игра\n5. лог\n\n" +
+		"Не публикуйте пароли, токены и лицензионные ключи.",
+	Color:  colorWarn,
+	Footer: footer,
+}}}
 
-const faqRU = `**Частые вопросы**
-**Что это?** Веб-панель для игровых серверов. Игровой движок: LinuxGSM.
-**Что уже готово?** Прототипы отдельных модулей. Установщика и релиза пока нет.
-**Сколько стоит?** Цены пока не объявлены. Планируется бесплатный тариф на один игровой сервер и платный с расширенными функциями.
-**Нужен ли Discord для работы панели?** Нет. Панель, лицензии и обновления от Discord не зависят.
-**Где задать вопрос?** В ru-support. Баги в ru-bugs, идеи в ru-ideas.`
+var ideasRU = Message{Embeds: []Embed{{
+	Title:       "Как предложить идею",
+	Description: "Расскажите, какую задачу вы хотите решить, а не только какую функцию добавить. Так проще понять, что на самом деле нужно.",
+	Color:       colorOK,
+	Footer:      footer,
+}}}
 
-const faqEN = `**FAQ**
-**What is it?** A web panel for game servers, using LinuxGSM as the game engine.
-**What is ready?** Prototypes of individual modules. No installer or release yet.
-**How much does it cost?** Prices are not announced yet. The plan is a free tier for one game server and a paid tier with extra features.
-**Do I need Discord to run the panel?** No. The panel, licences and updates do not depend on Discord.
-**Where do I ask?** In en-support. Bugs in en-bugs, ideas in en-ideas.`
+var startEN = Message{Embeds: []Embed{
+	{
+		Title: "Welcome to Stokehold GSM",
+		Description: "This is the community for Stokehold, a web panel for game servers built on top of LinuxGSM. " +
+			"It is built by one developer who runs a Factorio server and wanted something simpler than a shell.\n\n" +
+			"The project is under development and there is no public release yet. You can follow progress, ask questions and suggest ideas here.",
+		Color: colorBrand,
+		Fields: []Field{
+			{"Get help", "{#en-help}", true},
+			{"Report a bug", "{#en-bugs}", true},
+			{"Suggest an idea", "{#en-ideas}", true},
+			{"Roles", "Pick language, notification and game roles in {#roles}.", false},
+		},
+		Footer: footer,
+	},
+	{
+		Title: "Rules",
+		Color: colorWarn,
+		Description: "1. Be respectful. No insults, harassment or discrimination.\n" +
+			"2. Use the right channel.\n" +
+			"3. For bugs include panel version, OS, steps and logs. Never post passwords, tokens or licence keys.\n" +
+			"4. No advertising, spam, pirated software or cheats.\n" +
+			"5. Moderators may delete messages and restrict access. Message a moderator privately about disputes.",
+		Footer: footer,
+	},
+	{
+		Title: "FAQ",
+		Color: colorInfo,
+		Fields: []Field{
+			{"What is ready?", "Prototypes of individual modules. No installer or release yet.", false},
+			{"How much does it cost?", "Prices are not announced. The plan is a free tier for one game server and a paid tier with extra features.", false},
+			{"Do I need Discord to run the panel?", "No. The panel, licences and updates do not depend on Discord.", false},
+		},
+		Footer: footer,
+	},
+}}
+
+var helpEN = Message{Embeds: []Embed{{
+	Title: "How to ask for help",
+	Description: "More detail gets a faster answer:\n" +
+		"• panel version and OS\n• game and game version\n• what you did and what happened\n• a log excerpt (no passwords or tokens)",
+	Color:  colorInfo,
+	Footer: footer,
+}}}
+
+var modsRU = Message{Embeds: []Embed{{
+	Title: "Памятка модератора",
+	Description: "• Сначала просьба, потом удаление, потом ограничение.\n" +
+		"• Решения записывайте в {#log}.\n" +
+		"• Не публикуйте личные данные участников.\n" +
+		"• Сомнительные случаи обсуждайте здесь до решения.\n" +
+		"• Лицензионные ключи участников и платежи здесь не обсуждаются.",
+	Color:  colorWarn,
+	Footer: footer,
+}}}
