@@ -19,14 +19,6 @@ type Entitlements interface {
 	Renew(ctx context.Context) error
 }
 
-// limit returns how many servers may exist; panels without licensing are Free.
-func (s *Server) limit() int {
-	if s.Entitlement == nil {
-		return entitlement.FreeServers
-	}
-	return s.Entitlement.Status().MaxServers
-}
-
 func licenseMessage(lang string, err error) string {
 	key := "lic_other"
 	switch {
@@ -50,7 +42,7 @@ func licenseMessage(lang string, err error) string {
 
 func (s *Server) fillLicense(p *page) {
 	if s.Entitlement == nil {
-		p.Lic = entitlement.Status{MaxServers: entitlement.FreeServers}
+		p.Lic = entitlement.Status{}
 	} else {
 		p.Lic = s.Entitlement.Status()
 	}

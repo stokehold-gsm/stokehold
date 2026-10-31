@@ -11,7 +11,7 @@ func init() {
 		"lic_active":         "Действует",
 		"lic_grace":          "Нет связи с сервером лицензий: платные функции работают в льготный период.",
 		"lic_until":          "Действует до",
-		"lic_limit":          "Лимит серверов",
+		"lic_features":       "Включённые функции",
 		"lic_key":            "Лицензионный ключ",
 		"lic_activate":       "Активировать",
 		"lic_renew":          "Проверить сейчас",
@@ -27,7 +27,6 @@ func init() {
 		"lic_other":          "Не удалось активировать лицензию.",
 		"lic_ok":             "Готово.",
 		"lic_last_error":     "Последняя ошибка проверки",
-		"limit_reached":      "Достигнут лимит серверов вашего тарифа. Уже добавленные серверы продолжают работать. Тариф Pro снимает лимит.",
 	})
 	merge("en", map[string]string{
 		"license":            "Licence",
@@ -37,7 +36,7 @@ func init() {
 		"lic_active":         "Active",
 		"lic_grace":          "The licence server is not reachable: paid features keep working during the grace period.",
 		"lic_until":          "Valid until",
-		"lic_limit":          "Server limit",
+		"lic_features":       "Included features",
 		"lic_key":            "Licence key",
 		"lic_activate":       "Activate",
 		"lic_renew":          "Check now",
@@ -53,7 +52,6 @@ func init() {
 		"lic_other":          "Could not activate the licence.",
 		"lic_ok":             "Done.",
 		"lic_last_error":     "Last check error",
-		"limit_reached":      "You reached the server limit of your plan. Servers already added keep running. Pro removes the limit.",
 	})
 }
 

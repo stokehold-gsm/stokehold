@@ -64,7 +64,7 @@
 
 {{define "dashboard"}}{{template "head" .}}
 <div class="card">
-  <h1>{{t . "servers"}} ({{.Count}} / {{.Lic.MaxServers}})</h1>
+  <h1>{{t . "servers"}} ({{.Count}})</h1>
   {{if .Servers}}
   <table>
     <tr><th>{{t . "name"}}</th><th>{{t . "game"}}</th><th>{{t . "mode"}}</th><th></th></tr>
@@ -167,7 +167,7 @@
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   <table>
     <tr><th>{{t . "lic_plan"}}</th><td>{{if .Lic.Plan}}{{t . "lic_pro"}} ({{.Lic.Plan}}){{else}}{{t . "lic_free"}}{{end}}</td></tr>
-    <tr><th>{{t . "lic_limit"}}</th><td>{{.Count}} / {{.Lic.MaxServers}}</td></tr>
+    <tr><th>{{t . "lic_features"}}</th><td>{{range .Lic.Features}}<code>{{.}}</code> {{else}}-{{end}}</td></tr>
     {{if .LicExpires}}<tr><th>{{t . "lic_until"}}</th><td>{{.LicExpires}}</td></tr>{{end}}
   </table>
   {{if .IsGrace}}<p class="muted">{{t . "lic_grace"}}</p>{{end}}

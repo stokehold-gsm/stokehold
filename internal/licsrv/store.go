@@ -10,6 +10,8 @@ import (
 	"time"
 
 	_ "modernc.org/sqlite"
+
+	"github.com/stokehold-gsm/stokehold/pkg/license"
 )
 
 const (
@@ -26,7 +28,7 @@ type License struct {
 	ID          int64
 	OrderRef    string
 	Plan        string
-	MaxServers  int
+	Features    []string
 	ExpiresAt   int64
 	Status      string
 	Contact     string
@@ -184,38 +186,43 @@ func (s *Store) Audit(limit int) ([]AuditRow, error) {
 // Issue creates a licence for an order. The order reference is unique, so one
 // Boosty or FunPay order can never produce two keys. The key is returned
 // once and not stored.
-func (s *Store) Issue(actor, orderRef, plan string, maxServers int, expires time.Time, contact string) (string, error) {
+func (s *Store) Issue(actor, orderRef, plan string, expires time.Time, contact string) (string, error) {
 	orderRef = strings.TrimSpace(orderRef)
-	if orderRef == "" || maxServers < 1 || !expires.After(s.now()) {
-		return "", errors.New("order reference, a positive server limit and a future expiry are required")
+	if orderRef == "" || !license.KnownPlan(plan) || !expires.After(s.now()) {
+		return "", errors.New("an order reference, a known plan and a future expiry are required")
 	}
+	features := strings.Join(license.PlanFeatures(plan), ",")
 	display, norm := NewKey()
 	tx, err := s.db.Begin()
 	if err != nil {
 		return "", err
 	}
 	defer tx.Rollback()
-	_, err = tx.Exec(`insert into licenses(key_hash, order_ref, plan, max_servers, expires_at, status, contact, created_at, created_by)
-		values(?,?,?,?,?,?,?,?,?)`, hashKey(norm), orderRef, plan, maxServers, expires.Unix(), StatusActive, contact, s.now().Unix(), actor)
+	_, err = tx.Exec(`insert into licenses(key_hash, order_ref, plan, max_servers, features, expires_at, status, contact, created_at, created_by)
+		values(?,?,?,0,?,?,?,?,?,?)`, hashKey(norm), orderRef, plan, features, expires.Unix(), StatusActive, contact, s.now().Unix(), actor)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed: licenses.order_ref") {
 			return "", ErrExists
 		}
 		return "", err
 	}
-	if err := audit(tx, s.now(), actor, "issue", fmt.Sprintf("order=%s plan=%s servers=%d until=%s", orderRef, plan, maxServers, expires.UTC().Format("2006-01-02"))); err != nil {
+	if err := audit(tx, s.now(), actor, "issue", fmt.Sprintf("order=%s plan=%s until=%s", orderRef, plan, expires.UTC().Format("2006-01-02"))); err != nil {
 		return "", err
 	}
 	return display, tx.Commit()
 }
 
-const licCols = `id, order_ref, plan, max_servers, expires_at, status, contact, instance_pub, last_ts, created_at, created_by`
+const licCols = `id, order_ref, plan, features, expires_at, status, contact, instance_pub, last_ts, created_at, created_by`
 
 func scanLicense(r interface{ Scan(...any) error }) (*License, error) {
 	var l License
-	err := r.Scan(&l.ID, &l.OrderRef, &l.Plan, &l.MaxServers, &l.ExpiresAt, &l.Status, &l.Contact, &l.InstancePub, &l.LastTS, &l.CreatedAt, &l.CreatedBy)
+	var feats string
+	err := r.Scan(&l.ID, &l.OrderRef, &l.Plan, &feats, &l.ExpiresAt, &l.Status, &l.Contact, &l.InstancePub, &l.LastTS, &l.CreatedAt, &l.CreatedBy)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
+	}
+	if feats != "" {
+		l.Features = strings.Split(feats, ",")
 	}
 	return &l, err
 }

@@ -4,7 +4,7 @@
 //	stokehold-license serve  -db lic.db -online online.json [-listen 127.0.0.1:8090] [-admin-listen 127.0.0.1:8091] [-trust-proxy]
 //	stokehold-license admin-add -db lic.db -name NAME -role owner|issuer    (prints a one-time password)
 //	stokehold-license admin-reset-2fa -db lic.db -name NAME
-//	stokehold-license issue  -db lic.db -order FP-1001 [-plan pro] [-servers 10] [-days 365] [-contact who] [-actor name]
+//	stokehold-license issue  -db lic.db -order FP-1001 [-plan pro|hosting] [-days 365] [-contact who] [-actor name]
 //	stokehold-license list   -db lic.db
 //	stokehold-license revoke|reset-binding -db lic.db -order FP-1001
 //	stokehold-license extend -db lic.db -order FP-1001 -days 30
@@ -52,8 +52,7 @@ func main() {
 	fs := flag.NewFlagSet(cmd, flag.ExitOnError)
 	db := fs.String("db", "licenses.db", "licence database")
 	order := fs.String("order", "", "order reference (Boosty or FunPay order id)")
-	plan := fs.String("plan", "pro", "plan name")
-	servers := fs.Int("servers", 10, "game server limit")
+	plan := fs.String("plan", "pro", "pro or hosting")
 	days := fs.Int("days", 365, "validity or extension in days")
 	contact := fs.String("contact", "", "buyer contact (nick or email), optional")
 	actor := fs.String("actor", firstEnv("USER", "USERNAME"), "who is doing this, for the audit log")
@@ -87,7 +86,7 @@ func main() {
 	case "serve":
 		serve(st, *online, *listen, *adminListen, *proxy, *secure)
 	case "issue":
-		key, err := st.Issue(*actor, *order, *plan, *servers, time.Now().AddDate(0, 0, *days), *contact)
+		key, err := st.Issue(*actor, *order, *plan, time.Now().AddDate(0, 0, *days), *contact)
 		if err != nil {
 			die(err)
 		}
@@ -103,7 +102,7 @@ func main() {
 			if l.InstancePub != "" {
 				bound = "bound"
 			}
-			fmt.Printf("%-14s %-8s %-8s servers=%-3d until=%s %s %s\n", l.OrderRef, l.Plan, l.Status, l.MaxServers,
+			fmt.Printf("%-14s %-8s %-8s features=%-2d until=%s %s %s\n", l.OrderRef, l.Plan, l.Status, len(l.Features),
 				time.Unix(l.ExpiresAt, 0).UTC().Format("2006-01-02"), bound, l.Contact)
 		}
 	case "revoke":

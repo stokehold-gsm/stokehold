@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/stokehold-gsm/stokehold/pkg/auth"
+	"github.com/stokehold-gsm/stokehold/pkg/license"
 	"github.com/stokehold-gsm/stokehold/pkg/ratelimit"
 )
 
@@ -227,18 +228,17 @@ func (u *AdminUI) issueForm(w http.ResponseWriter, r *http.Request, p *apage) {
 // page and is not stored anywhere in readable form.
 func (u *AdminUI) issue(w http.ResponseWriter, r *http.Request, p *apage) {
 	order := strings.TrimSpace(r.PostFormValue("order"))
-	servers, e1 := strconv.Atoi(r.PostFormValue("servers"))
 	days, e2 := strconv.Atoi(r.PostFormValue("days"))
-	plan := "pro"
+	plan := r.PostFormValue("plan")
 	fail := func(msg string, status int) {
 		p.Error, p.Order, p.Quota = msg, order, u.quotaLeft(p)
 		u.render(w, "issue", p, status)
 	}
-	if order == "" || len(order) > 80 || e1 != nil || e2 != nil || servers < 1 || servers > 1000 || days < 1 || days > 3660 {
-		fail("Проверьте поля: номер заказа, число серверов (1-1000) и срок в днях (1-3660).", http.StatusBadRequest)
+	if order == "" || len(order) > 80 || e2 != nil || !license.KnownPlan(plan) || days < 1 || days > 3660 {
+		fail("Проверьте поля: номер заказа, тариф и срок в днях (1-3660).", http.StatusBadRequest)
 		return
 	}
-	key, err := u.Store.IssueAs(p.Admin, order, plan, servers, days, strings.TrimSpace(r.PostFormValue("contact")))
+	key, err := u.Store.IssueAs(p.Admin, order, plan, days, strings.TrimSpace(r.PostFormValue("contact")))
 	switch {
 	case errors.Is(err, ErrExists):
 		fail("На этот заказ ключ уже выдан. Второй ключ на один заказ выдать нельзя.", http.StatusConflict)
@@ -351,8 +351,8 @@ button{padding:8px 14px;border:0;border-radius:6px;background:#e8451a;color:#fff
 <button type="submit">Войти</button></form></div>{{template "foot" .}}{{end}}
 
 {{define "list"}}{{template "head" .}}<div class="c"><h2>Лицензии</h2>
-<table><tr><th>Заказ</th><th>Тариф</th><th>Серверов</th><th>До</th><th>Статус</th><th>Привязка</th><th>Контакт</th>{{if .Owner}}<th></th>{{end}}</tr>
-{{range $l := .Licenses}}<tr><td>{{$l.OrderRef}}</td><td>{{$l.Plan}}</td><td>{{$l.MaxServers}}</td><td>{{date $l.ExpiresAt}}</td><td>{{$l.Status}}</td><td>{{if $l.InstancePub}}да{{else}}нет{{end}}</td><td>{{$l.Contact}}</td>
+<table><tr><th>Заказ</th><th>Тариф</th><th>Функций</th><th>До</th><th>Статус</th><th>Привязка</th><th>Контакт</th>{{if .Owner}}<th></th>{{end}}</tr>
+{{range $l := .Licenses}}<tr><td>{{$l.OrderRef}}</td><td>{{$l.Plan}}</td><td>{{len $l.Features}}</td><td>{{date $l.ExpiresAt}}</td><td>{{$l.Status}}</td><td>{{if $l.InstancePub}}да{{else}}нет{{end}}</td><td>{{$l.Contact}}</td>
 {{if $.Owner}}<td>{{if eq $l.Status "active"}}
 <form class="i" method="post" action="/license/revoke"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="order" value="{{$l.OrderRef}}"><button class="l" type="submit">отозвать</button></form>
 <form class="i" method="post" action="/license/reset"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="order" value="{{$l.OrderRef}}"><button class="l" type="submit">сбросить привязку</button></form>
@@ -365,7 +365,7 @@ button{padding:8px 14px;border:0;border-radius:6px;background:#e8451a;color:#fff
 {{if .Error}}<p class="e">{{.Error}}</p>{{end}}
 <form method="post" action="/issue"><input type="hidden" name="csrf" value="{{.CSRF}}">
 <label for="o">Номер заказа (Boosty или FunPay)</label><input id="o" name="order" value="{{.Order}}" required maxlength="80">
-<label for="s">Число серверов</label><input id="s" name="servers" value="10" required inputmode="numeric">
+<label for="s">Тариф</label><select id="s" name="plan"><option value="pro">Pro</option><option value="hosting">Hosting</option></select>
 <label for="d">Срок, дней</label><input id="d" name="days" value="365" required inputmode="numeric">
 <label for="k">Контакт покупателя (ник или почта, по желанию)</label><input id="k" name="contact" maxlength="120">
 <button type="submit">Выдать</button></form></div>{{template "foot" .}}{{end}}

@@ -23,7 +23,7 @@ func newChain(t *testing.T) chain {
 }
 
 func (c chain) token(cert Cert, iat time.Time) string {
-	return Sign(c.online, Claims{KID: cert.KID, JTI: "j", IAT: iat.Unix(), EXP: iat.Add(7 * 24 * time.Hour).Unix(), Inst: "inst-A", Plan: "pro", MaxServers: 10, Cert: &cert})
+	return Sign(c.online, Claims{KID: cert.KID, JTI: "j", IAT: iat.Unix(), EXP: iat.Add(7 * 24 * time.Hour).Unix(), Inst: "inst-A", Plan: "pro", Features: []string{FeatureS3Backup}, Cert: &cert})
 }
 
 func TestCertChainAccepted(t *testing.T) {

@@ -101,7 +101,7 @@ func (s *Server) Token(key, inst string, ts int64, sig string) (string, int64, e
 	cert := s.Cert
 	token := license.Sign(s.Key, license.Claims{
 		KID: cert.KID, JTI: hex.EncodeToString(jti), IAT: now.Unix(), EXP: exp.Unix(),
-		Inst: inst, Plan: lic.Plan, MaxServers: lic.MaxServers, Cert: &cert,
+		Inst: inst, Plan: lic.Plan, Features: lic.Features, Cert: &cert,
 	})
 	return token, exp.Unix(), nil
 }

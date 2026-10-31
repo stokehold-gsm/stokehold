@@ -32,15 +32,15 @@ var ErrInvalid = errors.New("invalid license token")
 var ErrExpired = errors.New("license token expired")
 
 type Claims struct {
-	V          int    `json:"v"`
-	KID        string `json:"kid"`
-	JTI        string `json:"jti"`
-	IAT        int64  `json:"iat"`
-	EXP        int64  `json:"exp"`
-	Inst       string `json:"inst"` // base64 of the instance public key
-	Plan       string `json:"plan"`
-	MaxServers int    `json:"max_servers"`
-	Cert       *Cert  `json:"cert,omitempty"` // online key certificate signed by a root key
+	V        int      `json:"v"`
+	KID      string   `json:"kid"`
+	JTI      string   `json:"jti"`
+	IAT      int64    `json:"iat"`
+	EXP      int64    `json:"exp"`
+	Inst     string   `json:"inst"` // base64 of the instance public key
+	Plan     string   `json:"plan"`
+	Features []string `json:"features,omitempty"` // paid capabilities this licence unlocks
+	Cert     *Cert    `json:"cert,omitempty"`     // online key certificate signed by a root key
 }
 
 // Cert says "the root key vouches for this online signing key until NotAfter".

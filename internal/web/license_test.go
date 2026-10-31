@@ -27,54 +27,35 @@ func (f *fakeEnt) Activate(_ context.Context, key string) error {
 }
 func (f *fakeEnt) Renew(context.Context) error { f.renews++; return f.activate }
 
-func pro(n int) *fakeEnt {
-	return &fakeEnt{st: entitlement.Status{Configured: true, HasKey: true, Plan: "pro", MaxServers: n, State: license.Active, ExpiresAt: 1_900_000_000}}
+func pro() *fakeEnt {
+	return &fakeEnt{st: entitlement.Status{Configured: true, HasKey: true, Plan: "pro", Features: []string{license.FeatureS3Backup, license.FeatureRollback}, State: license.Active, ExpiresAt: 1_900_000_000}}
 }
 
-func TestFreeLimitBlocksTheSecondServerButNotTheFirst(t *testing.T) {
-	r := newRig(t)
+func TestFreeHasNoServerLimit(t *testing.T) {
+	r := newRig(t) // no licensing at all: the open core, Free
 	r.setup()
 	r.login("")
-	f := &fakeHelper{ok: true, out: "fctrserver\nmcserver"}
+	f := &fakeHelper{ok: true, out: "fctrserver\nmcserver\nvhserver"}
 	r.withHelper(f)
 	tok := r.csrf()
-	add := func(game, name string) int {
-		return r.do("POST", "/servers/add", url.Values{"csrf": {tok}, "user": {"factorio"}, "game": {game}, "name": {name}}, nil).Code
+	for i, game := range []string{"fctrserver", "mcserver", "vhserver"} {
+		form := url.Values{"csrf": {tok}, "user": {"factorio"}, "game": {game}, "name": {"server-" + game}}
+		if rec := r.do("POST", "/servers/add", form, nil); rec.Code != 303 {
+			t.Fatalf("server %d on Free: %d %s", i+1, rec.Code, rec.Body)
+		}
 	}
-	if code := add("fctrserver", "one"); code != 303 {
-		t.Fatalf("first server on Free: %d", code)
-	}
-	rec := r.do("POST", "/servers/add", url.Values{"csrf": {tok}, "user": {"factorio"}, "game": {"mcserver"}, "name": {"two"}}, nil)
-	if rec.Code != 403 || !strings.Contains(rec.Body.String(), "server limit") {
-		t.Errorf("second server on Free: %d %s", rec.Code, rec.Body)
-	}
-	if list, _ := r.st.Servers(); len(list) != 1 {
+	if list, _ := r.st.Servers(); len(list) != 3 {
 		t.Errorf("servers stored: %d", len(list))
-	}
-	// the limit never touches what already runs
-	f.out = "Status: STARTED"
-	if rec := r.do("POST", idPath(1), url.Values{"csrf": {tok}, "cmd": {"restart"}}, nil); rec.Code != 200 {
-		t.Errorf("existing server action under the limit: %d", rec.Code)
-	}
-	// Pro lifts it
-	f.out = "fctrserver\nmcserver"
-	r.s.Entitlement = pro(5)
-	if code := add("mcserver", "two"); code != 303 {
-		t.Errorf("second server on Pro: %d", code)
 	}
 }
 
-func TestDashboardShowsTheCount(t *testing.T) {
+func TestDashboardShowsTheServerCount(t *testing.T) {
 	r := newRig(t)
 	r.setup()
 	r.login("")
 	r.addServerRow()
-	if body := r.do("GET", "/", nil, nil).Body.String(); !strings.Contains(body, "(1 / 1)") {
-		t.Errorf("Free counter missing: %s", body)
-	}
-	r.s.Entitlement = pro(10)
-	if body := r.do("GET", "/", nil, nil).Body.String(); !strings.Contains(body, "(1 / 10)") {
-		t.Error("Pro counter missing")
+	if body := r.do("GET", "/", nil, nil).Body.String(); !strings.Contains(body, "(1)") {
+		t.Errorf("server counter missing: %s", body)
 	}
 }
 
@@ -82,7 +63,7 @@ func TestOwnerActivatesAViewerCannot(t *testing.T) {
 	r := newRig(t)
 	r.setup()
 	r.st.CreateUser("viewer@example.com", pass, store.RoleViewer)
-	f := &fakeEnt{st: entitlement.Status{Configured: true, MaxServers: 1}}
+	f := &fakeEnt{st: entitlement.Status{Configured: true}}
 	r.s.Entitlement = f
 	r.login("")
 	tok := r.csrf()
@@ -111,7 +92,7 @@ func TestLicenseErrorsAreExplained(t *testing.T) {
 	r := newRig(t)
 	r.setup()
 	r.login("")
-	f := &fakeEnt{st: entitlement.Status{Configured: true, MaxServers: 1}}
+	f := &fakeEnt{st: entitlement.Status{Configured: true}}
 	r.s.Entitlement = f
 	tok := r.csrf()
 	for err, want := range map[error]string{
@@ -149,7 +130,7 @@ func TestGraceIsExplained(t *testing.T) {
 	r := newRig(t)
 	r.setup()
 	r.login("")
-	f := pro(10)
+	f := pro()
 	f.st.State = license.InGrace
 	f.st.LastError = "licence server unreachable"
 	r.s.Entitlement = f

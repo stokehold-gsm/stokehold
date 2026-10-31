@@ -142,10 +142,6 @@ func (s *Server) newServer(w http.ResponseWriter, r *http.Request, p *page) {
 		return
 	}
 	existing, _ := s.Store.Servers()
-	if len(existing) >= s.limit() {
-		fail("limit_reached", http.StatusForbidden)
-		return
-	}
 	for _, e := range existing {
 		if strings.EqualFold(e.Name, name) {
 			fail("server_exists", http.StatusConflict)

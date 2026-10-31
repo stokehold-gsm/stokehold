@@ -1,6 +1,6 @@
 // Package entitlement is the panel side of licensing: it activates a key with
 // the licence server, keeps a short-lived signed token fresh, and answers one
-// question for the rest of the panel: how many servers may be added.
+// question for the rest of the panel: which paid features are unlocked.
 //
 // Rule from docs/security-licensing.md: nothing here can stop a running game
 // server. Any failure falls back to the Free limit.
@@ -28,9 +28,6 @@ import (
 
 	"github.com/stokehold-gsm/stokehold/pkg/license"
 )
-
-// FreeServers is the Free tier limit.
-const FreeServers = 1
 
 const (
 	setKey      = "license_key"
@@ -72,7 +69,7 @@ type Status struct {
 	Configured bool
 	HasKey     bool
 	Plan       string
-	MaxServers int
+	Features   []string
 	State      license.State
 	ExpiresAt  int64
 	LastError  string
@@ -172,7 +169,7 @@ func (m *Manager) Status() Status {
 
 func (m *Manager) status() Status {
 	m.load()
-	st := Status{Configured: m.configured(), LastError: m.lastErr, MaxServers: FreeServers}
+	st := Status{Configured: m.configured(), LastError: m.lastErr}
 	_, st.HasKey = m.S.Setting(setKey)
 	tok, ok := m.S.Setting(setToken)
 	if !ok || !st.Configured {
@@ -189,14 +186,23 @@ func (m *Manager) status() Status {
 		return st
 	}
 	st.State, st.Plan, st.ExpiresAt = state, c.Plan, c.EXP
-	if c.MaxServers > 0 {
-		st.MaxServers = c.MaxServers
-	}
+	st.Features = c.Features
 	return st
 }
 
-// Limit is how many servers may exist on this panel.
-func (m *Manager) Limit() int { return m.Status().MaxServers }
+// Has reports whether the current licence unlocks a feature. Free has none:
+// the open core never needs this, only the official Pro module asks.
+func (m *Manager) Has(feature string) bool { return m.Status().Has(feature) }
+
+// Has reports whether the status includes a feature.
+func (s Status) Has(feature string) bool {
+	for _, f := range s.Features {
+		if f == feature {
+			return true
+		}
+	}
+	return false
+}
 
 type tokenResponse struct {
 	Token   string `json:"token"`

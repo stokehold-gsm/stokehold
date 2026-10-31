@@ -46,7 +46,7 @@ func newRig(t *testing.T) *rig {
 
 func (r *rig) issue(order string) string {
 	r.t.Helper()
-	key, err := r.st.Issue("owner", order, "pro", 10, t0.Add(30*24*time.Hour), "buyer@example.com")
+	key, err := r.st.Issue("owner", order, "pro", t0.Add(30*24*time.Hour), "buyer@example.com")
 	if err != nil {
 		r.t.Fatal(err)
 	}
@@ -104,14 +104,14 @@ func TestActivateAndVerifyWithRootOnly(t *testing.T) {
 	v := &license.Verifier{Roots: map[string]ed25519.PublicKey{"root1": r.rootPub}}
 	inst, _, _ := SignRequest(r.instance, key, 0)
 	c, st, err := v.Check(tok, inst, r.now.Add(time.Minute))
-	if err != nil || st != license.Active || c.Plan != "pro" || c.MaxServers != 10 {
+	if err != nil || st != license.Active || c.Plan != "pro" || !c.Has(license.FeatureS3Backup) {
 		t.Fatalf("panel check: %v %v %+v", st, err, c)
 	}
 }
 
 func TestTokenNeverOutlivesTheLicense(t *testing.T) {
 	r := newRig(t)
-	key, _ := r.st.Issue("owner", "FP-2", "pro", 5, r.now.Add(2*24*time.Hour), "")
+	key, _ := r.st.Issue("owner", "FP-2", "pro", r.now.Add(2*24*time.Hour), "")
 	_, exp, err := r.request(key, r.instance)
 	if err != nil {
 		t.Fatal(err)
@@ -218,15 +218,14 @@ func TestRevokeAndExpiry(t *testing.T) {
 func TestOneOrderOneLicense(t *testing.T) {
 	r := newRig(t)
 	r.issue("FP-8")
-	if _, err := r.st.Issue("helper", "FP-8", "pro", 10, t0.Add(time.Hour*24), ""); !errors.Is(err, ErrExists) {
+	if _, err := r.st.Issue("helper", "FP-8", "pro", t0.Add(time.Hour*24), ""); !errors.Is(err, ErrExists) {
 		t.Errorf("second key for one order: %v", err)
 	}
 	for _, bad := range []struct {
-		order string
-		n     int
-		exp   time.Time
-	}{{"", 10, t0.Add(time.Hour)}, {"FP-9", 0, t0.Add(time.Hour)}, {"FP-9", 5, t0.Add(-time.Hour)}} {
-		if _, err := r.st.Issue("owner", bad.order, "pro", bad.n, bad.exp, ""); err == nil {
+		order, plan string
+		exp         time.Time
+	}{{"", "pro", t0.Add(time.Hour)}, {"FP-9", "free", t0.Add(time.Hour)}, {"FP-9", "", t0.Add(time.Hour)}, {"FP-9", "pro", t0.Add(-time.Hour)}} {
+		if _, err := r.st.Issue("owner", bad.order, bad.plan, bad.exp, ""); err == nil {
 			t.Errorf("accepted %+v", bad)
 		}
 	}

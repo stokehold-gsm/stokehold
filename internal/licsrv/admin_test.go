@@ -110,7 +110,7 @@ func (r *arig) signIn(name, secret string) string {
 }
 
 func issueForm(tok, order string) url.Values {
-	return url.Values{"csrf": {tok}, "order": {order}, "servers": {"10"}, "days": {"365"}, "contact": {"buyer"}}
+	return url.Values{"csrf": {tok}, "order": {order}, "plan": {"pro"}, "days": {"365"}, "contact": {"buyer"}}
 }
 
 func TestAnonymousIsSentToLogin(t *testing.T) {
@@ -198,10 +198,10 @@ func TestIssuerIssuesOnceAndTheKeyIsNotStored(t *testing.T) {
 		t.Errorf("second key for one order: %d", rec.Code)
 	}
 	for _, bad := range []url.Values{
-		{"csrf": {tok}, "order": {""}, "servers": {"10"}, "days": {"30"}},
-		{"csrf": {tok}, "order": {"X"}, "servers": {"0"}, "days": {"30"}},
-		{"csrf": {tok}, "order": {"X"}, "servers": {"10"}, "days": {"99999"}},
-		{"csrf": {tok}, "order": {"X"}, "servers": {"abc"}, "days": {"30"}},
+		{"csrf": {tok}, "order": {""}, "plan": {"pro"}, "days": {"30"}},
+		{"csrf": {tok}, "order": {"X"}, "plan": {"free"}, "days": {"30"}},
+		{"csrf": {tok}, "order": {"X"}, "plan": {"pro"}, "days": {"99999"}},
+		{"csrf": {tok}, "order": {"X"}, "plan": {"pro"}, "days": {"abc"}},
 	} {
 		if rec := r.do("POST", "/issue", bad, nil); rec.Code != 400 {
 			t.Errorf("%v: %d", bad, rec.Code)
@@ -239,7 +239,7 @@ func suffix(i int) string { return string(rune('a'+i/26)) + string(rune('a'+i%26
 func TestOnlyTheOwnerCanRevokeExtendResetOrReadTheAudit(t *testing.T) {
 	r := newARig(t)
 	hs, os := r.admin("helper", RoleIssuer), r.admin("owner", RoleOwner)
-	r.st.Issue("owner", "FP-7", "pro", 5, r.now.Add(10*24*time.Hour), "")
+	r.st.Issue("owner", "FP-7", "pro", r.now.Add(10*24*time.Hour), "")
 
 	tok := r.signIn("helper", hs)
 	list := r.do("GET", "/", nil, nil).Body.String()
@@ -297,7 +297,7 @@ func TestCSRFAndCrossSiteArePrevented(t *testing.T) {
 	if rec := r.do("POST", "/issue", issueForm(tok, "FP-1"), map[string]string{"Origin": "https://evil.example"}); rec.Code != 403 {
 		t.Errorf("foreign origin: %d", rec.Code)
 	}
-	if rec := r.do("POST", "/issue", url.Values{"order": {"FP-1"}, "servers": {"1"}, "days": {"1"}}, nil); rec.Code != 403 {
+	if rec := r.do("POST", "/issue", url.Values{"order": {"FP-1"}, "plan": {"pro"}, "days": {"1"}}, nil); rec.Code != 403 {
 		t.Errorf("no csrf: %d", rec.Code)
 	}
 }

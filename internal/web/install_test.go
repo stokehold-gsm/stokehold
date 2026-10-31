@@ -65,7 +65,7 @@ func startInstall(r *rig, tok, game, name string) (int, string) {
 
 func newInstallRig(t *testing.T) (*rig, *stepHelper, string) {
 	r := newRig(t)
-	r.s.Entitlement = pro(10)
+	r.s.Entitlement = pro()
 	r.s.Distro = "ubuntu-24.04"
 	h := &stepHelper{resp: map[string]helper.Response{}}
 	r.s.Helper = h.call
@@ -185,7 +185,7 @@ func TestUnknownDistroSkipsPackagesButStillInstalls(t *testing.T) {
 	}
 }
 
-func TestInstallInputAndLimits(t *testing.T) {
+func TestInstallInputIsValidated(t *testing.T) {
 	r, _, tok := newInstallRig(t)
 	for name, c := range map[string]struct{ game, name string }{
 		"unknown game":      {"nosuchserver", "x"},
@@ -202,10 +202,11 @@ func TestInstallInputAndLimits(t *testing.T) {
 	if code, _ := startInstall(r, tok, "mcserver", "FACTORIO"); code != 409 {
 		t.Errorf("duplicate name: %d", code)
 	}
-	r.s.Entitlement = nil // back to Free: one server, already present
-	if code, _ := startInstall(r, tok, "mcserver", "another"); code != 403 {
-		t.Errorf("over the Free limit: %d", code)
+	// Free has no server count limit: a second, differently named server is fine
+	if code, _ := startInstall(r, tok, "mcserver", "another"); code != 303 {
+		t.Errorf("a second server: %d", code)
 	}
+	waitJob(t, r, 1)
 }
 
 func TestViewersCannotInstall(t *testing.T) {

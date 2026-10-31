@@ -19,7 +19,7 @@ func fixture(t *testing.T) (ed25519.PrivateKey, *Verifier, Claims) {
 		t.Fatal(err)
 	}
 	v := &Verifier{Keys: map[string]ed25519.PublicKey{"k1": pub}, Revoked: map[string]bool{}}
-	c := Claims{KID: "k1", JTI: "j", IAT: t0.Unix(), EXP: t0.Add(7 * 24 * time.Hour).Unix(), Inst: "inst-A", Plan: "pro", MaxServers: 10}
+	c := Claims{KID: "k1", JTI: "j", IAT: t0.Unix(), EXP: t0.Add(7 * 24 * time.Hour).Unix(), Inst: "inst-A", Plan: "pro", Features: []string{FeatureS3Backup}}
 	return priv, v, c
 }
 

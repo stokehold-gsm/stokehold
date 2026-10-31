@@ -167,11 +167,11 @@ func (s *Store) IssuedSince(actor string, since time.Time) (n int) {
 
 // IssueAs issues a licence on behalf of an admin, enforcing the daily limit
 // for issuers.
-func (s *Store) IssueAs(a *Admin, orderRef, plan string, servers, days int, contact string) (string, error) {
+func (s *Store) IssueAs(a *Admin, orderRef, plan string, days int, contact string) (string, error) {
 	if a.Role != RoleOwner && s.IssuedSince(a.Name, s.now().Add(-24*time.Hour)) >= IssuerDailyMax {
 		return "", ErrQuota
 	}
-	return s.Issue(a.Name, orderRef, plan, servers, s.now().AddDate(0, 0, days), contact)
+	return s.Issue(a.Name, orderRef, plan, s.now().AddDate(0, 0, days), contact)
 }
 
 // AdminAudit writes an event that is not tied to a licence change, such as a login.
@@ -198,4 +198,8 @@ func (s *Store) AdminResetTOTP(name string) error {
 	}
 	s.AdminAudit("cli", "admin.reset-2fa", name)
 	return nil
+}
+
+func init() {
+	migrations = append(migrations, `alter table licenses add column features text not null default '';`)
 }
