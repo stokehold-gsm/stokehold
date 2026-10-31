@@ -55,7 +55,9 @@ func main() {
 		if role == "" {
 			role = "Server Admin"
 		}
-		h.Panel = &discordbot.Panel{API: api, URL: u, Token: t, ControlRole: role, HTTP: &http.Client{Timeout: 50 * time.Second}}
+		if h.Panel = discordbot.NewPanel(api, u, t, role, &http.Client{Timeout: 50 * time.Second}); h.Panel == nil {
+			log.Print("the panel commands need the Pro edition of the bot; they stay off")
+		}
 	}
 	if guild := os.Getenv("DISCORD_GUILD_ID"); guild != "" {
 		// The detailed logs need a gateway connection; STOKEHOLD_GATEWAY=off keeps only the audit-log events.

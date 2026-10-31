@@ -35,7 +35,7 @@ type Handler struct {
 	AppID     string            // application id, needed to edit deferred answers
 	Mod       *Mod              // slash commands; nil switches them off
 	Tickets   *Tickets          // shop tickets; nil switches them off
-	Panel     *Panel            // /servers, /server, /metrics against a Stokehold panel; nil switches them off
+	Panel     PanelRunner       // /servers, /server, /metrics against a Stokehold panel (Pro); nil switches them off
 	Reports   *Reports          // /report and the complaint buttons; nil switches them off
 	Logs      *Logs             // writes every command into the bot log; nil switches that off
 	Now       func() time.Time  // tests only

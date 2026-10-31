@@ -47,6 +47,9 @@ func main() {
 			log.Fatal("need DISCORD_BOT_TOKEN and -guild")
 		}
 		c := &discordsetup.Client{Base: discordsetup.DefaultBase, Token: token, HTTP: &http.Client{Timeout: 30 * time.Second}}
+		if discordbot.PanelCommands() == nil {
+			log.Fatal("the panel commands need the Pro edition")
+		}
 		if err := c.Do(context.Background(), "PUT", "/applications/"+*panelCmds+"/guilds/"+g+"/commands", discordbot.PanelCommands(), nil); err != nil {
 			log.Fatal(err)
 		}
