@@ -214,3 +214,22 @@
   }
   doc.querySelectorAll('select').forEach(enhance);
 })();
+
+// Pages that mark a block data-autorefresh="N" are re-fetched every N seconds and the block swapped in place.
+(function () {
+  var box = document.querySelector("[data-autorefresh]");
+  if (!box || !window.fetch || !window.DOMParser) return;
+  var secs = +box.getAttribute("data-autorefresh") || 10, busy = false;
+  setInterval(function () {
+    if (document.hidden || busy || document.querySelector("details.menu[open]")) return;
+    busy = true;
+    fetch(location.href, { credentials: "same-origin" }).then(function (r) { return r.text(); }).then(function (t) {
+      var n = new DOMParser().parseFromString(t, "text/html").querySelector("[data-autorefresh]");
+      if (!n || !box.isConnected) return;
+      var pre = box.querySelector("pre.log"), atEnd = pre && pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 8;
+      box.innerHTML = n.innerHTML;
+      var np = box.querySelector("pre.log");
+      if (np && atEnd) np.scrollTop = np.scrollHeight;
+    }).catch(function () {}).then(function () { busy = false; });
+  }, secs * 1000);
+})();

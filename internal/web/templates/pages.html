@@ -87,7 +87,7 @@
   <div class="srv-list">
     {{range $r := .Rows}}<div class="srv">
       <div class="srv-main">
-        <div class="srv-name">{{$r.Name}}{{if $r.Node}} <span class="muted">({{$r.Node}})</span>{{end}}</div>
+        <div class="srv-name"><a href="/servers/{{$r.ID}}">{{$r.Name}}</a>{{if $r.Node}} <span class="muted">({{$r.Node}})</span>{{end}}</div>
         <div class="srv-meta muted">{{$r.Game}} · {{$r.Mode}}</div>
       </div>
       <div class="srv-state"><span class="badge st-{{$r.State}}">{{t $ (printf "st_%s" $r.State)}}</span>{{if $r.Players}}<span class="muted">{{t $ "players"}} {{$r.Players}}</span>{{end}}</div>

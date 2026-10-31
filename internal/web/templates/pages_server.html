@@ -1,0 +1,79 @@
+{{define "server"}}{{template "head" .}}
+{{with .Srv}}
+<div id="live-wrap" data-autorefresh="{{if eq .Tab "logs"}}6{{else}}12{{end}}">
+<div class="card srv-head">
+  <div class="card-head">
+    <div>
+      <h1>{{.Name}}</h1>
+      <div class="muted">{{.Game}} · {{.Mode}}{{if .Node}} · {{.Node}}{{end}}</div>
+    </div>
+    <div class="srv-state-big">
+      <span class="badge big st-{{.State}}">{{t $ (printf "st_%s" .State)}}</span>
+      {{if .Players}}<span class="chip">{{t $ "players"}} {{.Players}}</span>{{end}}
+    </div>
+  </div>
+  {{if .Address}}<p class="addr"><span class="muted">{{t $ "srv_address"}}</span> <code>{{.Address}}</code></p>{{end}}
+  {{if .CanControl}}
+  <div class="srv-actions">
+    <form class="inline" method="post" action="/servers/{{.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="start"><button class="btn start" type="submit"{{if not .CanStart}} disabled{{end}}>{{t $ "act_start"}}</button></form>
+    <form class="inline" method="post" action="/servers/{{.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="stop"><button class="btn stop" type="submit"{{if not .CanStop}} disabled{{end}}>{{t $ "act_stop"}}</button></form>
+    <form class="inline" method="post" action="/servers/{{.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="restart"><button class="btn restart" type="submit"{{if not .CanStop}} disabled{{end}}>{{t $ "act_restart"}}</button></form>
+    <form class="inline" method="post" action="/servers/{{.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="backup"><button class="btn" type="submit">{{t $ "act_backup"}}</button></form>
+    <form class="inline" method="post" action="/servers/{{.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="check-update"><button class="btn" type="submit">{{t $ "act_check-update"}}</button></form>
+  </div>
+  {{else}}
+  <div class="srv-actions">
+    <form class="inline" method="post" action="/servers/{{.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="check-update"><button class="btn" type="submit">{{t $ "act_check-update"}}</button></form>
+  </div>
+  {{end}}
+  <nav class="tabs" aria-label="{{t $ "srv_sections"}}">
+    <a href="/servers/{{.ID}}"{{if eq .Tab "overview"}} aria-current="page"{{end}}>{{t $ "srv_overview"}}</a>
+    {{if .CanControl}}<a href="/servers/{{.ID}}?tab=logs"{{if eq .Tab "logs"}} aria-current="page"{{end}}>{{t $ "srv_logs"}}</a>
+    <a href="/servers/{{.ID}}/files">{{t $ "files"}}</a>{{end}}
+    <a href="/servers/{{.ID}}/schedules">{{t $ "schedules"}}</a>
+    {{if and pro .CanControl (or (eq .Game "mcserver") (eq .Game "pmcserver") (eq .Game "fctrserver"))}}<a href="/servers/{{.ID}}/game">{{t $ "g_menu"}}</a>{{end}}
+  </nav>
+</div>
+
+{{if eq .Tab "logs"}}
+<div class="card">
+  <div class="card-head">
+    <h1>{{t $ "srv_logs"}}</h1>
+    <div class="head-actions">
+      <a class="btn{{if eq .LogKind "console"}} primary{{end}}" href="/servers/{{.ID}}?tab=logs&log=console">{{t $ "srv_log_console"}}</a>
+      <a class="btn{{if eq .LogKind "script"}} primary{{end}}" href="/servers/{{.ID}}?tab=logs&log=script">{{t $ "srv_log_script"}}</a>
+      <a class="btn" href="/servers/{{.ID}}/fm/download?path={{.LogPath}}">{{t $ "srv_log_download"}}</a>
+    </div>
+  </div>
+  {{if .LogErr}}<div class="banner"><p class="muted">{{t $ .LogErr}} <code>{{.LogPath}}</code></p></div>
+  {{else if .Log}}<pre class="log" id="live">{{.Log}}</pre>
+  {{else}}<p class="muted">{{t $ "srv_log_empty"}}</p>{{end}}
+</div>
+{{else}}
+<div>
+{{if .Err}}<div class="banner bad"><p>{{.Err}}</p></div>{{end}}
+<div class="grid2">
+  {{range $sec := .D.Sections}}
+  <div class="card">
+    <h1>{{$sec.Title}}</h1>
+    <dl class="facts">
+      {{range $sec.Rows}}<dt>{{.K}}</dt><dd>{{if .Secret}}<span class="muted">{{t $ "srv_hidden"}}</span>{{else}}{{.V}}{{end}}</dd>{{end}}
+    </dl>
+  </div>
+  {{end}}
+  {{if .D.Ports}}
+  <div class="card">
+    <h1>{{t $ "srv_ports"}}</h1>
+    <div class="scroll"><table>
+      <tr><th>{{t $ "srv_port_name"}}</th><th>{{t $ "srv_port"}}</th><th>{{t $ "srv_proto"}}</th><th>{{t $ "srv_listen"}}</th></tr>
+      {{range .D.Ports}}<tr><td>{{.Name}}</td><td><code>{{.Port}}</code></td><td>{{.Proto}}</td><td>{{if .Listening}}<span class="chip ok">{{t $ "yes"}}</span>{{else}}<span class="chip">{{t $ "no"}}</span>{{end}}</td></tr>{{end}}
+    </table></div>
+  </div>
+  {{end}}
+</div>
+{{if and .Raw .CanControl}}<details class="card raw"><summary>{{t $ "srv_raw"}}</summary><pre>{{.Raw}}</pre></details>{{end}}
+</div>
+{{end}}
+</div>
+{{end}}
+{{template "foot" .}}{{end}}

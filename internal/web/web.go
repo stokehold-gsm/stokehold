@@ -49,6 +49,7 @@ type Server struct {
 	Version    string                                                                 // this build, for the updates page and the settings page
 	Releases   func(ctx context.Context, channel string) (*selfupdate.Release, error) // nil: ask GitHub; tests replace it
 	upd        updState
+	dcache     detailsCache
 	status     statusCache
 
 	jobs jobTracker
@@ -106,6 +107,7 @@ type page struct {
 	Files       []string
 	FM          *fmView
 	Upd         *updView
+	Srv         *srvPage
 	FilePath    string
 	FileContent string
 	Refresh     bool
@@ -171,6 +173,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /monitor", s.auth(s.monitorPage))
 	s.fmRoutes(mux)
 	s.updRoutes(mux)
+	s.srvRoutes(mux)
 	s.proRoutes(mux)
 	return s.protect(mux)
 }

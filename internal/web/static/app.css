@@ -338,3 +338,18 @@ dl.facts { margin-bottom: 14px; }
 table.fm-table th a { color: var(--muted); text-decoration: none; font-weight: 600; }
 table.fm-table th a:hover { color: var(--fg); }
 td.fm-acts { text-align: right; }
+
+/* server page */
+.badge.st-starting { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: .55; } }
+.badge.big { font-size: 1rem; padding: 6px 16px; }
+.srv-state-big { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.srv-head .addr { margin: 4px 0 10px; }
+.srv-head .srv-actions { margin: 8px 0 14px; }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 12px; margin-top: 6px; }
+.tabs a { padding: 6px 14px; border-radius: 99px; color: var(--muted); text-decoration: none; transition: background .2s var(--ease), color .2s var(--ease); }
+.tabs a:hover { background: var(--hover); color: var(--fg); }
+.tabs a[aria-current="page"] { background: var(--tint); color: var(--brand); }
+pre.log { max-height: 65vh; overflow: auto; font-size: .82rem; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+details.raw summary { cursor: pointer; font-weight: 600; }
+.card .facts dd code { word-break: break-all; }
