@@ -306,7 +306,7 @@ func orderRoles(ctx context.Context, c *Client, guildID, botID string, roles []r
 			body = append(body, map[string]any{"id": id, "position": top - i})
 		}
 	}
-	if top <= len(plan) || len(body) == 0 {
+	if top < len(plan) || len(body) == 0 {
 		logf("role order left as is: the bot role is not above the %d staff and tier roles", len(plan))
 		return nil
 	}
