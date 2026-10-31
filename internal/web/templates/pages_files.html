@@ -1,0 +1,92 @@
+{{define "fm"}}{{template "head" .}}
+<div class="card fm">
+  <h1>{{.ServerName}}: {{t . "files"}}</h1>
+  {{if .Info}}<p class="info">{{.Info}}</p>{{end}}
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  {{with .FM}}
+  <nav class="fm-crumbs" aria-label="{{t $ "fm_path"}}">{{range $i, $c := .Crumbs}}{{if $i}} / {{end}}<a href="{{$c.Href}}">{{$c.Name}}</a>{{end}}</nav>
+  {{if .Up}}<p><a href="{{.Base}}/files?path={{.Up}}">&larr; {{t $ "fm_up"}}</a></p>{{else if .Dir}}<p><a href="{{.Base}}/files">&larr; {{t $ "fm_up"}}</a></p>{{end}}
+
+  <form method="post" action="{{.Base}}/fm/delete" class="fm-list">
+    <input type="hidden" name="csrf" value="{{$.CSRF}}">
+    <input type="hidden" name="dir" value="{{if .Dir}}{{.Dir}}{{else}}.{{end}}">
+    <div class="scroll"><table>
+      <tr><th></th><th></th>
+        <th><a href="{{.NameLink}}">{{t $ "fm_name"}} {{.NameMark}}</a></th>
+        <th><a href="{{.SizeLink}}">{{t $ "fm_size"}} {{.SizeMark}}</a></th>
+        <th><a href="{{.TimeLink}}">{{t $ "fm_time"}} {{.TimeMark}}</a></th><th></th></tr>
+      {{range .Rows}}<tr>
+        <td><input type="checkbox" name="paths" value="{{.Path}}" aria-label="{{.Name}}"></td>
+        <td aria-hidden="true">{{.Icon}}</td>
+        <td>{{if .IsDir}}<a href="{{.Href}}">{{.Name}}</a>{{else}}{{.Name}}{{end}}</td>
+        <td>{{.Size}}</td>
+        <td>{{.Time}}</td>
+        <td class="fm-acts">{{if .EditHref}}<a href="{{.EditHref}}">{{t $ "file_edit"}}</a> {{end}}{{if .DownloadHref}}<a href="{{.DownloadHref}}">{{t $ "fm_download"}}</a> {{end}}<a href="{{.RenameHref}}">{{t $ "fm_rename"}}</a> <a href="{{.DeleteHref}}">{{t $ "fm_delete"}}</a></td>
+      </tr>{{else}}<tr><td colspan="6" class="muted">{{t $ "fm_empty"}}</td></tr>{{end}}
+    </table></div>
+    {{if .More}}<p class="muted">{{t $ "fm_more"}}</p>{{end}}
+    {{if .Rows}}<button type="submit">{{t $ "fm_delete_sel"}}</button>{{end}}
+  </form>
+
+  <div class="fm-forms">
+    <form method="post" action="{{.Base}}/fm/mkdir">
+      <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="path" value="{{if .Dir}}{{.Dir}}{{else}}.{{end}}">
+      <label for="fm-dir">{{t $ "fm_newdir"}}</label>
+      <input id="fm-dir" type="text" name="name" required maxlength="200" autocomplete="off">
+      <button type="submit">{{t $ "fm_create"}}</button>
+    </form>
+    <form method="post" action="{{.Base}}/fm/touch">
+      <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="path" value="{{if .Dir}}{{.Dir}}{{else}}.{{end}}">
+      <label for="fm-file">{{t $ "fm_newfile"}}</label>
+      <input id="fm-file" type="text" name="name" required maxlength="200" autocomplete="off">
+      <button type="submit">{{t $ "fm_create"}}</button>
+    </form>
+    <form method="post" action="{{.Base}}/fm/upload" enctype="multipart/form-data">
+      <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="path" value="{{if .Dir}}{{.Dir}}{{else}}.{{end}}">
+      <label for="fm-up">{{t $ "fm_upload"}}</label>
+      <input id="fm-up" type="file" name="file" multiple required>
+      <p class="muted">{{t $ "fm_upload_hint"}} {{.Max}} MB.</p>
+      <button type="submit">{{t $ "fm_upload_go"}}</button>
+    </form>
+  </div>
+
+  {{if .Configs}}<h2>{{t $ "fm_configs"}}</h2>
+  <p class="muted">{{t $ "files_hint"}}</p>
+  <table>{{range $f := .Configs}}<tr><td><code>{{$f}}</code></td><td><a href="{{$.FM.Base}}/edit?path={{$f}}">{{t $ "file_edit"}}</a></td></tr>{{end}}</table>{{end}}
+  {{end}}
+  <p><a href="/">{{t . "back"}}</a></p>
+</div>
+{{template "foot" .}}{{end}}
+
+{{define "fmrename"}}{{template "head" .}}
+<div class="card">
+  <h1>{{.ServerName}}: {{t . "fm_rename"}}</h1>
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <p class="muted">{{t . "fm_rename_hint"}}</p>
+  <form method="post" action="{{.FM.Base}}/fm/rename">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="hidden" name="path" value="{{.FM.From}}">
+    <label for="fm-to">{{.FM.From}}</label>
+    <input id="fm-to" type="text" name="to" value="{{.FM.From}}" required maxlength="400" autocomplete="off">
+    <button type="submit">{{t . "fm_rename"}}</button>
+  </form>
+  <p><a href="{{.FM.Back}}">{{t . "back"}}</a></p>
+</div>
+{{template "foot" .}}{{end}}
+
+{{define "fmdelete"}}{{template "head" .}}
+<div class="card">
+  <h1>{{.ServerName}}: {{t . "fm_delete"}}</h1>
+  <p>{{t . "fm_delete_ask"}}</p>
+  <ul>{{range .FM.Confirm}}<li><code>{{.}}</code></li>{{end}}</ul>
+  <p class="muted">{{t . "fm_delete_warn"}}</p>
+  <form method="post" action="{{.FM.Base}}/fm/delete">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="hidden" name="confirmed" value="1">
+    <input type="hidden" name="dir" value="{{.FM.From}}">
+    {{range .FM.Confirm}}<input type="hidden" name="paths" value="{{.}}">{{end}}
+    <button type="submit">{{t . "fm_delete_yes"}}</button>
+  </form>
+  <p><a href="{{.FM.Back}}">{{t . "fm_cancel"}}</a></p>
+</div>
+{{template "foot" .}}{{end}}

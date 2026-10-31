@@ -59,7 +59,7 @@ func Serve(sock string, allowUID uint32, run Runner, adopted Adopted) error {
 				return
 			}
 			mu.Lock()
-			resp := HandleFull(req, Backend{Run: run, Adopted: adopted, Files: OSFiles{}})
+			resp := HandleFull(req, Backend{Run: run, Adopted: adopted, Files: OSFiles{}, Update: true})
 			mu.Unlock()
 			log.Printf("uid=%d op=%s user=%s ok=%v", uid, req.Op, req.User, resp.OK)
 			c.SetWriteDeadline(time.Now().Add(10 * time.Second))

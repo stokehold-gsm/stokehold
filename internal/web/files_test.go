@@ -31,6 +31,8 @@ func (f *fileHelper) call(r helper.Request) (helper.Response, error) {
 	switch r.Op {
 	case "files":
 		return helper.Response{OK: true, Out: f.listing}, nil
+	case "list-dir":
+		return helper.Response{OK: true, Out: `{"list":[{"n":"serverfiles","t":"d","s":0,"m":1700000000}],"more":false}`}, nil
 	case "read-file":
 		return helper.Response{OK: true, Out: f.content}, nil
 	}
@@ -53,8 +55,8 @@ func TestFileListAndEditorShowTheConfig(t *testing.T) {
 	if list.Code != 200 || !strings.Contains(list.Body.String(), "serverfiles/server.properties") || !strings.Contains(list.Body.String(), "mcserver.cfg") {
 		t.Fatalf("list: %d %s", list.Code, list.Body)
 	}
-	if f.calls[0].Op != "files" || f.calls[0].User != "factorio" {
-		t.Errorf("helper got %+v", f.calls[0])
+	if f.calls[0].Op != "list-dir" || f.calls[0].User != "factorio" || f.calls[0].Path != "." || f.calls[1].Op != "files" {
+		t.Errorf("helper got %+v", f.calls[:2])
 	}
 	page := r.do("GET", "/servers/"+itoaTest(id)+"/edit?path=serverfiles/server.properties", nil, nil)
 	if page.Code != 200 || !strings.Contains(page.Body.String(), "rcon.password=secret") {
@@ -63,8 +65,8 @@ func TestFileListAndEditorShowTheConfig(t *testing.T) {
 	if strings.Contains(page.Body.String(), "<b>hi</b>") || !strings.Contains(page.Body.String(), "&lt;b&gt;hi&lt;/b&gt;") {
 		t.Error("the file content must be HTML-escaped in the editor")
 	}
-	if f.calls[1].Op != "read-file" || f.calls[1].Path != "serverfiles/server.properties" {
-		t.Errorf("read request: %+v", f.calls[1])
+	if last := f.calls[len(f.calls)-1]; last.Op != "read-file" || last.Path != "serverfiles/server.properties" {
+		t.Errorf("read request: %+v", last)
 	}
 }
 

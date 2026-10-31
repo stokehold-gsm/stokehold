@@ -82,7 +82,8 @@ if [ -n "$LOCAL_DIR" ]; then
     [ -f "$LOCAL_DIR/$f" ] || die "$LOCAL_DIR/$f is missing"
     cp "$LOCAL_DIR/$f" "$WORK/$f"
   done
-  TAG="local"
+  case "$VERSION" in ""|v[0-9]*) ;; *) die "odd version string: $VERSION" ;; esac
+  TAG="${VERSION:-local}"
 else
   if [ -z "$VERSION" ]; then
     if [ "$CHANNEL" = "stable" ]; then

@@ -27,6 +27,12 @@ func inTree(rel string) bool {
 	return false
 }
 
+// CanEdit says whether the config editor accepts this path (the file manager
+// uses it to decide which files get an Edit link).
+func CanEdit(rel string) bool {
+	return inTree(rel) && safefs.Editable(rel) && !strings.Contains(rel, "..")
+}
+
 // Files is the config editor backend; tests use a fake.
 type Files interface {
 	List(user string) ([]string, error)
