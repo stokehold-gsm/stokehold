@@ -18,6 +18,7 @@ import (
 func main() {
 	guild := flag.String("guild", "", "guild (server) id")
 	clean := flag.Bool("clean-defaults", false, "remove the empty default channels of a new server")
+	legacy := flag.Bool("remove-legacy", false, "remove channels and categories of earlier layouts")
 	invite := flag.String("invite-for", "", "print the bot invite URL for this application id and exit")
 	flag.Parse()
 
@@ -32,6 +33,7 @@ func main() {
 	c := &discordsetup.Client{Base: discordsetup.DefaultBase, Token: token, HTTP: &http.Client{Timeout: 30 * time.Second}}
 	err := discordsetup.Apply(context.Background(), c, *guild, discordsetup.Default(), discordsetup.Options{
 		CleanDefaults: *clean,
+		RemoveLegacy:  *legacy,
 		Log:           func(f string, a ...any) { log.Printf(f, a...) },
 	})
 	if err != nil {
