@@ -21,6 +21,7 @@ func main() {
 	clean := flag.Bool("clean-defaults", false, "remove the empty default channels of a new server")
 	legacy := flag.Bool("remove-legacy", false, "remove channels and categories of earlier layouts")
 	repost := flag.Bool("repost", false, "replace the bot's pinned messages with the current texts")
+	onboarding := flag.Bool("onboarding", false, "set up onboarding questions (community must be enabled first)")
 	commands := flag.String("register-commands", "", "register the moderation slash commands for this application id and exit")
 	invite := flag.String("invite-for", "", "print the bot invite URL for this application id and exit")
 	flag.Parse()
@@ -50,6 +51,7 @@ func main() {
 		CleanDefaults: *clean,
 		RemoveLegacy:  *legacy,
 		Repost:        *repost,
+		Onboarding:    *onboarding,
 		Log:           func(f string, a ...any) { log.Printf(f, a...) },
 	})
 	if err != nil {

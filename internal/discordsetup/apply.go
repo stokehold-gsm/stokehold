@@ -34,6 +34,7 @@ type Options struct {
 	CleanDefaults bool // remove the empty channels Discord creates with a new server
 	RemoveLegacy  bool // remove channels, categories and roles of earlier layouts (Plan.Legacy, Plan.LegacyRoles)
 	Repost        bool // replace the bot's pinned messages with the current texts
+	Onboarding    bool // fill in the onboarding questions (server must already be a community server)
 	Log           func(format string, args ...any)
 }
 
@@ -201,6 +202,9 @@ func Apply(ctx context.Context, c *Client, guildID string, p Plan, o Options) er
 		if err := post(ctx, c, me.ID, t.id, t.ch.Messages, byKey, o.Repost, logf); err != nil {
 			return err
 		}
+	}
+	if o.Onboarding {
+		return Onboarding(ctx, c, guildID, byKey, roleIDs, logf)
 	}
 	return nil
 }

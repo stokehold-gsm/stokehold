@@ -338,3 +338,34 @@ func TestReadOnlyStaffChannelOnlyFounderWrites(t *testing.T) {
 		}
 	}
 }
+
+func TestOnboardingPointsAtPlanThings(t *testing.T) {
+	p := Default()
+	roles := map[string]bool{}
+	for _, r := range p.Roles {
+		roles[r.Name] = true
+	}
+	for _, q := range onboardingPrompts {
+		for _, c := range q.Choices {
+			if !roles[c.Role] {
+				t.Errorf("onboarding choice %q uses unknown role %q", c.Title, c.Role)
+			}
+			for _, tier := range []string{RoleFounder, RoleCurator, RoleMod, RoleHelper, RoleShopCurator, RoleOperator, RoleBeta, RolePro, RoleHosting, RoleFree} {
+				if c.Role == tier {
+					t.Errorf("onboarding must not hand out %q", tier)
+				}
+			}
+		}
+	}
+	keys := map[string]bool{}
+	for _, cat := range p.Categories {
+		for _, ch := range cat.Channels {
+			keys[ch.Key] = true
+		}
+	}
+	for _, k := range onboardingChannels {
+		if !keys[k] {
+			t.Errorf("onboarding channel key %q is not in the plan", k)
+		}
+	}
+}

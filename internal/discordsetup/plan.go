@@ -143,6 +143,9 @@ func Default() Plan {
 			{Name: "🇬🇧 English", Color: 0xe74c3c},
 			{Name: "🔔 Releases", Color: colorOK, Mentionable: true},
 			{Name: "📣 News", Color: colorOK, Mentionable: true},
+			{Name: RoleHe, Color: colorGrey},
+			{Name: RoleShe, Color: colorGrey},
+			{Name: RoleNeutral, Color: colorGrey},
 		},
 		SelfRoles: []SelfRole{
 			{"ru", "🇷🇺 Русский"}, {"en", "🇬🇧 English"},
