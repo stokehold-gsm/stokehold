@@ -123,7 +123,11 @@ fi
 id stokehold >/dev/null 2>&1 || useradd --system --home-dir /var/lib/stokehold --shell /usr/sbin/nologin stokehold
 install -d -m 750 -o stokehold -g stokehold /var/lib/stokehold
 install -d -m 755 /etc/stokehold
-[ -f /etc/stokehold/stokehold.env ] || printf 'STOKEHOLD_FLAGS=-secure -trust-proxy\n' > /etc/stokehold/stokehold.env
+# New installs open HTTPS on :8443 with their own certificate, so a link can finish the setup;
+# the plain 127.0.0.1:8080 listener stays for a reverse proxy. The old default is upgraded in place.
+if [ ! -f /etc/stokehold/stokehold.env ] || grep -qx "STOKEHOLD_FLAGS=-secure -trust-proxy" /etc/stokehold/stokehold.env; then
+  echo "STOKEHOLD_FLAGS=-secure -tls-listen :8443" > /etc/stokehold/stokehold.env
+fi
 
 # Services are stopped around the swap so a running binary is never overwritten in place.
 systemctl stop stokehold.service stokehold-helper.service 2>/dev/null || true
@@ -213,20 +217,55 @@ if ! healthy; then
   die "the panel did not start; see: journalctl -u stokehold"
 fi
 
+ENVF=/etc/stokehold/stokehold.env
+# This machine's address for the link: the one the default route leaves from.
+HOST=$(ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -n1)
+[ -n "$HOST" ] || HOST=$(hostname -I 2>/dev/null | awk '{print $1}')
+[ -n "$HOST" ] || HOST="YOUR_SERVER_ADDRESS"
+
+if grep -q -- '-tls-listen' "$ENVF" 2>/dev/null; then
+  PORT=$(sed -n 's/.*-tls-listen *:\([0-9]*\).*/\1/p' "$ENVF" | head -n1)
+  PORT=${PORT:-8443}
+  if command -v ufw >/dev/null && ufw status 2>/dev/null | grep -q "Status: active"; then
+    ufw allow "$PORT/tcp" >/dev/null && say "ufw: opened $PORT/tcp for the panel"
+  fi
+  # the code is printed only while there is no owner yet
+  CODE=""; FP=""
+  for _ in $(seq 1 15); do
+    LOGS=$(journalctl -u stokehold --since "-2min" --no-pager 2>/dev/null || true)
+    CODE=$(printf '%s\n' "$LOGS" | sed -n 's/.*setup code \([A-Za-z0-9_-]*\).*/\1/p' | tail -n1)
+    FP=$(printf '%s\n' "$LOGS" | sed -n 's/.*certificate sha256 \([0-9A-F:]*\).*/\1/p' | tail -n1)
+    [ -n "$FP" ] && break
+    sleep 1
+  done
+  cat <<DONE
+
+Stokehold $TAG is running.
+
+$( [ -n "$CODE" ] && printf 'Open this link in your browser to finish the setup (create the owner, then sign in):\n\n    https://%s:%s/setup?code=%s\n' "$HOST" "$PORT" "$CODE" || printf 'Open the panel and sign in:\n\n    https://%s:%s/\n' "$HOST" "$PORT" )
+
+The browser will warn about the certificate: Stokehold made its own, because
+there is no domain yet. That is expected. Choose "Advanced" and continue.
+${FP:+To be sure it is yours, the certificate fingerprint (SHA-256) is:
+    $FP}
+
+Если страница не открывается, порт $PORT закрыт в файрволе или в панели
+вашего хостинга: откройте TCP $PORT.
+Ссылка выше нужна один раз; код внутри неё одноразовый.
+
+Later, with a domain, put Caddy in front for a trusted certificate:
+    panel.example.com { reverse_proxy 127.0.0.1:8080 }
+and in $ENVF replace "-tls-listen :$PORT" with "-trust-proxy".
+Turn on two-factor authentication on the Security page.
+Uninstall: sudo bash uninstall.sh   (your game servers are never touched)
+DONE
+  exit 0
+fi
+
 cat <<DONE
 
-Stokehold $TAG is running on 127.0.0.1:8080 (not reachable from outside yet).
-
-Next:
-  1. Put an HTTPS reverse proxy in front, for example Caddy:
-       panel.example.com {
-           reverse_proxy 127.0.0.1:8080
-       }
-     For a quick look over plain HTTP, remove "-secure" in /etc/stokehold/stokehold.env
-     and run: systemctl restart stokehold
-  2. Create the owner account. The one-time setup code is in the log:
-       journalctl -u stokehold | grep "setup code"
-  3. Turn on two-factor authentication on the Security page.
-
+Stokehold $TAG is running on 127.0.0.1:8080 (your own flags in $ENVF keep it local).
+Put an HTTPS reverse proxy in front, for example Caddy:
+    panel.example.com { reverse_proxy 127.0.0.1:8080 }
 Uninstall: sudo bash uninstall.sh   (your game servers are never touched)
 DONE

@@ -131,11 +131,7 @@ footer a { color:var(--muted); }
 curl -fsSL https://dl.stokehold.online/install.sh -o install.sh
 less install.sh        # прочитайте, выход: q
 sudo bash install.sh</code></pre></div>
-    <p>Одноразовый код для создания владельца и адрес панели:</p>
-    <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>sudo journalctl -u stokehold | grep "setup code"
-# с вашего компьютера, чтобы открыть панель без своего домена:
-ssh -L 8080:127.0.0.1:8080 ВАШ_ПОЛЬЗОВАТЕЛЬ@АДРЕС_СЕРВЕРА
-# затем откройте http://127.0.0.1:8080 и введите код</code></pre></div>
+    <p>В конце установщик напечатает ссылку вида <code>https://АДРЕС:8443/setup?code=…</code>. Откройте её в браузере: браузер предупредит о сертификате (панель сама его создала, пока нет домена), нажмите «Дополнительно» и продолжите. Дальше создаёте владельца и входите в панель. Если страница не открывается, откройте TCP-порт 8443 у хостинга или в файрволе.</p>
   </div>
 
   <div class="os" data-os="linux">
@@ -144,8 +140,7 @@ ssh -L 8080:127.0.0.1:8080 ВАШ_ПОЛЬЗОВАТЕЛЬ@АДРЕС_СЕРВЕ
 # Arch: sudo pacman -S --needed curl openssl
 curl -fsSL https://dl.stokehold.online/install.sh -o install.sh
 less install.sh
-sudo bash install.sh
-sudo journalctl -u stokehold | grep "setup code"</code></pre></div>
+sudo bash install.sh</code></pre></div>
   </div>
 
   <div class="os" data-os="win">
@@ -153,7 +148,7 @@ sudo journalctl -u stokehold | grep "setup code"</code></pre></div>
     <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>wsl --install -d Ubuntu-24.04</code></pre></div>
     <p>После перезагрузки откройте Ubuntu и включите systemd:</p>
     <div class="cmd"><button type="button" class="copy">Копировать</button><pre><code>printf '[boot]\nsystemd=true\n' | sudo tee /etc/wsl.conf</code></pre></div>
-    <p>Выполните в PowerShell <code>wsl --shutdown</code>, снова откройте Ubuntu и дальше ставьте по вкладке «Ubuntu / Debian». Обычно панель открывается на <code>http://127.0.0.1:8080</code> прямо в браузере Windows. Игровые серверы в WSL2 недоступны снаружи без проброса портов, поэтому для настоящего сервера выбирайте VPS.</p>
+    <p>Выполните в PowerShell <code>wsl --shutdown</code>, снова откройте Ubuntu и дальше ставьте по вкладке «Ubuntu / Debian». Ссылку из вывода установщика можно открыть в браузере Windows; если адрес не открывается, замените его на <code>localhost</code>. Игровые серверы в WSL2 недоступны снаружи без проброса портов, поэтому для настоящего сервера выбирайте VPS.</p>
   </div>
 
   <div class="os" data-os="mac">

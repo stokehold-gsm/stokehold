@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -69,7 +70,8 @@ func serve(args []string) {
 	licURL := fs.String("license-url", "", "licence server URL (default: the project server once a root key is built in)")
 	rootPub := fs.String("root-pub", "", "extra trusted root public key PEM (testing); the id is the file name without .pem")
 	helperSock := fs.String("helper", "/run/stokehold/helper.sock", "privileged helper socket")
-	proxy := fs.Bool("trust-proxy", false, "use the last X-Forwarded-For entry as the client address")
+	proxy := fs.Bool("trust-proxy", false, "use the last X-Forwarded-For entry as the client address (plain listener only)")
+	tlsListen := fs.String("tls-listen", "", "also serve HTTPS directly on this address with a self-signed certificate, e.g. :8443")
 	fs.Parse(args)
 
 	st, err := store.Open(*dbPath)
@@ -129,6 +131,23 @@ func serve(args []string) {
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
+	}
+	if *tlsListen != "" {
+		cert, fp, err := web.SelfSignedCert(filepath.Join(filepath.Dir(*dbPath), "tls"), time.Now())
+		if err != nil {
+			log.Fatalf("tls certificate: %v", err)
+		}
+		log.Printf("https listening on %s, certificate sha256 %s", *tlsListen, fp)
+		ts := &http.Server{
+			Addr:              *tlsListen,
+			Handler:           srv.Handler,
+			TLSConfig:         &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12},
+			ReadHeaderTimeout: srv.ReadHeaderTimeout,
+			ReadTimeout:       srv.ReadTimeout,
+			WriteTimeout:      srv.WriteTimeout,
+			IdleTimeout:       srv.IdleTimeout,
+		}
+		go func() { log.Printf("https: %v", ts.ListenAndServeTLS("", "")) }()
 	}
 	log.Printf("listening on %s", *listen)
 	log.Fatal(srv.ListenAndServe())

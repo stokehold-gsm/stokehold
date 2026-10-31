@@ -86,6 +86,7 @@ type page struct {
 	NewPassword string
 
 	proPage
+	SetupCode string // prefilled from the link the installer prints
 	NodeNames map[int64]string
 	NodeID    int64
 	Mon       monView
@@ -216,7 +217,7 @@ func (s *Server) clearCookie(w http.ResponseWriter) {
 }
 
 func (s *Server) clientIP(r *http.Request) string {
-	if s.TrustProxy {
+	if s.TrustProxy && r.TLS == nil { // a direct TLS client could forge the header
 		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 			parts := strings.Split(xff, ",")
 			return strings.TrimSpace(parts[len(parts)-1])
@@ -294,7 +295,7 @@ func (s *Server) setupForm(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	s.render(w, "setup", &page{Lang: lang(w, r)}, http.StatusOK)
+	s.render(w, "setup", &page{Lang: lang(w, r), SetupCode: r.URL.Query().Get("code")}, http.StatusOK)
 }
 
 // setup: first owner only, needs the code from the service log.

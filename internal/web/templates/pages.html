@@ -55,7 +55,7 @@
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   <form method="post" action="/setup">
     <label for="token">{{t . "setup_token"}}</label>
-    <input id="token" name="token" type="text" required autocomplete="off">
+    <input id="token" name="token" type="text" required autocomplete="off" value="{{.SetupCode}}">
     <label for="email">{{t . "email"}}</label>
     <input id="email" name="email" type="email" required>
     <label for="password">{{t . "password"}}</label>

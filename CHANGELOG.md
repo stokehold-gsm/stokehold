@@ -10,6 +10,10 @@ Format follows Keep a Changelog. Versions follow semver once there is a first re
 - Discord: detailed logs as embeds from a gateway connection (messages with before and after, members, voice, invites, threads, AutoMod), bot commands and audit events as embeds, numbered moderation cases.
 - Discord: complaint system: /report, a message menu command, and a complaint card with take, warn, resolve and reject buttons.
 
+## 0.1.2 - 2026-10-31
+
+- One command to a working panel: the installer opens HTTPS on port 8443 with a self-signed certificate (new `-tls-listen` flag), opens the port in ufw when it is active, and prints a link with the one-time setup code and the certificate fingerprint. No reverse proxy or tunnel is needed for the first run. The old default `-secure -trust-proxy` is upgraded in place; the forwarded-for header is never trusted on the direct HTTPS listener.
+
 ## 0.1.1 - 2026-10-31
 
 - The paid features (REST API, several machines, mod manager, Discord webhook and panel commands, public status page) moved to the closed Pro edition (ADR 0007). The open build has monitoring, schedules, the config editor and everything else; v0.1.0 was withdrawn because it still contained the Pro code.

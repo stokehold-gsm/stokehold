@@ -130,11 +130,7 @@ footer a { color:var(--muted); }
 curl -fsSL https://dl.stokehold.online/install.sh -o install.sh
 less install.sh        # read it, quit with q
 sudo bash install.sh</code></pre></div>
-    <p>The one-time code that creates the owner, and how to open the panel:</p>
-    <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>sudo journalctl -u stokehold | grep "setup code"
-# from your computer, to open the panel without a domain of your own:
-ssh -L 8080:127.0.0.1:8080 YOUR_USER@SERVER_ADDRESS
-# then open http://127.0.0.1:8080 and enter the code</code></pre></div>
+    <p>At the end the installer prints a link like <code>https://ADDRESS:8443/setup?code=…</code>. Open it in your browser: the browser warns about the certificate (the panel made its own, there is no domain yet), choose "Advanced" and continue. Then create the owner and sign in. If the page does not open, open TCP port 8443 at your host or in the firewall.</p>
   </div>
 
   <div class="os" data-os="linux">
@@ -143,8 +139,7 @@ ssh -L 8080:127.0.0.1:8080 YOUR_USER@SERVER_ADDRESS
 # Arch: sudo pacman -S --needed curl openssl
 curl -fsSL https://dl.stokehold.online/install.sh -o install.sh
 less install.sh
-sudo bash install.sh
-sudo journalctl -u stokehold | grep "setup code"</code></pre></div>
+sudo bash install.sh</code></pre></div>
   </div>
 
   <div class="os" data-os="win">
@@ -152,7 +147,7 @@ sudo journalctl -u stokehold | grep "setup code"</code></pre></div>
     <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>wsl --install -d Ubuntu-24.04</code></pre></div>
     <p>After the reboot open Ubuntu and enable systemd:</p>
     <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>printf '[boot]\nsystemd=true\n' | sudo tee /etc/wsl.conf</code></pre></div>
-    <p>Run <code>wsl --shutdown</code> in PowerShell, open Ubuntu again and continue with the Ubuntu / Debian tab. The panel is usually reachable at <code>http://127.0.0.1:8080</code> from the Windows browser. Game servers in WSL2 are not reachable from outside without port forwarding, so use a VPS for a real server.</p>
+    <p>Run <code>wsl --shutdown</code> in PowerShell, open Ubuntu again and continue with the Ubuntu / Debian tab. You can open the link from the installer output in the Windows browser; if the address does not open, replace it with <code>localhost</code>. Game servers in WSL2 are not reachable from outside without port forwarding, so use a VPS for a real server.</p>
   </div>
 
   <div class="os" data-os="mac">
