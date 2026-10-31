@@ -21,32 +21,19 @@ var welcomeRU = Message{Embeds: []Embed{{
 	Footer: footer,
 }}}
 
-var rulesRU = Message{Embeds: []Embed{{
-	Title: "Правила сервера",
-	Color: colorWarn,
-	Description: "**1. Уважение.** Без оскорблений, травли и дискриминации.\n\n" +
-		"**2. Нужный канал.** Вопросы по установке в {#help}, ошибки в {#bugs}, идеи в {#ideas}.\n\n" +
-		"**3. Данные.** В сообщении об ошибке указывайте версию панели, ОС, шаги и логи. Не публикуйте пароли, токены и лицензионные ключи.\n\n" +
-		"**4. Без рекламы и спама.** Нельзя ссылки на пиратское ПО, читы и сторонние серверы с рекламой.\n\n" +
-		"**5. Модерация.** Модераторы могут удалять сообщения и ограничивать доступ. Если не согласны с решением, напишите модератору лично.",
-	Footer: footer,
-}}}
-
 var rolesRU = Message{
 	Embeds: []Embed{{
 		Title: "Выберите роли",
 		Description: "Нажмите на кнопку, чтобы получить роль. Нажмите ещё раз, чтобы снять.\n\n" +
 			"**Язык**: показывает, на каком языке вам удобнее общаться.\n" +
 			"**Уведомления**: 🔔 Releases пингуется при выходе релизов, 📣 News при важных новостях.\n" +
-			"**Игры**: какие серверы вам интересны.\n\n" +
 			"Роли **Pro**, **Hosting** и **Beta tester** выдаются отдельно, их нельзя взять кнопкой.",
 		Color:  colorInfo,
 		Footer: footer,
 	}},
 	Rows: [][]Button{
-		{{"ru", "Русский", "🇷🇺"}, {"en", "English", "🇬🇧"}},
-		{{"releases", "Releases", "🔔"}, {"news", "News", "📣"}},
-		{{"factorio", "Factorio", ""}, {"minecraft", "Minecraft", ""}, {"rust", "Rust", ""}, {"valheim", "Valheim", ""}, {"cs2", "CS2", ""}},
+		{{Key: "ru", Label: "Русский", Emoji: "🇷🇺"}, {Key: "en", Label: "English", Emoji: "🇬🇧"}},
+		{{Key: "releases", Label: "Releases", Emoji: "🔔"}, {Key: "news", Label: "News", Emoji: "📣"}},
 	},
 }
 
@@ -124,7 +111,7 @@ var startEN = Message{Embeds: []Embed{
 			{"Get help", "{#en-help}", true},
 			{"Report a bug", "{#en-bugs}", true},
 			{"Suggest an idea", "{#en-ideas}", true},
-			{"Roles", "Pick language, notification and game roles in {#roles}.", false},
+			{"Roles", "Pick language and notification roles in {#roles}.", false},
 		},
 		Footer: footer,
 	},
@@ -161,10 +148,11 @@ var helpEN = Message{Embeds: []Embed{{
 var modsRU = Message{Embeds: []Embed{{
 	Title: "Памятка модератора",
 	Description: "• Сначала просьба, потом удаление, потом ограничение.\n" +
-		"• Решения записывайте в {#log}.\n" +
+		"• Команды бота: `/warn`, `/timeout`, `/untimeout`, `/kick`, `/purge`, `/warnings`. Бан и разбан только у кураторов. Бот сам пишет всё в {#log}.\n" +
+		"• Порядок и сроки: {#staff}.\n" +
 		"• Не публикуйте личные данные участников.\n" +
 		"• Сомнительные случаи обсуждайте здесь до решения.\n" +
-		"• Лицензионные ключи участников и платежи здесь не обсуждаются.",
+		"• Лицензионные ключи участников и платежи здесь не обсуждаются: это ветка шопа.",
 	Color:  colorWarn,
 	Footer: footer,
 }}}

@@ -8,8 +8,12 @@ import (
 )
 
 type role struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Position int    `json:"position"`
+	Tags     struct {
+		BotID string `json:"bot_id"`
+	} `json:"tags"`
 }
 
 type channel struct {
@@ -28,7 +32,8 @@ type overwrite struct {
 
 type Options struct {
 	CleanDefaults bool // remove the empty channels Discord creates with a new server
-	RemoveLegacy  bool // remove channels and categories of earlier layouts (Plan.Legacy)
+	RemoveLegacy  bool // remove channels, categories and roles of earlier layouts (Plan.Legacy, Plan.LegacyRoles)
+	Repost        bool // replace the bot's pinned messages with the current texts
 	Log           func(format string, args ...any)
 }
 
@@ -44,7 +49,7 @@ func Overwrites(ch Channel, guildID, botID string, roleIDs map[string]string) []
 		ow = append(ow, overwrite{ID: guildID, Allow: "0", Deny: perm(PermViewChannel)})
 		for _, name := range ch.OnlyFor {
 			if id, ok := roleIDs[name]; ok {
-				ow = append(ow, overwrite{ID: id, Allow: perm(PermViewChannel | PermSendMessages | PermReadHistory), Deny: "0"})
+				ow = append(ow, overwrite{ID: id, Allow: perm(staffAllow(ch, name)), Deny: "0"})
 			}
 		}
 	case ch.ReadOnly:
@@ -89,6 +94,20 @@ func Apply(ctx context.Context, c *Client, guildID string, p Plan, o Options) er
 		}
 		roleIDs[r.Name] = made.ID
 		logf("role created: %s", r.Name)
+	}
+	if o.RemoveLegacy {
+		for _, name := range p.LegacyRoles {
+			if id, ok := roleIDs[name]; ok {
+				if err := c.Do(ctx, "DELETE", "/guilds/"+guildID+"/roles/"+id, nil, nil); err != nil {
+					return err
+				}
+				delete(roleIDs, name)
+				logf("role removed: %s", name)
+			}
+		}
+	}
+	if err := orderRoles(ctx, c, guildID, me.ID, roles, roleIDs, p.Roles, logf); err != nil {
+		return err
 	}
 
 	var chans []channel
@@ -161,6 +180,14 @@ func Apply(ctx context.Context, c *Client, guildID string, p Plan, o Options) er
 					return err
 				}
 				logf("channel created: %s / %s", cat.Name, ch.Name)
+			} else if len(ch.OnlyFor) > 0 || ch.ReadOnly {
+				// staff roles change over time, so existing restricted channels are brought up to date
+				for _, ow := range Overwrites(ch, guildID, me.ID, roleIDs) {
+					body := map[string]any{"allow": ow.Allow, "deny": ow.Deny, "type": ow.Type}
+					if err := c.Do(ctx, "PUT", "/channels/"+id+"/permissions/"+ow.ID, body, nil); err != nil {
+						return err
+					}
+				}
 			}
 			byKey[ch.Key] = id
 			todo = append(todo, placed{id, ch})
@@ -171,7 +198,7 @@ func Apply(ctx context.Context, c *Client, guildID string, p Plan, o Options) er
 		if len(t.ch.Messages) == 0 {
 			continue
 		}
-		if err := post(ctx, c, t.id, t.ch.Messages, byKey, logf); err != nil {
+		if err := post(ctx, c, me.ID, t.id, t.ch.Messages, byKey, o.Repost, logf); err != nil {
 			return err
 		}
 	}
@@ -231,7 +258,11 @@ func payload(m Message, byKey map[string]string) map[string]any {
 	for _, row := range m.Rows {
 		var comps []map[string]any
 		for _, b := range row {
-			c := map[string]any{"type": 2, "style": 2, "label": b.Label, "custom_id": "role:" + b.Key}
+			id, style := "role:"+b.Key, 2
+			if b.ID != "" {
+				id, style = b.ID, 1
+			}
+			c := map[string]any{"type": 2, "style": style, "label": b.Label, "custom_id": id}
 			if b.Emoji != "" {
 				c["emoji"] = map[string]string{"name": b.Emoji}
 			}
@@ -245,16 +276,66 @@ func payload(m Message, byKey map[string]string) map[string]any {
 	return out
 }
 
-// post sends the messages only when the channel has no pins, so reruns stay quiet.
-func post(ctx context.Context, c *Client, channelID string, msgs []Message, byKey map[string]string, logf func(string, ...any)) error {
-	var pins struct {
-		Items []any `json:"items"`
+// staffAllow is what a listed role may do in a restricted channel. In a
+// read-only staff channel only the founder writes.
+func staffAllow(ch Channel, role string) int64 {
+	p := int64(PermViewChannel | PermReadHistory)
+	if !ch.ReadOnly || role == RoleFounder {
+		p |= PermSendMessages
 	}
+	return p
+}
+
+// orderRoles puts the plan's roles in hierarchy order, directly under the
+// bot's own role. A bot cannot move roles above itself, so if it does not
+// sit high enough the order is left as it is.
+func orderRoles(ctx context.Context, c *Client, guildID, botID string, roles []role, ids map[string]string, plan []Role, logf func(string, ...any)) error {
+	top := 0
+	for _, r := range roles {
+		if r.Tags.BotID == botID {
+			top = r.Position - 1
+		}
+	}
+	var body []map[string]any
+	for i, r := range plan {
+		if id, ok := ids[r.Name]; ok {
+			body = append(body, map[string]any{"id": id, "position": top - i})
+		}
+	}
+	if top <= len(plan) || len(body) == 0 {
+		logf("role order left as is: the bot role is not above the %d staff and tier roles", len(plan))
+		return nil
+	}
+	return c.Do(ctx, "PATCH", "/guilds/"+guildID+"/roles", body, nil)
+}
+
+type pinned struct {
+	Items []struct {
+		Message struct {
+			ID     string `json:"id"`
+			Author struct {
+				ID string `json:"id"`
+			} `json:"author"`
+		} `json:"message"`
+	} `json:"items"`
+}
+
+// post sends the messages only when the channel has no pins, so reruns stay
+// quiet. With repost it first removes the bot's own pinned messages.
+func post(ctx context.Context, c *Client, botID, channelID string, msgs []Message, byKey map[string]string, repost bool, logf func(string, ...any)) error {
+	var pins pinned
 	if err := c.Do(ctx, "GET", "/channels/"+channelID+"/messages/pins", nil, &pins); err != nil {
 		return err
 	}
-	if len(pins.Items) > 0 {
+	if len(pins.Items) > 0 && !repost {
 		return nil
+	}
+	for _, it := range pins.Items {
+		if it.Message.Author.ID == botID {
+			if err := c.Do(ctx, "DELETE", "/channels/"+channelID+"/messages/"+it.Message.ID, nil, nil); err != nil {
+				return err
+			}
+		}
 	}
 	for _, m := range msgs {
 		var msg struct {

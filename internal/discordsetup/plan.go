@@ -6,14 +6,17 @@ package discordsetup
 // Permission bits, from https://docs.discord.com/developers/topics/permissions
 const (
 	PermKickMembers    = 1 << 1
+	PermBanMembers     = 1 << 2
 	PermManageChannels = 1 << 4
 	PermAddReactions   = 1 << 6
+	PermViewAuditLog   = 1 << 7
 	PermViewChannel    = 1 << 10
 	PermSendMessages   = 1 << 11
 	PermManageMessages = 1 << 13
 	PermEmbedLinks     = 1 << 14
 	PermReadHistory    = 1 << 16
 	PermManageRoles    = 1 << 28
+	PermManageThreads  = 1 << 34
 	PermManageWebhooks = 1 << 29
 	PermModerate       = 1 << 40
 	PermPinMessages    = 1 << 51
@@ -21,7 +24,7 @@ const (
 
 // InvitePerms is what the bot is invited with. A bot cannot hand out
 // permissions it lacks, so the moderator bits are included on purpose.
-const InvitePerms = PermKickMembers | PermManageChannels | PermViewChannel |
+const InvitePerms = PermKickMembers | PermBanMembers | PermViewAuditLog | PermManageChannels | PermViewChannel |
 	PermSendMessages | PermManageMessages | PermEmbedLinks | PermReadHistory |
 	PermManageRoles | PermManageWebhooks | PermModerate | PermPinMessages
 
@@ -55,7 +58,8 @@ type Field struct {
 }
 
 type Button struct {
-	Key   string // custom_id is "role:" + Key
+	Key   string // custom_id is "role:" + Key unless ID is set
+	ID    string // full custom_id, for buttons the bot handles in another way
 	Label string
 	Emoji string
 }
@@ -83,19 +87,24 @@ type SelfRole struct {
 }
 
 type Plan struct {
-	Roles      []Role
-	Categories []Category
-	SelfRoles  []SelfRole
-	Legacy     []string // names of earlier layouts, removed with Options.RemoveLegacy
+	Roles       []Role
+	Categories  []Category
+	SelfRoles   []SelfRole
+	Legacy      []string // names of earlier layouts, removed with Options.RemoveLegacy
+	LegacyRoles []string // roles that no longer exist in the plan, removed together with Legacy
 }
 
 const (
-	RoleFounder = "Founder"
-	RoleMod     = "Moderator"
-	RoleBeta    = "Beta tester"
-	RolePro     = "Pro"
-	RoleHosting = "Hosting"
-	RoleFree    = "Free"
+	RoleFounder     = "Founder"
+	RoleCurator     = "Curator"
+	RoleMod         = "Moderator"
+	RoleHelper      = "Helper"
+	RoleShopCurator = "Shop Curator"
+	RoleOperator    = "Shop Operator"
+	RoleBeta        = "Beta tester"
+	RolePro         = "Pro"
+	RoleHosting     = "Hosting"
+	RoleFree        = "Free"
 )
 
 const (
@@ -106,11 +115,26 @@ const (
 	colorGrey  = 0x95a5a6
 )
 
+// Who sees which staff channel. Higher roles are listed explicitly because a
+// channel overwrite does not inherit from the role order.
+var (
+	modTeam   = []string{RoleFounder, RoleCurator, RoleMod}
+	helpTeam  = []string{RoleFounder, RoleCurator, RoleMod, RoleHelper}
+	allStaff  = []string{RoleFounder, RoleCurator, RoleMod, RoleHelper, RoleShopCurator, RoleOperator}
+	shopTeam  = []string{RoleFounder, RoleShopCurator, RoleOperator}
+	shopLeads = []string{RoleFounder, RoleShopCurator}
+)
+
 func Default() Plan {
 	return Plan{
+		// Order is the hierarchy, highest first (applied to the server by Apply).
 		Roles: []Role{
 			{Name: RoleFounder, Color: colorBrand, Hoist: true},
+			{Name: RoleCurator, Color: 0xe74c3c, Hoist: true, Mentionable: true, Perms: PermManageMessages | PermKickMembers | PermBanMembers | PermModerate | PermManageThreads},
 			{Name: RoleMod, Color: colorWarn, Hoist: true, Mentionable: true, Perms: PermManageMessages | PermKickMembers | PermModerate},
+			{Name: RoleHelper, Color: 0x1abc9c, Hoist: true, Mentionable: true, Perms: PermModerate},
+			{Name: RoleShopCurator, Color: 0xe67e22, Hoist: true, Mentionable: true},
+			{Name: RoleOperator, Color: 0xf5b041, Hoist: true, Mentionable: true},
 			{Name: RoleHosting, Color: 0x9b59b6, Hoist: true},
 			{Name: RolePro, Color: 0xff8a1f, Hoist: true},
 			{Name: RoleBeta, Color: colorInfo, Hoist: true, Mentionable: true},
@@ -119,23 +143,17 @@ func Default() Plan {
 			{Name: "🇬🇧 English", Color: 0xe74c3c},
 			{Name: "🔔 Releases", Color: colorOK, Mentionable: true},
 			{Name: "📣 News", Color: colorOK, Mentionable: true},
-			{Name: "Factorio", Color: 0xe67e22},
-			{Name: "Minecraft", Color: 0x2ecc71},
-			{Name: "Rust", Color: 0xc0392b},
-			{Name: "Valheim", Color: 0x1abc9c},
-			{Name: "CS2", Color: 0xf39c12},
 		},
 		SelfRoles: []SelfRole{
 			{"ru", "🇷🇺 Русский"}, {"en", "🇬🇧 English"},
 			{"releases", "🔔 Releases"}, {"news", "📣 News"},
-			{"factorio", "Factorio"}, {"minecraft", "Minecraft"}, {"rust", "Rust"},
-			{"valheim", "Valheim"}, {"cs2", "CS2"},
 		},
 		Categories: []Category{
 			{Name: "📌 ИНФОРМАЦИЯ", Channels: []Channel{
 				{Key: "welcome", Name: "👋・приветствие", Topic: "С чего начать", ReadOnly: true, Messages: []Message{welcomeRU}},
-				{Key: "rules", Name: "📜・правила", Topic: "Правила сервера", ReadOnly: true, Messages: []Message{rulesRU}},
+				{Key: "rules", Name: "📜・правила", Topic: "Правила сервера", ReadOnly: true, Messages: rulesRU},
 				{Key: "roles", Name: "🎭・роли", Topic: "Выберите роли кнопками", ReadOnly: true, Messages: []Message{rolesRU}},
+				{Key: "team", Name: "👥・команда", Topic: "Кто модерирует сервер и как с ними связаться", ReadOnly: true, Messages: []Message{teamRU}},
 				{Key: "news", Name: "📢・новости", Topic: "Новости проекта", ReadOnly: true, Messages: []Message{newsRU}},
 				{Key: "releases", Name: "🚀・релизы", Topic: "Релизы и список изменений", ReadOnly: true, Messages: []Message{releasesRU}},
 				{Key: "faq", Name: "❓・faq", Topic: "Частые вопросы", ReadOnly: true, Messages: []Message{faqRU}},
@@ -161,18 +179,32 @@ func Default() Plan {
 				{Key: "en-guides", Name: "📚・guides", Topic: "Per-game guides: Factorio, Minecraft, Rust and others"},
 			}},
 			{Name: "⭐ ПОДДЕРЖАВШИЕ", Channels: []Channel{
-				{Key: "beta", Name: "🧪・бета-тест", Topic: "Тестовые сборки и обратная связь", OnlyFor: []string{RoleBeta}},
-				{Key: "pro", Name: "💎・pro-зал", Topic: "Pro и Hosting", OnlyFor: []string{RolePro, RoleHosting}},
+				{Key: "beta", Name: "🧪・бета-тест", Topic: "Тестовые сборки и обратная связь", OnlyFor: []string{RoleBeta, RoleFounder, RoleCurator, RoleMod}},
+				{Key: "pro", Name: "💎・pro-зал", Topic: "Pro и Hosting", OnlyFor: []string{RolePro, RoleHosting, RoleFounder, RoleCurator, RoleMod}},
 			}},
+			{Name: "🛒 МАГАЗИН", Channels: []Channel{
+				{Key: "buy", Name: "🛒・купить-лицензию", Topic: "Оформление заказа через тикет", ReadOnly: true, Messages: []Message{buyRU}},
+			}},
+			{Name: TicketCategory},
 			{Name: "🔊 ГОЛОСОВЫЕ", Channels: []Channel{
 				{Key: "v1", Name: "🔊 Общий", Voice: true},
 				{Key: "v2", Name: "🛠 Помощь голосом", Voice: true},
 				{Key: "v3", Name: "🎮 Играем", Voice: true},
 			}},
 			{Name: "🛡 ПЕРСОНАЛ", Channels: []Channel{
-				{Key: "mods", Name: "🛡・модераторы", Topic: "Только для модераторов", OnlyFor: []string{RoleMod}, Messages: []Message{modsRU}},
-				{Key: "log", Name: "📋・журнал", Topic: "Журнал модерации", OnlyFor: []string{RoleMod}},
-				{Key: "botlog", Name: "🤖・бот", Topic: "Служебные сообщения бота", OnlyFor: []string{RoleMod}},
+				{Key: "staff", Name: "📘・устав-персонала", Topic: "Структура, права и порядок наказаний", ReadOnly: true, OnlyFor: allStaff, Messages: staffRU},
+				{Key: "mods", Name: "🛡・модераторы", Topic: "Только для модераторов и кураторов", OnlyFor: modTeam, Messages: []Message{modsRU}},
+				{Key: "helpers", Name: "🤝・хелперы", Topic: "Хелперы, модераторы и кураторы: разбор вопросов поддержки", OnlyFor: helpTeam, Messages: []Message{helpersRU}},
+				{Key: "curators", Name: "🧭・кураторы", Topic: "Обсуждение персонала, жалобы на модераторов, апелляции", OnlyFor: []string{RoleFounder, RoleCurator}},
+				{Key: "log", Name: LogChannel, Topic: "Журнал модерации: каждое наказание одной записью", OnlyFor: modTeam, Messages: []Message{logRU}},
+				{Key: "events", Name: EventsChannel, Topic: "События сервера из журнала аудита Discord", OnlyFor: modTeam},
+				{Key: "botlog", Name: "🤖・бот", Topic: "Служебные сообщения бота", OnlyFor: modTeam},
+			}},
+			{Name: "🛒 МАГАЗИН (ПЕРСОНАЛ)", Channels: []Channel{
+				{Key: "shop-rules", Name: "📘・регламент-шопа", Topic: "Как проверять заказы и выдавать лицензии", ReadOnly: true, OnlyFor: shopTeam, Messages: shopRulesRU},
+				{Key: "shop-new", Name: TicketNotify, Topic: "Новые тикеты. Нажмите «Взять», чтобы получить доступ", OnlyFor: shopTeam},
+				{Key: "shop-orders", Name: TicketOrders, Topic: "Только номера заказов и решения. Ключи и данные покупателей сюда не писать", OnlyFor: shopTeam},
+				{Key: "shop-curators", Name: "🧭・кураторы-шопа", Topic: "Спорные заказы, возвраты, жалобы на операторов", OnlyFor: shopLeads},
 			}},
 		},
 		Legacy: []string{
@@ -182,5 +214,15 @@ func Default() Plan {
 			"en-general", "en-support", "en-bugs", "en-ideas", "en-guides",
 			"servers-showcase", "pro-lounge", "beta", "mod-chat", "mod-log",
 		},
+		LegacyRoles: []string{"Factorio", "Minecraft", "Rust", "Valheim", "CS2"},
 	}
 }
+
+// Names the ticket flow of the bot looks up (internal/discordbot/tickets.go).
+const (
+	TicketCategory = "🎫 ТИКЕТЫ"
+	TicketNotify   = "🔔・новые-тикеты"
+	TicketOrders   = "🧾・заказы"
+	LogChannel     = "📋・журнал"
+	EventsChannel  = "📜・события"
+)

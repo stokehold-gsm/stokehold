@@ -51,3 +51,10 @@ DISCORD_BOT_TOKEN=... discord-setup -guild <ID> -remove-legacy -clean-defaults
 
 ## Не сделано
 Выдача ролей Pro/Hosting по лицензии, публикация релизов из GitHub, тикеты и ответы бота (фазы 4-5), роль-порядок через API (порядок ролей выставляется порядком создания), баннер сервера (нужен буст).
+
+## Модерация, магазин и журналы (2026-11-01)
+Игровых ролей больше нет: остались язык и уведомления. Иерархия персонала (Founder, Curator, Moderator, Helper) и ветка магазина (Shop Curator, Shop Operator) описаны в docs/moderation.md и docs/shop-operations.md. Бот теперь умеет:
+- slash-команды модерации `/warn /warnings /timeout /untimeout /kick /ban /unban /purge` (регистрация: `discord-setup -guild ID -register-commands APP_ID`);
+- тикеты магазина: кнопка в `🛒・купить-лицензию`, приватный канал на клиента;
+- копирование журнала аудита в `📜・события`.
+Переменные сервиса бота: `DISCORD_APP_ID`, `DISCORD_GUILD_ID`, `STOKEHOLD_BOT_WARNS` (файл предупреждений) рядом с токеном и публичным ключом. Обновить тексты закрепов: `discord-setup -guild ID -repost`; убрать игровые роли: `-remove-legacy`.

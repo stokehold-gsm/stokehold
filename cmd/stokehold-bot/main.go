@@ -1,8 +1,10 @@
-// stokehold-bot serves Discord interactions (role buttons) over HTTP.
-// Behind a TLS reverse proxy, see deploy/.
+// stokehold-bot serves Discord interactions (role buttons, moderation
+// commands, shop tickets) over HTTP and copies the audit log into the events
+// channel. Behind a TLS reverse proxy, see deploy/.
 package main
 
 import (
+	"context"
 	"crypto/ed25519"
 	"encoding/hex"
 	"log"
@@ -28,11 +30,24 @@ func main() {
 	for _, s := range discordsetup.Default().SelfRoles {
 		self[s.Key] = s.RoleName
 	}
-	h := &discordbot.Handler{
-		PublicKey: key,
-		API:       &discordsetup.Client{Base: discordsetup.DefaultBase, Token: token, HTTP: &http.Client{Timeout: 3 * time.Second}},
-		SelfRoles: self,
+	api := &discordsetup.Client{Base: discordsetup.DefaultBase, Token: token, HTTP: &http.Client{Timeout: 10 * time.Second}}
+	h := &discordbot.Handler{PublicKey: key, API: api, SelfRoles: self}
+
+	// Commands and tickets need the application id to answer after the first 3 seconds.
+	if app := os.Getenv("DISCORD_APP_ID"); app != "" {
+		warns, err := discordbot.OpenWarns(os.Getenv("STOKEHOLD_BOT_WARNS"))
+		if err != nil {
+			log.Fatalf("warnings file: %v", err)
+		}
+		h.AppID = app
+		h.Mod = &discordbot.Mod{API: api, LogName: discordsetup.LogChannel, Warns: warns}
+		h.Tickets = &discordbot.Tickets{Category: discordsetup.TicketCategory, Notify: discordsetup.TicketNotify, Orders: discordsetup.TicketOrders}
 	}
+	if guild := os.Getenv("DISCORD_GUILD_ID"); guild != "" {
+		ev := &discordbot.Events{API: api, GuildID: guild, Channel: discordsetup.EventsChannel}
+		go ev.Run(context.Background(), log.Printf)
+	}
+
 	mux := http.NewServeMux()
 	mux.Handle("/discord/interactions", h)
 	srv := &http.Server{

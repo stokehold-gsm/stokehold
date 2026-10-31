@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/stokehold-gsm/stokehold/internal/discordsetup"
@@ -31,18 +32,33 @@ type Handler struct {
 	PublicKey ed25519.PublicKey
 	API       *discordsetup.Client
 	SelfRoles map[string]string // button key -> role name; only these can be toggled
+	AppID     string            // application id, needed to edit deferred answers
+	Mod       *Mod              // slash commands; nil switches them off
+	Tickets   *Tickets          // shop tickets; nil switches them off
 	Now       func() time.Time  // tests only
+
+	wg sync.WaitGroup // deferred answers still running
 }
 
 type interaction struct {
-	Type    int    `json:"type"`
-	GuildID string `json:"guild_id"`
-	Member  struct {
-		User  struct{ ID string } `json:"user"`
-		Roles []string            `json:"roles"`
+	Type      int    `json:"type"`
+	GuildID   string `json:"guild_id"`
+	ChannelID string `json:"channel_id"`
+	Token     string `json:"token"`
+	Message   struct {
+		ID string `json:"id"`
+	} `json:"message"`
+	Member struct {
+		User struct {
+			ID       string `json:"id"`
+			Username string `json:"username"`
+		} `json:"user"`
+		Roles []string `json:"roles"`
 	} `json:"member"`
 	Data struct {
-		CustomID string `json:"custom_id"`
+		CustomID string   `json:"custom_id"`
+		Name     string   `json:"name"`
+		Options  []option `json:"options"`
 	} `json:"data"`
 }
 
@@ -65,7 +81,17 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case typePing:
 		reply(w, map[string]any{"type": respPong})
 	case typeComponent:
+		if strings.HasPrefix(in.Data.CustomID, "tkt:") {
+			h.deferred(w, in, h.ticket)
+			return
+		}
 		reply(w, h.component(r.Context(), in))
+	case typeCommand:
+		if h.Mod == nil {
+			http.Error(w, "commands are off", http.StatusBadRequest)
+			return
+		}
+		h.deferred(w, in, h.Mod.run)
 	default:
 		http.Error(w, "unsupported interaction", http.StatusBadRequest)
 	}
@@ -138,4 +164,35 @@ func (h *Handler) component(ctx context.Context, in interaction) map[string]any 
 		return message("Не удалось изменить роль, попробуйте позже.")
 	}
 	return message(done + roleName)
+}
+
+// deferred answers at once and finishes the work in the background, so a
+// command that needs several Discord calls is not held to the 3 second limit.
+func (h *Handler) deferred(w http.ResponseWriter, in interaction, run func(context.Context, interaction) string) {
+	reply(w, map[string]any{"type": respDefer, "data": map[string]any{"flags": flagEphemeral}})
+	h.wg.Add(1)
+	go func() {
+		defer h.wg.Done()
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		text := run(ctx, in)
+		_ = h.API.Do(ctx, "PATCH", "/webhooks/"+h.AppID+"/"+in.Token+"/messages/@original",
+			map[string]any{"content": text, "allowed_mentions": map[string]any{"parse": []string{}}}, nil)
+	}()
+}
+
+func (h *Handler) ticket(ctx context.Context, in interaction) string {
+	if h.Tickets == nil {
+		return "Тикеты выключены."
+	}
+	parts := strings.SplitN(in.Data.CustomID, ":", 3)
+	switch {
+	case len(parts) == 2 && parts[1] == "open":
+		return h.Tickets.open(ctx, h, in)
+	case len(parts) == 3 && parts[1] == "claim":
+		return h.Tickets.claim(ctx, h, in, parts[2])
+	case len(parts) == 3 && parts[1] == "close":
+		return h.Tickets.close(ctx, h, in, parts[2])
+	}
+	return "Эта кнопка не поддерживается."
 }

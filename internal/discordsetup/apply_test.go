@@ -76,6 +76,8 @@ func (f *fake) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		f.pins[ch] = append(f.pins[ch], strings.Split(p, "/")[5])
 		w.WriteHeader(http.StatusNoContent)
+	case r.Method == "PUT" && strings.Contains(p, "/permissions/"):
+		w.WriteHeader(http.StatusNoContent)
 	default:
 		http.Error(w, "unexpected "+r.Method+" "+p, http.StatusTeapot)
 	}
@@ -253,6 +255,9 @@ func TestSelfRolesMatchButtonsAndRoles(t *testing.T) {
 			for _, m := range ch.Messages {
 				for _, row := range m.Rows {
 					for _, b := range row {
+						if b.ID != "" {
+							continue // handled by the ticket flow, not a role
+						}
 						if _, ok := self[b.Key]; !ok {
 							t.Errorf("button %q has no self role", b.Key)
 						}
@@ -261,11 +266,75 @@ func TestSelfRolesMatchButtonsAndRoles(t *testing.T) {
 			}
 		}
 	}
-	for _, tier := range []string{RolePro, RoleHosting, RoleBeta, RoleMod, RoleFounder, RoleFree} {
+	for _, tier := range []string{RolePro, RoleHosting, RoleBeta, RoleMod, RoleFounder, RoleFree, RoleCurator, RoleHelper, RoleShopCurator, RoleOperator} {
 		for _, name := range self {
 			if name == tier {
 				t.Errorf("tier or staff role %q must never be self-assignable", tier)
 			}
+		}
+	}
+}
+
+func TestStaffChannelsAreVisibleOnlyToTheRightBranch(t *testing.T) {
+	p := Default()
+	only := map[string][]string{}
+	for _, cat := range p.Categories {
+		for _, ch := range cat.Channels {
+			only[ch.Key] = ch.OnlyFor
+		}
+	}
+	has := func(key, role string) bool {
+		for _, r := range only[key] {
+			if r == role {
+				return true
+			}
+		}
+		return false
+	}
+	for _, key := range []string{"shop-rules", "shop-orders", "shop-new", "shop-curators"} {
+		if has(key, RoleMod) || has(key, RoleHelper) || has(key, RoleCurator) {
+			t.Errorf("%s: moderation staff must not see the shop branch", key)
+		}
+		if !has(key, RoleFounder) || !has(key, RoleShopCurator) {
+			t.Errorf("%s: founder and shop curator must see it", key)
+		}
+	}
+	for _, key := range []string{"mods", "log", "events", "curators"} {
+		if has(key, RoleOperator) || has(key, RoleShopCurator) {
+			t.Errorf("%s: shop staff must not see moderation channels", key)
+		}
+	}
+	if has("curators", RoleMod) || has("curators", RoleHelper) {
+		t.Error("the curators' room is for curators only")
+	}
+	if !has("shop-new", RoleOperator) || has("shop-curators", RoleOperator) {
+		t.Error("operators see new tickets but not the curators' shop room")
+	}
+}
+
+func TestGameRolesAreGone(t *testing.T) {
+	p := Default()
+	for _, r := range p.Roles {
+		for _, g := range p.LegacyRoles {
+			if r.Name == g {
+				t.Errorf("role %q should be removed, not created", g)
+			}
+		}
+	}
+	if len(p.LegacyRoles) == 0 {
+		t.Error("the old game roles must be listed for removal")
+	}
+}
+
+func TestReadOnlyStaffChannelOnlyFounderWrites(t *testing.T) {
+	ids := map[string]string{RoleFounder: "f", RoleMod: "m"}
+	ow := Overwrites(Channel{ReadOnly: true, OnlyFor: []string{RoleFounder, RoleMod}}, "g", "bot", ids)
+	for _, o := range ow {
+		if o.ID == "m" && o.Allow != perm(PermViewChannel|PermReadHistory) {
+			t.Errorf("a moderator must only read the charter: %+v", o)
+		}
+		if o.ID == "f" && o.Allow != perm(PermViewChannel|PermReadHistory|PermSendMessages) {
+			t.Errorf("the founder must be able to write: %+v", o)
 		}
 	}
 }
