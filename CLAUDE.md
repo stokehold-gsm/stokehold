@@ -29,6 +29,6 @@ Free открыт (AGPL-3.0, этот репозиторий), Pro закрыт:
 Все записи на месте: stokehold.ru, www, api, admin, dl -> stokehold.ru, MX на ImprovMX, SPF. Локальный Windows-резолвер владельца и мой врут или кэшируют отказ, поэтому проверять DNS только через `curl https://dns.google/resolve?name=...&type=...`, а не через `nslookup`.
 
 ## Админка лицензий и демо (2026-10-31, без секретов)
-- Админка лицензий: https://api.stokehold.online:8443 (Caddy, вход с паролем, 2FA обязательна). Роли: owner, curator (смотрит всех, продлевает, сбрасывает привязку, читает журнал), operator (выдаёт ключи, видит только свои). Сотрудников добавляет владелец на странице «Сотрудники».
+- Админка лицензий: https://admin.stokehold.online (Caddy, вход с паролем, 2FA обязательна). Роли: owner, curator (смотрит всех, продлевает, сбрасывает привязку, читает журнал), operator (выдаёт ключи, видит только свои). Сотрудников добавляет владелец на странице «Сотрудники».
 - Демо-панель (сборка Pro, тариф hosting, без игровых серверов): https://stokehold.ru:8444, сервис stokehold-demo на VPS.
-- https://stokehold.online открывает тот же сайт, что и stokehold.ru. У admin.stokehold.ru и www.stokehold.online DNS-записей нет.
+- https://stokehold.online открывает тот же сайт, что и stokehold.ru. DNS (проверено в reg.ru 2026-10-31): в зоне stokehold.online есть @, admin, api, dl, MX и SPF (ImprovMX); в зоне stokehold.ru только @ и www, остальное живёт на .online. У www.stokehold.online записи нет.
