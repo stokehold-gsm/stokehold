@@ -1,0 +1,7 @@
+.env
+*.key
+*.pem
+/dist/
+/bin/
+*.db
+*.test
