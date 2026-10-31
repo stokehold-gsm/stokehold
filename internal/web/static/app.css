@@ -353,3 +353,7 @@ td.fm-acts { text-align: right; }
 pre.log { max-height: 65vh; overflow: auto; font-size: .82rem; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
 details.raw summary { cursor: pointer; font-weight: 600; }
 .card .facts dd code { word-break: break-all; }
+
+.srv-name a { color: var(--fg); text-decoration: none; }
+.srv-name a:hover { color: var(--brand); text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 1450px) { header nav .who { display: none; } }

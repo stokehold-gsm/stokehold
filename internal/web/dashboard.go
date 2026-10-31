@@ -21,6 +21,8 @@ func srvState(raw string) string {
 	switch u := strings.ToUpper(strings.TrimSpace(raw)); {
 	case u == "STARTED" || u == "ONLINE" || u == "RUNNING":
 		return "started"
+	case u == "STARTING":
+		return "starting"
 	case u == "STOPPED" || u == "OFFLINE":
 		return "stopped"
 	}
@@ -36,7 +38,7 @@ func srvRows(servers []store.Server, statuses map[int64]ServerStatus, nodes map[
 			r.Players = strconv.Itoa(st.Players) + "/" + strconv.Itoa(st.Max)
 		}
 		// an unknown state keeps every button: LinuxGSM will say what is true
-		r.CanStart = r.State != "started"
+		r.CanStart = r.State != "started" && r.State != "starting"
 		r.CanStop = r.State != "stopped"
 		r.CanRestart = r.State != "stopped"
 		rows = append(rows, r)

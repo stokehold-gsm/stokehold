@@ -44,6 +44,7 @@ type srvPage struct {
 	Players                    string
 	Address                    string
 	D                          lgsm.Details
+	Secs                       []srvSec
 	Raw                        string
 	Err                        string
 	CanControl                 bool
@@ -116,6 +117,7 @@ func (s *Server) serverPage(w http.ResponseWriter, r *http.Request, p *page) {
 			v.Err = tr(p.Lang, "srv_details_failed")
 		} else {
 			v.D = lgsm.ParseDetails(raw)
+			v.Secs = sections(p.Lang, v.D)
 			v.Raw = trim(raw)
 			switch v.D.State() {
 			case "STARTED":
@@ -131,7 +133,7 @@ func (s *Server) serverPage(w http.ResponseWriter, r *http.Request, p *page) {
 			v.Address = rowValue(v.D, "Server IP", "Server address")
 		}
 	}
-	v.CanStart, v.CanStop = v.State != "started", v.State != "stopped"
+	v.CanStart, v.CanStop = v.State != "started" && v.State != "starting", v.State != "stopped"
 	p.Srv = v
 	p.Refresh = false
 	s.render(w, "server", p, http.StatusOK)
@@ -194,4 +196,52 @@ func jsonSize(out string) int64 {
 		return 0
 	}
 	return e.Size
+}
+
+var ruTitles = map[string]string{
+	"Distro Details": "Система", "Server Resource": "Ресурсы", "Ports": "Порты", "Script Details": "Скрипт LinuxGSM",
+	"Backups": "Бэкапы", "Parameters": "Параметры запуска", "Command-line Parameters": "Параметры запуска",
+}
+
+var ruRows = map[string]string{
+	"Distro": "Дистрибутив", "Arch": "Архитектура", "Kernel": "Ядро", "Hostname": "Имя хоста", "tmux": "tmux",
+	"Avg Load": "Нагрузка", "Free Memory": "Свободно памяти", "Free Disk": "Свободно на диске", "Total Memory": "Всего памяти",
+	"CPU Used": "Процессор", "Mem Used": "Память", "Swap Used": "Подкачка", "Server name": "Название сервера",
+	"Server IP": "Адрес сервера", "Internet IP": "Внешний адрес", "Server password": "Пароль сервера", "RCON password": "Пароль RCON",
+	"Players": "Игроки", "Status": "Статус", "Map": "Карта", "Game mode": "Режим", "Version": "Версия", "Build": "Сборка",
+	"Script name": "Скрипт", "LinuxGSM version": "Версия LinuxGSM", "Server dir": "Каталог сервера", "Config file": "Файл настроек",
+	"Backups": "Бэкапов", "Last backup": "Последний бэкап", "Uptime": "Работает", "Branch": "Ветка", "Master Server": "Мастер-сервер",
+}
+
+type srvSec struct {
+	Title string
+	Rows  []lgsm.Row
+}
+
+// sections returns the parsed sections with the labels LinuxGSM prints in
+// English translated where we know them; anything else stays as printed.
+func sections(lang string, d lgsm.Details) []srvSec {
+	var out []srvSec
+	for _, sec := range d.Sections {
+		if sec.Title == "Ports" {
+			continue // shown as its own table
+		}
+		t := sec
+		ns := srvSec{Title: sec.Title}
+		if lang == "ru" {
+			if x, ok := ruTitles[sec.Title]; ok {
+				ns.Title = x
+			} else if g, found := strings.CutSuffix(sec.Title, " Details"); found {
+				ns.Title = g + ": сервер"
+			}
+		}
+		for _, r := range t.Rows {
+			if x, ok := ruRows[r.K]; ok && lang == "ru" {
+				r.K = x
+			}
+			ns.Rows = append(ns.Rows, r)
+		}
+		out = append(out, ns)
+	}
+	return out
 }

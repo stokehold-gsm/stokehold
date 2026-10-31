@@ -53,7 +53,7 @@
 <div>
 {{if .Err}}<div class="banner bad"><p>{{.Err}}</p></div>{{end}}
 <div class="grid2">
-  {{range $sec := .D.Sections}}
+  {{range $sec := .Secs}}
   <div class="card">
     <h1>{{$sec.Title}}</h1>
     <dl class="facts">
