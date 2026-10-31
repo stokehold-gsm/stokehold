@@ -27,7 +27,7 @@ func TestParseCheckUpdate(t *testing.T) {
 }
 
 func TestParseStatus(t *testing.T) {
-	if s, err := ParseStatus("Status:         STARTED\n"); err != nil || s != "STARTED" {
+	if s, err := ParseStatus(detailsOut); err != nil || s != "STARTED" {
 		t.Fatalf("plain: %q %v", s, err)
 	}
 	if _, err := ParseStatus("nothing"); err == nil {
