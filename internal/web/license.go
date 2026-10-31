@@ -39,6 +39,72 @@ func licenseMessage(lang string, err error) string {
 	return tr(lang, key)
 }
 
+// planRow is one line of the comparison on the licence page. Rows with a
+// Feature take their Pro and Hosting cells from the plans in pkg/license;
+// Planned marks what a plan includes on paper but is not built yet.
+type planRow struct {
+	Key     string // i18n key of the label
+	Feature string // licence feature behind the row, empty for the open core
+	Planned bool
+}
+
+var planRows = []planRow{
+	{Key: "pf_monitoring"},
+	{Key: "pf_servers"},
+	{Key: "pf_schedules"},
+	{Key: "pf_editor"},
+	{Key: "pf_filemgr"},
+	{Key: "pf_gametools"},
+	{Key: "pf_multiadmin"}, // users and roles are in the core: nothing gates them
+	{Key: "pf_s3", Feature: license.FeatureS3Backup, Planned: true},
+	{Key: "pf_rollback", Feature: license.FeatureRollback, Planned: true},
+	{Key: "pf_api", Feature: license.FeatureAPI},
+	{Key: "pf_mods", Feature: license.FeatureMods},
+	{Key: "pf_discord", Feature: license.FeatureDiscord},
+	{Key: "pf_status", Feature: license.FeatureStatusPage},
+	{Key: "pf_nodes", Feature: license.FeatureMultiNode},
+}
+
+// planCols are the columns, in order; Free has no licence plan.
+var planCols = []string{"free", "pro", "hosting"}
+
+type planCell struct {
+	Class, Text string
+	Cur         bool // the column of the plan this panel is on
+}
+
+type planRowView struct {
+	Label string
+	Cells []planCell
+}
+
+func listHas(list []string, f string) bool {
+	for _, x := range list {
+		if x == f {
+			return true
+		}
+	}
+	return false
+}
+
+func planTable(lang, cur string) []planRowView {
+	out := make([]planRowView, 0, len(planRows))
+	for _, row := range planRows {
+		v := planRowView{Label: tr(lang, row.Key)}
+		for _, col := range planCols {
+			c := planCell{Class: "y", Text: "✓", Cur: col == cur}
+			if row.Feature != "" && !listHas(license.PlanFeatures(col), row.Feature) {
+				c.Class, c.Text = "n", "—"
+			} else if row.Feature != "" && row.Planned {
+				c.Class, c.Text = "soon", tr(lang, "pf_soon")
+			}
+			v.Cells = append(v.Cells, c)
+		}
+		out = append(out, v)
+	}
+	return out
+}
+
 func (s *Server) fillLicense(p *page) {
 	if s.Entitlement == nil {
 		p.Lic = entitlement.Status{}
@@ -49,6 +115,11 @@ func (s *Server) fillLicense(p *page) {
 		p.LicExpires = time.Unix(p.Lic.ExpiresAt, 0).UTC().Format("2006-01-02")
 	}
 	p.IsGrace = p.Lic.State == license.InGrace
+	p.CurPlan = "free"
+	if license.KnownPlan(p.Lic.Plan) {
+		p.CurPlan = p.Lic.Plan
+	}
+	p.PlanRows = planTable(p.Lang, p.CurPlan)
 	servers, _ := s.Store.Servers()
 	p.Count = len(servers)
 	p.CanChangeLicense = p.User.Role == store.RoleOwner

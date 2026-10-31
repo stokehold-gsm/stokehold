@@ -6,6 +6,7 @@
 <title>{{t . "app"}}</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js" defer></script>
 {{if .Refresh}}<meta http-equiv="refresh" content="3">{{end}}
 </head>
 <body>
@@ -13,27 +14,31 @@
   <a class="brand" href="/"><img src="/static/logo.svg" alt="" width="28" height="28"> {{t . "app"}}</a>
   <nav>
     {{if .User}}
-      <span class="muted">{{.User.Email}} ({{.User.Role}})</span>
       <a href="/">{{t . "servers"}}</a>
       <a href="/monitor">{{t . "monitor"}}</a>
       <a href="/security">{{t . "security"}}</a>
       <a href="/license">{{t . "license"}}</a>
       {{if eq .User.Role "owner"}}<a href="/users">{{t . "users"}}</a>{{if pro}} <a href="/nodes">{{t . "nodes"}}</a> <a href="/integrations">{{t . "integrations"}}</a>{{end}}{{end}}
       {{if pro}}<a href="/tokens">{{t . "tokens"}}</a>{{end}}
+      <span class="who" title="{{.User.Email}}">{{.User.Email}} ({{.User.Role}})</span>
       <form class="inline" method="post" action="/logout">
         <input type="hidden" name="csrf" value="{{.CSRF}}">
         <button class="link" type="submit">{{t . "signout"}}</button>
       </form>
     {{end}}
-    <a href="?lang=ru">RU</a> <a href="?lang=en">EN</a>
   </nav>
+  <div class="lang" data-lang="{{.Lang}}" role="group" aria-label="{{t . "language"}}">
+    <a href="?lang=ru" data-lang="ru" lang="ru" aria-current="{{if eq .Lang "ru"}}true{{else}}false{{end}}">RU</a>
+    <a href="?lang=en" data-lang="en" lang="en" aria-current="{{if eq .Lang "en"}}true{{else}}false{{end}}">EN</a>
+    <span class="thumb" aria-hidden="true"></span>
+  </div>
 </header>
 <main>{{end}}
 
 {{define "foot"}}</main></body></html>{{end}}
 
 {{define "login"}}{{template "head" .}}
-<div class="card">
+<div class="card auth">
   <h1>{{t . "login"}}</h1>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   <form method="post" action="/login" autocomplete="on">
@@ -49,7 +54,7 @@
 {{template "foot" .}}{{end}}
 
 {{define "setup"}}{{template "head" .}}
-<div class="card">
+<div class="card auth">
   <h1>{{t . "setup"}}</h1>
   <p class="muted">{{t . "setup_hint"}}</p>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
@@ -69,7 +74,7 @@
 <div class="card">
   <h1>{{t . "servers"}} ({{.Count}})</h1>
   {{if .Servers}}
-  <table>
+  <div class="scroll"><table>
     <tr><th>{{t . "name"}}</th><th>{{t . "game"}}</th><th>{{t . "mode"}}</th><th></th></tr>
     {{range $srv := .Servers}}<tr><td>{{$srv.Name}}{{with index $.NodeNames $srv.NodeID}} <span class="muted">({{.}})</span>{{end}}</td><td>{{$srv.Game}}</td><td>{{$srv.Mode}}</td><td>
       {{range $.Actions}}{{if or $.CanControl (eq . "details") (eq . "check-update")}}<form class="inline" method="post" action="/servers/{{$srv.ID}}/run">
@@ -78,7 +83,7 @@
       <a href="/servers/{{$srv.ID}}/schedules">{{t $ "schedules"}}</a>
       {{if $.CanControl}}<a href="/servers/{{$srv.ID}}/files">{{t $ "files"}}</a>{{if and pro (eq $srv.Game "fctrserver")}} <a href="/servers/{{$srv.ID}}/mods">{{t $ "mods"}}</a>{{end}}{{end}}
     </td></tr>{{end}}
-  </table>
+  </table></div>
   {{else}}<p class="muted">{{t . "no_servers"}}</p>{{end}}
   {{if .CanControl}}<p><a href="/servers/new">{{t . "install_server"}}</a> · <a href="/servers/add">{{t . "add_server"}}</a></p>{{end}}
 </div>
@@ -117,6 +122,7 @@
 {{template "foot" .}}{{end}}
 
 {{define "security"}}{{template "head" .}}
+<div class="grid2">
 <div class="card">
   <h1>{{t . "pw_title"}}</h1>
   {{if .Info}}<p>{{.Info}}</p>{{end}}
@@ -158,24 +164,18 @@
     </form>
   {{end}}
 </div>
+</div>
 {{template "foot" .}}{{end}}
 
 {{define "message"}}{{template "head" .}}
-<div class="card"><p>{{.Error}}</p><p><a href="/">{{t . "back"}}</a></p></div>
+<div class="card auth"><p>{{.Error}}</p><p><a href="/">{{t . "back"}}</a></p></div>
 {{template "foot" .}}{{end}}
 
 {{define "license"}}{{template "head" .}}
 <div class="card">
   <h1>{{t . "license"}}</h1>
-  {{if .Info}}<p>{{.Info}}</p>{{end}}
+  {{if .Info}}<p><span class="chip ok">{{.Info}}</span></p>{{end}}
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
-  <table>
-    <tr><th>{{t . "lic_plan"}}</th><td>{{if .Lic.Plan}}{{t . "lic_pro"}} ({{.Lic.Plan}}){{else}}{{t . "lic_free"}}{{end}}</td></tr>
-    <tr><th>{{t . "lic_features"}}</th><td>{{range .Lic.Features}}<code>{{.}}</code> {{else}}-{{end}}</td></tr>
-    {{if .LicExpires}}<tr><th>{{t . "lic_until"}}</th><td>{{.LicExpires}}</td></tr>{{end}}
-  </table>
-  {{if .IsGrace}}<p class="muted">{{t . "lic_grace"}}</p>{{end}}
-  {{if .Lic.LastError}}<p class="muted">{{t . "lic_last_error"}}: {{.Lic.LastError}}</p>{{end}}
   {{if .CanChangeLicense}}
   <form method="post" action="/license/activate">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
@@ -183,12 +183,42 @@
     <input id="key" name="key" type="text" required autocomplete="off" spellcheck="false" placeholder="SKH-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX">
     <button type="submit">{{t . "lic_activate"}}</button>
   </form>
-  {{if .Lic.HasKey}}<form method="post" action="/license/renew">
+  {{if .Lic.HasKey}}<form class="inline" method="post" action="/license/renew">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
-    <button type="submit">{{t . "lic_renew"}}</button>
+    <button class="link" type="submit">{{t . "lic_renew"}}</button>
   </form>{{end}}
-  {{end}}
-  <h2>{{t . "lic_sent_title"}}</h2>
+  {{else}}<p class="muted">{{t . "lic_owner_only"}}</p>{{end}}
+  <p>{{t . "lic_plan"}}: <span class="chip ok">{{t . (printf "plan_%s" .CurPlan)}}{{if .Lic.Plan}} ({{.Lic.Plan}}){{end}}</span>{{if .LicExpires}} · {{t . "lic_until"}} {{.LicExpires}}{{end}}</p>
+  {{if .Lic.Features}}<p class="muted">{{t . "lic_features"}}: {{range .Lic.Features}}<code>{{.}}</code> {{end}}</p>{{end}}
+  {{if .IsGrace}}<p class="muted">{{t . "lic_grace"}}</p>{{end}}
+  {{if .Lic.LastError}}<p class="muted">{{t . "lic_last_error"}}: {{.Lic.LastError}}</p>{{end}}
+</div>
+<div class="card">
+  <h1>{{t . "lic_plans"}}</h1>
+  <div class="scroll"><table class="plans">
+    <thead><tr>
+      <th></th>
+      <th class="{{if eq .CurPlan "free"}}cur{{end}}">Free<span class="sub">{{t . "plan_free_sub"}}</span></th>
+      <th class="{{if eq .CurPlan "pro"}}cur{{end}}">Pro<span class="sub">{{t . "plan_pro_sub"}}</span></th>
+      <th class="{{if eq .CurPlan "hosting"}}cur{{end}}">Hosting<span class="sub">{{t . "plan_hosting_sub"}}</span></th>
+    </tr></thead>
+    <tbody>
+    {{range $r := .PlanRows}}<tr><td>{{$r.Label}}</td>{{range $r.Cells}}<td class="{{if .Cur}}cur{{end}}"><span class="mark {{.Class}}">{{.Text}}</span></td>{{end}}</tr>
+    {{end}}
+    <tr><td>{{t . "lic_pros"}}</td>
+      <td class="note{{if eq .CurPlan "free"}} cur{{end}}">{{t . "plan_free_pros"}}</td>
+      <td class="note{{if eq .CurPlan "pro"}} cur{{end}}">{{t . "plan_pro_pros"}}</td>
+      <td class="note{{if eq .CurPlan "hosting"}} cur{{end}}">{{t . "plan_hosting_pros"}}</td></tr>
+    <tr><td>{{t . "lic_cons"}}</td>
+      <td class="note{{if eq .CurPlan "free"}} cur{{end}}">{{t . "plan_free_cons"}}</td>
+      <td class="note{{if eq .CurPlan "pro"}} cur{{end}}">{{t . "plan_pro_cons"}}</td>
+      <td class="note{{if eq .CurPlan "hosting"}} cur{{end}}">{{t . "plan_hosting_cons"}}</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted">{{t . "lic_plans_note"}}</p>
+</div>
+<div class="card">
+  <h1>{{t . "lic_sent_title"}}</h1>
   <p class="muted">{{t . "lic_sent"}}</p>
 </div>
 {{template "foot" .}}{{end}}
@@ -197,13 +227,13 @@
 <div class="card">
   <h1>{{t . "users"}}</h1>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
-  <table>
+  <div class="scroll"><table>
     <tr><th>{{t . "user_email"}}</th><th>{{t . "user_role"}}</th><th>{{t . "user_2fa"}}</th><th></th></tr>
     {{range $u := .UserRows}}<tr><td>{{$u.Email}}</td><td>{{$u.Role}}</td><td>{{if $u.TOTPEnabled}}{{t $ "yes"}}{{else}}{{t $ "no"}}{{end}}</td><td>
       <form class="inline" method="post" action="/users/{{$u.ID}}/reset"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="link" type="submit">{{t $ "user_reset"}}</button></form>
       <form class="inline" method="post" action="/users/{{$u.ID}}/delete"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="link" type="submit">{{t $ "user_delete"}}</button></form>
     </td></tr>{{end}}
-  </table>
+  </table></div>
 </div>
 <div class="card">
   <h1>{{t . "user_create"}}</h1>
@@ -233,12 +263,12 @@
   <p class="muted">{{t . "sch_note"}}</p>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   {{if .Sched}}
-  <table>
+  <div class="scroll"><table>
     <tr><th>{{t . "sch_cmd"}}</th><th></th><th>{{t . "sch_last"}}</th><th></th></tr>
     {{range $x := .Sched}}<tr><td>{{t $ (printf "act_%s" $x.Cmd)}}</td><td>{{$x.When}}</td>
       <td>{{$x.Last}}{{if $x.Note}}: {{if not $x.OK}}<span class="error">{{end}}{{$x.Note}}{{if not $x.OK}}</span>{{end}}{{end}}</td>
       <td>{{if $.CanControl}}<form class="inline" method="post" action="/schedules/{{$x.ID}}/delete"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="link" type="submit">{{t $ "sch_delete"}}</button></form>{{end}}</td></tr>{{end}}
-  </table>
+  </table></div>
   {{else}}<p class="muted">{{t . "sch_empty"}}</p>{{end}}
 </div>
 {{if .CanControl}}<div class="card">
@@ -289,7 +319,7 @@
   <p class="muted">{{t . "files_hint"}}</p>
   {{if .Info}}<p>{{.Info}}</p>{{end}}
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
-  {{if .Files}}<table>{{range $f := .Files}}<tr><td><code>{{$f}}</code></td><td><a href="/servers/{{$.ServerID}}/edit?path={{$f}}">{{t $ "file_edit"}}</a></td></tr>{{end}}</table>
+  {{if .Files}}<div class="scroll"><table>{{range $f := .Files}}<tr><td><code>{{$f}}</code></td><td><a href="/servers/{{$.ServerID}}/edit?path={{$f}}">{{t $ "file_edit"}}</a></td></tr>{{end}}</table></div>
   {{else if not .Error}}<p class="muted">{{t . "files_empty"}}</p>{{end}}
   <p><a href="/">{{t . "back"}}</a></p>
 </div>
@@ -313,22 +343,22 @@
 <div class="card">
   <h1>{{t . "monitor"}}</h1>
   {{if .Mon.Have}}
-  <table>
+  <div class="scroll"><table>
     <tr><th>{{t . "mon_cpu"}}</th><td>{{printf "%.0f" .Mon.CPU}}%</td><td>{{if .Mon.CPUPoints}}<svg class="spark" viewBox="0 0 120 30" aria-hidden="true"><polyline points="{{.Mon.CPUPoints}}"/></svg>{{end}}</td></tr>
     <tr><th>{{t . "mon_mem"}}</th><td>{{printf "%.0f" .Mon.Mem}}% ({{.Mon.MemText}})</td><td>{{if .Mon.MemPoints}}<svg class="spark" viewBox="0 0 120 30" aria-hidden="true"><polyline points="{{.Mon.MemPoints}}"/></svg>{{end}}</td></tr>
     <tr><th>{{t . "mon_disk"}}</th><td>{{printf "%.0f" .Mon.Disk}}% ({{.Mon.DiskText}})</td><td></td></tr>
     <tr><th>{{t . "mon_load"}}</th><td>{{printf "%.2f" .Mon.Load1}}</td><td></td></tr>
-  </table>
+  </table></div>
   <p class="muted">{{t . "mon_note"}}</p>
   {{else}}<p class="muted">{{t . "mon_none"}}</p>{{end}}
 </div>
 <div class="card">
   <h1>{{t . "servers"}}</h1>
-  {{if .Servers}}<table>
+  {{if .Servers}}<div class="scroll"><table>
     <tr><th>{{t . "name"}}</th><th>{{t . "mon_state"}}</th><th>{{t . "mon_players"}}</th></tr>
     {{range $srv := .Servers}}{{$st := index $.Statuses $srv.ID}}<tr><td>{{$srv.Name}}{{with index $.NodeNames $srv.NodeID}} <span class="muted">({{.}})</span>{{end}}</td>
       <td>{{if $st.State}}{{$st.State}}{{else}}-{{end}}</td><td>{{if $st.HasPlayers}}{{$st.Players}}/{{$st.Max}}{{else}}-{{end}}</td></tr>{{end}}
-  </table>{{else}}<p class="muted">{{t . "no_servers"}}</p>{{end}}
+  </table></div>{{else}}<p class="muted">{{t . "no_servers"}}</p>{{end}}
 </div>
 {{template "foot" .}}{{end}}
 
