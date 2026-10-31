@@ -50,7 +50,7 @@ func TestFileOpsRoundTripThroughTheBackend(t *testing.T) {
 	}
 }
 
-func TestFileRequestsAreValidatedBeforeAnythingHappens(t *testing.T) {
+func TestFileRequestValidation(t *testing.T) {
 	ff := &fakeFiles{read: "x"}
 	b := Backend{Files: ff, Adopted: only("factorio")}
 	bad := []Request{
@@ -150,7 +150,7 @@ func TestInTree(t *testing.T) {
 	}
 }
 
-func TestLinuxGSMDefaultConfigIsNeitherListedNorWritable(t *testing.T) {
+func TestDefaultCfgHidden(t *testing.T) {
 	home := t.TempDir()
 	os.MkdirAll(filepath.Join(home, "lgsm/config-lgsm/mcserver"), 0o755)
 	for _, n := range []string{"_default.cfg", "mcserver.cfg", "common.cfg"} {

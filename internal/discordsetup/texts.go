@@ -1,7 +1,5 @@
 package discordsetup
 
-// Только то, что уже есть. Без обещаний про пользователей и сроки.
-
 const footer = "Stokehold GSM"
 
 var welcomeRU = Message{Embeds: []Embed{{
@@ -11,9 +9,6 @@ var welcomeRU = Message{Embeds: []Embed{{
 	Color: colorBrand,
 	Fields: []Field{
 		{"С чего начать", "1. Прочитайте {#rules}\n2. Выберите роли в {#roles}\n3. Загляните в {#plans}, чтобы узнать, что готово и что будет", false},
-		{"Нужна помощь", "Пишите в {#help}. Укажите версию панели, ОС и игру.", true},
-		{"Нашли ошибку", "Опишите её в {#bugs}.", true},
-		{"Есть идея", "Расскажите в {#ideas}.", true},
 		{"Кто это делает", "Один разработчик, который сам администрирует сервер Factorio. Сервер помогают вести модераторы. Бот сервера помечен как бот.", false},
 		{"English", "English-speaking? Start in {#start}.", false},
 	},
@@ -65,7 +60,7 @@ var faqRU = Message{Embeds: []Embed{{
 
 var plansRU = Message{Embeds: []Embed{{
 	Title:       "Что делаем и что дальше",
-	Description: "Сроков нет. План может меняться.",
+	Description: "Сроков не обещаем.",
 	Color:       colorBrand,
 	Fields: []Field{
 		{"Сделано (прототипы)", "• безопасная работа с файлами игровых серверов\n• проверка лицензионных токенов\n• управление LinuxGSM-серверами и подхват уже установленных\n• служебный процесс с узким набором операций", false},
@@ -94,7 +89,7 @@ var bugsRU = Message{Embeds: []Embed{{
 
 var ideasRU = Message{Embeds: []Embed{{
 	Title:       "Как предложить идею",
-	Description: "Расскажите, какую задачу вы хотите решить, а не только какую функцию добавить. Так проще понять, что на самом деле нужно.",
+	Description: "Опишите задачу, а не готовую функцию.",
 	Color:       colorOK,
 	Footer:      footer,
 }}}

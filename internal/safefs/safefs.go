@@ -9,7 +9,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"path"
 	"strings"
 )
 
@@ -57,23 +56,4 @@ func (f *FS) ReadFile(rel string, max int64) ([]byte, error) {
 		return nil, fmt.Errorf("%w: %q", ErrDenied, rel)
 	}
 	return io.ReadAll(io.LimitReader(file, max))
-}
-
-// WriteFile is for the config editor, so only whitelisted extensions are allowed.
-func (f *FS) WriteFile(rel string, data []byte) error {
-	if err := check(rel); err != nil {
-		return err
-	}
-	if !editable[strings.ToLower(path.Ext(rel))] {
-		return fmt.Errorf("%w: %q", ErrDenied, rel)
-	}
-	file, err := f.root.OpenFile(rel, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o640)
-	if err != nil {
-		return err
-	}
-	if _, err := file.Write(data); err != nil {
-		file.Close()
-		return err
-	}
-	return file.Close()
 }

@@ -14,4 +14,4 @@
 Файлы `internal/helper/deps/*.csv` взяты из GameServerManagers/LinuxGSM (MIT License, Copyright (c) Daniel Gibbs и участники). Обновлять снимки при каждом релизе.
 
 ## Лицензия самого проекта
-Не выбрана. Решение владельца до первого публичного релиза: открытый код под AGPL/MIT и платные функции по лицензионному ключу, либо source-available. Влияет на фазы 4 и 6.
+AGPL-3.0 для ядра (файл LICENSE), Pro-модуль закрыт. Решение в docs/decisions/0005-open-core.md. Зависимости с лицензиями MIT, BSD и ISC совместимы с AGPL.

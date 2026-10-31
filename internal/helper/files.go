@@ -8,9 +8,7 @@ import (
 	"github.com/stokehold-gsm/stokehold/internal/safefs"
 )
 
-// Config files can only be read and written inside these trees of a game
-// user's home directory. Everything else, including .ssh and the rest of the
-// home, is out of reach whatever the panel asks for.
+// только эти поддеревья home, остальное недоступно
 var allowedTrees = []string{"serverfiles", "lgsm/config-lgsm"}
 
 // _default.cfg is overwritten by every LinuxGSM update; its own advice is to
@@ -29,8 +27,7 @@ func inTree(rel string) bool {
 	return false
 }
 
-// Files is what the helper needs for the config editor. The real
-// implementation opens the user's home through safefs; tests use a fake.
+// Files is the config editor backend; tests use a fake.
 type Files interface {
 	List(user string) ([]string, error)
 	Read(user, rel string) (string, error)
@@ -124,10 +121,11 @@ func handleFiles(r Request, files Files) Response {
 			return Response{Err: err.Error()}
 		}
 		return Response{OK: true, Out: s}
-	default: // write-file
+	case "write-file":
 		if err := files.Write(r.User, r.Path, r.Content); err != nil {
 			return Response{Err: err.Error()}
 		}
 		return Response{OK: true}
 	}
+	return Response{Err: "unknown file operation"}
 }

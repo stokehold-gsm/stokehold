@@ -12,7 +12,6 @@ import (
 	"github.com/stokehold-gsm/stokehold/pkg/license"
 )
 
-// Entitlements is what the web layer needs from the licensing side.
 type Entitlements interface {
 	Status() entitlement.Status
 	Activate(ctx context.Context, key string) error

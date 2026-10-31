@@ -93,8 +93,6 @@ func HashToken(token string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// --- TOTP ---
-
 const totpPeriod = 30
 
 func NewTOTPSecret() string {

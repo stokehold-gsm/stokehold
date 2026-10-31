@@ -19,7 +19,7 @@ func only(users ...string) Adopted {
 	}
 }
 
-func TestAdoptedAccountsMayOnlyBeRunAndInspected(t *testing.T) {
+func TestAdopted(t *testing.T) {
 	ad := only("factorio", "root")
 	ok := []Request{
 		{Op: "run", User: "factorio", Game: "fctrserver", Cmd: "details"},
@@ -96,7 +96,7 @@ func TestDiscoverRunsWithoutShellInterpolation(t *testing.T) {
 	}
 }
 
-func TestCreateUserReusesAnExistingGsAccountWithoutTouchingIt(t *testing.T) {
+func TestCreateUserReuse(t *testing.T) {
 	var cmds []string
 	run := func(name string, args ...string) (string, error) {
 		cmds = append(cmds, name)
@@ -115,7 +115,7 @@ func TestCreateUserReusesAnExistingGsAccountWithoutTouchingIt(t *testing.T) {
 	}
 }
 
-func TestMorePackagesThanBeforeAreAccepted(t *testing.T) {
+func TestLongPackageList(t *testing.T) {
 	pkgs, _ := DepsFor("ubuntu-22.04", "rust")
 	if len(pkgs) <= 20 {
 		t.Skip("this list is short")

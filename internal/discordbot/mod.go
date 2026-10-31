@@ -223,7 +223,7 @@ func (m *Mod) run(ctx context.Context, in interaction) string {
 		return "Участник исключён."
 	default: // ban
 		if err := m.API.Do(ctx, "PUT", g+"/bans/"+target, map[string]any{}, nil); err != nil {
-			return "Не удалось забанить. Проверьте, что у бота есть право Ban Members и его роль выше роли участника."
+			return "Бан не прошёл: у бота нет права Ban Members или его роль ниже."
 		}
 		m.log(ctx, in.GuildID, "🔨 Бан", target, by, reason, "")
 		return "Участник забанен."

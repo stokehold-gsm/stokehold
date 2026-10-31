@@ -80,7 +80,6 @@ func summary(out, errText string) string {
 	return last
 }
 
-// Loop ticks every interval until ctx ends.
 func (r *Runner) Loop(ctx context.Context, every time.Duration) {
 	t := time.NewTicker(every)
 	defer t.Stop()

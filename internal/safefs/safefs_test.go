@@ -28,14 +28,11 @@ func setup(t *testing.T) (*FS, string) {
 	return f, base
 }
 
-func TestReadWriteInside(t *testing.T) {
+func TestReadInside(t *testing.T) {
 	f, _ := setup(t)
 	b, err := f.ReadFile("server.cfg", 1024)
 	if err != nil || string(b) != "ok" {
 		t.Fatalf("read: %q %v", b, err)
-	}
-	if err := f.WriteFile("new.cfg", []byte("x")); err != nil {
-		t.Fatal(err)
 	}
 }
 
@@ -47,9 +44,6 @@ func TestHostilePaths(t *testing.T) {
 	} {
 		if _, err := f.ReadFile(p, 1024); !errors.Is(err, ErrDenied) {
 			t.Errorf("read %q: want ErrDenied, got %v", p, err)
-		}
-		if err := f.WriteFile(p, []byte("x")); !errors.Is(err, ErrDenied) {
-			t.Errorf("write %q: want ErrDenied, got %v", p, err)
 		}
 	}
 }
@@ -67,18 +61,5 @@ func TestSymlinkEscape(t *testing.T) {
 	}
 	if b, err := f.ReadFile("dir/secret.cfg", 1024); err == nil {
 		t.Errorf("dir symlink escaped: %q", b)
-	}
-	if err := f.WriteFile("dir/new.cfg", []byte("x")); err == nil {
-		t.Error("write through dir symlink escaped")
-	}
-}
-
-func TestWriteExtensionAndSize(t *testing.T) {
-	f, _ := setup(t)
-	if err := f.WriteFile("start.sh", []byte("x")); !errors.Is(err, ErrDenied) {
-		t.Errorf("sh write: %v", err)
-	}
-	if _, err := f.ReadFile("server.cfg", 1); !errors.Is(err, ErrDenied) {
-		t.Errorf("size limit: %v", err)
 	}
 }

@@ -79,7 +79,7 @@ func TestListDoesNotFollowSymlinks(t *testing.T) {
 	}
 }
 
-func TestReplaceKeepsModeMakesABackupAndLeavesNoTempFiles(t *testing.T) {
+func TestReplace(t *testing.T) {
 	f, base := tree(t)
 	p := "serverfiles/server.properties"
 	if err := f.Replace(p, []byte("motd=changed\n")); err != nil {

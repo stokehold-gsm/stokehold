@@ -17,7 +17,6 @@ type HelperFunc func(helper.Request) (helper.Response, error)
 
 const maxOutput = 8 << 10
 
-// Actions a viewer may trigger: read-only ones. Everything else needs admin.
 var viewerActions = map[string]bool{"details": true, "check-update": true}
 
 var actionLabels = []string{"details", "start", "stop", "restart", "backup", "check-update"}

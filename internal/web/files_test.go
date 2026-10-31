@@ -68,7 +68,7 @@ func TestFileListAndEditorShowTheConfig(t *testing.T) {
 	}
 }
 
-func TestSavingSendsLFContentAndAuditsWithoutTheContent(t *testing.T) {
+func TestSave(t *testing.T) {
 	r, f, id, tok := fileRig(t)
 	form := url.Values{"csrf": {tok}, "path": {"serverfiles/server.properties"}, "content": {"motd=hi\r\nrcon.password=newsecret\r\n"}}
 	rec := r.do("POST", "/servers/"+itoaTest(id)+"/edit", form, nil)

@@ -76,7 +76,7 @@ func TestTamperedCertFieldsRejected(t *testing.T) {
 	}
 }
 
-func TestTokenIssuedAfterCertExpiryRejectedButOlderOnesSurvive(t *testing.T) {
+func TestCertExpiry(t *testing.T) {
 	c := newChain(t)
 	after := time.Unix(c.cert.NotAfter, 0).Add(time.Hour)
 	if _, st, _ := c.v.Check(c.token(c.cert, after), "inst-A", after); st != Free {

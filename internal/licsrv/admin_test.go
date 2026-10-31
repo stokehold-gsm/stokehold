@@ -236,7 +236,7 @@ func TestIssuerDailyLimitAndOwnerExempt(t *testing.T) {
 
 func suffix(i int) string { return string(rune('a'+i/26)) + string(rune('a'+i%26)) }
 
-func TestOnlyTheOwnerCanRevokeExtendResetOrReadTheAudit(t *testing.T) {
+func TestOwnerOnlyActions(t *testing.T) {
 	r := newARig(t)
 	hs, os := r.admin("helper", RoleIssuer), r.admin("owner", RoleOwner)
 	r.st.Issue("owner", "FP-7", "pro", r.now.Add(10*24*time.Hour), "")

@@ -2,7 +2,7 @@
 
 A web panel for game servers on top of [LinuxGSM](https://linuxgsm.com). One Go binary, SQLite, no Docker. It adopts LinuxGSM servers you already run instead of asking you to reinstall them.
 
-**Status: prototype, no public release yet.** What is below is what works today, tested on Ubuntu 22.04. Nothing here is promised ahead of time.
+**Status: prototype, no public release yet.** What is below is what works today, tested on Ubuntu 22.04.
 
 ## What works
 
@@ -17,7 +17,7 @@ Not yet: mod manager, scheduled backups and wipes, S3 backups, update rollback f
 
 ## Why another panel
 
-Pterodactyl needs PHP, MySQL, Redis and Docker plus a daemon per node. Crafty is Minecraft only. AMP is not sold in Russia. LinuxGSM covers 143 games but is a command line. This project wants the middle: a small panel that runs on one VPS and sits on top of what you already have. Details and sources are in [docs/market.md](docs/market.md).
+Pterodactyl needs PHP, MySQL, Redis and Docker plus a daemon per node. Crafty is Minecraft only. AMP is not sold in Russia. LinuxGSM covers 143 games but is a command line. The gap this fills: a small panel that runs on one VPS and sits on top of what you already have. Details and sources are in [docs/market.md](docs/market.md).
 
 ## Design in short
 
@@ -50,6 +50,6 @@ Releases are built by CI and signed by hand on the owner's machine, see [docs/re
 
 ## Notes
 
-Written with the help of an AI assistant; a human decides, reviews and releases. Community: a Discord server (invite on the site). The Discord-free path always works: the panel, licences and updates do not depend on it.
+Written with an AI assistant; releases are signed by a human. Community: a Discord server (invite on the site). The Discord-free path always works: the panel, licences and updates do not depend on it.
 
 The core is licensed under AGPL-3.0 ([LICENSE](LICENSE), [ADR 0005](docs/decisions/0005-open-core.md)). Paid Pro features are a separate closed module. The name and logo are not covered by the licence ([legal/trademark.md](legal/trademark.md)). See [CONTRIBUTING.md](CONTRIBUTING.md).

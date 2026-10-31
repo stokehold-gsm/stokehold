@@ -87,7 +87,7 @@ func TestOnlyOwnersManageUsers(t *testing.T) {
 	}
 }
 
-func TestResetGivesANewPasswordAndEndsSessionsAndTwoFactor(t *testing.T) {
+func TestReset(t *testing.T) {
 	r := newRig(t)
 	r.setup()
 	id, _ := r.st.CreateUser("victim@example.com", pass, store.RoleAdmin)
