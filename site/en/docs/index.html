@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en" class="nojs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+<title>Documentation: Stokehold GSM</title>
+<meta name="description" content="How to install and use Stokehold GSM: servers, schedules, config editor, roles, security, monitoring, API, commands and troubleshooting.">
+<style>
+:root { color-scheme: dark light; --bg:#14161c; --card:#1c1f27; --fg:#e6e8eb; --muted:#9aa3b0; --brand:#e8451a; --line:#2c313c; }
+@media (prefers-color-scheme: light) { :root { --bg:#f6f7f9; --card:#fff; --fg:#1d2127; --muted:#6b7380; --line:#dde1e6; } }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin:0; font:17px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--fg); animation:pagein .35s ease both; }
+@keyframes pagein { from { opacity:0 } to { opacity:1 } }
+body.leaving { opacity:0; transition:opacity .22s ease; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior:auto; } body { animation:none; } body.leaving { transition:none; } }
+.wrap { max-width:1080px; margin:0 auto; padding:0 16px; }
+header { padding:18px 0; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+header nav { display:flex; flex-wrap:wrap; gap:6px 16px; }
+header a { color:var(--muted); text-decoration:none; }
+header a:hover { color:var(--fg); }
+.logo { display:inline-flex; align-items:center; gap:10px; font-weight:800; color:var(--brand); letter-spacing:.3px; }
+.logo img { border-radius:7px; }
+.layout { display:grid; grid-template-columns:230px minmax(0,1fr); gap:32px; align-items:start; padding-bottom:48px; }
+.side { position:sticky; top:16px; border:1px solid var(--line); border-radius:12px; background:var(--card); padding:12px 14px; font-size:.95rem; max-height:calc(100vh - 32px); overflow:auto; }
+.side a { display:block; padding:4px 0; color:var(--muted); text-decoration:none; }
+.side a:hover { color:var(--fg); }
+.side b { display:block; margin:10px 0 2px; font-size:.8rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:600; }
+.side b:first-child { margin-top:0; }
+article h1 { font-size:clamp(1.8rem,4vw,2.4rem); line-height:1.15; margin:8px 0 12px; }
+article h2 { font-size:1.45rem; margin:0 0 12px; padding-top:8px; scroll-margin-top:12px; }
+article h3 { font-size:1.1rem; margin:22px 0 6px; }
+article section { padding:28px 0; border-top:1px solid var(--line); }
+article section:first-of-type { border-top:0; }
+.muted { color:var(--muted); }
+code, pre { font-family:ui-monospace,Consolas,monospace; font-size:.92em; }
+:not(pre) > code { background:var(--card); border:1px solid var(--line); border-radius:6px; padding:1px 6px; word-break:break-word; }
+pre { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; overflow-x:auto; margin:10px 0 14px; }
+.cmd { position:relative; margin:10px 0 14px; } .cmd pre { margin:0; padding-right:96px; }
+.cmd .copy { position:absolute; top:8px; right:8px; padding:4px 10px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--muted); font:inherit; font-size:.82rem; cursor:pointer; }
+.cmd .copy:hover { color:var(--fg); } .nojs .copy { display:none; }
+table { width:100%; border-collapse:collapse; font-size:.95rem; margin:10px 0 14px; }
+th,td { text-align:left; padding:9px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+.scroll { overflow-x:auto; }
+.note { border-left:3px solid var(--brand); background:var(--card); border-radius:0 10px 10px 0; padding:10px 14px; margin:12px 0; }
+.pro { display:inline-block; font-size:.75rem; border:1px solid var(--brand); color:var(--brand); border-radius:99px; padding:0 8px; vertical-align:middle; margin-left:6px; }
+footer { padding:24px 0 48px; color:var(--muted); font-size:.9rem; border-top:1px solid var(--line); }
+@media (max-width: 800px) { .layout { grid-template-columns:1fr; } .side { position:static; max-height:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="logo" href="../"><img src="../../logo.svg" alt="" width="28" height="28"> Stokehold GSM</a>
+  <nav><a href="../#now">What works</a><a href="../#compare">Comparison</a><a href="../#install">Install</a><a href="../#plans">Plans</a><a href="./">Documentation</a><a class="lang" href="../../docs/">RU</a></nav>
+</header>
+
+<div class="layout">
+<nav class="side" aria-label="Documentation sections">
+  <b>Start</b>
+  <a href="#overview">What it is</a>
+  <a href="#install">Install</a>
+  <a href="#first">First sign-in</a>
+  <b>Servers</b>
+  <a href="#adopt">Adopting existing servers</a>
+  <a href="#new">New server from the catalogue</a>
+  <a href="#actions">Actions</a>
+  <a href="#schedules">Schedules</a>
+  <a href="#files">Config editor</a>
+  <a href="#monitor">Monitoring</a>
+  <b>Access</b>
+  <a href="#roles">Users and roles</a>
+  <a href="#security">Security</a>
+  <a href="#https">HTTPS and a domain</a>
+  <b>Pro</b>
+  <a href="#license">Licence and plans</a>
+  <a href="#api">REST API</a>
+  <a href="#nodes">Several machines</a>
+  <a href="#mods">Factorio mods</a>
+  <a href="#discord">Discord and status page</a>
+  <b>Reference</b>
+  <a href="#cli">Commands and flags</a>
+  <a href="#files-paths">Where things live</a>
+  <a href="#update">Update and uninstall</a>
+  <a href="#trouble">Troubleshooting</a>
+  <a href="#faq">FAQ</a>
+</nav>
+
+<article>
+<h1>Documentation</h1>
+<p class="muted">Version 0.1, early access. This covers only what works today. What is still missing is listed at the end of "What it is".</p>
+
+<section id="overview">
+  <h2>What it is</h2>
+  <p>Stokehold GSM is a web panel for game servers on top of <a href="https://linuxgsm.com">LinuxGSM</a>. One binary and SQLite, no Docker, PHP or database server. The panel runs the LinuxGSM scripts and shows the result, so it supports whatever LinuxGSM supports (143 games when checked). Game servers run under ordinary Linux users, just like in LinuxGSM itself.</p>
+  <p>Two parts: the <b>panel</b> (web interface, no root rights) and the <b>helper</b> (a root service with a fixed set of operations; it is what actually runs the LinuxGSM commands). The panel can do nothing the helper does not allow.</p>
+  <p><b>Not yet:</b> installing mods from the portal, wipes from the UI, S3 backups, game update rollback, panel self-update. Real-game tests so far cover Minecraft and Factorio only.</p>
+</section>
+
+<section id="install">
+  <h2>Install</h2>
+  <p>You need Linux with systemd and OpenSSL 3 (Ubuntu 22.04 or newer, Debian 12 or newer), an x86_64 or ARM64 CPU and root access. On Windows and macOS the panel cannot be installed directly: use a Linux VPS or WSL2 (see the <a href="../#install">home page</a>).</p>
+  <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>sudo apt install -y curl openssl &amp;&amp; curl -fsSL https://dl.stokehold.online/install.sh | sudo bash</code></pre></div>
+  <p>What the installer does:</p>
+  <ol>
+    <li>verifies the release signature and file hashes; on any error it stops without changing anything;</li>
+    <li>installs <code>stokehold</code> and <code>stokehold-helper</code> into <code>/usr/local/bin</code>;</li>
+    <li>creates the <code>stokehold</code> user, <code>/var/lib/stokehold</code> and the settings file <code>/etc/stokehold/stokehold.env</code>;</li>
+    <li>creates and starts the <code>stokehold-helper</code> and <code>stokehold</code> services;</li>
+    <li>opens port 8443 in ufw if it is active and prints the first-setup link.</li>
+  </ol>
+  <p>To read the installer first, download <a href="https://dl.stokehold.online/install.sh">install.sh</a> and run <code>sudo bash install.sh</code>. Installer options: <code>--channel stable|beta</code>, <code>--version vX.Y.Z</code>, <code>--no-start</code>.</p>
+</section>
+
+<section id="first">
+  <h2>First sign-in</h2>
+  <ol>
+    <li>At the end of the install a link like <code>https://ADDRESS:8443/setup?code=…</code> appears in the console. Open it in a browser. The code in the link is single-use.</li>
+    <li>The browser warns about the certificate: the panel makes its own until you have a domain. Choose "Advanced" and continue. The installer prints the certificate fingerprint next to the link so you can compare.</li>
+    <li>Enter the owner's email and a password (at least 10 characters). The page works once: after the owner exists it cannot be opened again.</li>
+    <li>Turn on two-factor authentication right away: Security → Start setup. Add the secret to an authenticator app (Aegis, FreeOTP, any TOTP), enter the six-digit code and press Enable.</li>
+  </ol>
+  <div class="note">Lost the link? The code is always in the log: <code>sudo journalctl -u stokehold | grep "setup code"</code>. Every restart of the service before the owner exists prints a new code. If the page does not open, open TCP port 8443 at your host.</div>
+</section>
+
+<section id="adopt">
+  <h2>Adopting existing servers</h2>
+  <p>If a LinuxGSM server already runs on the machine, there is nothing to reinstall. The panel may not manage other accounts on its own: the machine's owner adds the user name to a file that the helper reads and the panel cannot change.</p>
+  <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>echo factorio | sudo tee -a /etc/stokehold/adopt.conf</code></pre></div>
+  <p>Then on the Add server page enter that Linux user name, press "Find servers" and add the script you need (<code>fctrserver</code>, <code>mcserver</code>, and so on). The file is read on every request, no restart needed. An adopted server gets the mode <code>adopted</code>. The panel installs nothing into such an account and creates no users. Names: one per line, no spaces, not <code>root</code>.</p>
+</section>
+
+<section id="new">
+  <h2>New server from the catalogue</h2>
+  <p>"Install new server": pick a game from the LinuxGSM catalogue and a name. The panel creates a separate <code>gs_…</code> user, installs the packages LinuxGSM lists for the game (on Ubuntu and Debian) and installs the server. Progress is shown on the page, one install at a time. If it fails the reason is in the log: retry with the same or another name.</p>
+  <ul>
+    <li>For Steam games LinuxGSM sometimes asks for extra packages: install them by hand as it suggests.</li>
+    <li>For Minecraft accept the EULA before the first start: open <code>serverfiles/eula.txt</code> in the file editor and set <code>eula=true</code>.</li>
+  </ul>
+</section>
+
+<section id="actions">
+  <h2>Server actions</h2>
+  <p>Every server in the list has buttons. The command output is shown on the page and every action is written to the log.</p>
+  <div class="scroll"><table>
+    <tr><th>Button</th><th>LinuxGSM command</th><th>What it does</th></tr>
+    <tr><td>Status</td><td><code>details</code></td><td>shows the state and parameters of the server</td></tr>
+    <tr><td>Start</td><td><code>start</code></td><td>starts the server</td></tr>
+    <tr><td>Stop</td><td><code>stop</code></td><td>stops the server; right after a start it may not manage a clean stop and the process is killed</td></tr>
+    <tr><td>Restart</td><td><code>restart</code></td><td>stops and starts</td></tr>
+    <tr><td>Backup</td><td><code>backup</code></td><td>makes a copy; LinuxGSM <b>stops the server during the backup</b> and starts it again</td></tr>
+    <tr><td>Check update</td><td><code>check-update</code></td><td>checks whether a new game version is out</td></tr>
+  </table></div>
+</section>
+
+<section id="schedules">
+  <h2>Schedules</h2>
+  <p>Each server has a Schedule page: a backup, a restart or an update check every day at a set time (UTC) or every N hours. If the panel was off at the scheduled time the action runs once after it starts. The result of the last run is on the same page. Owners and admins can change schedules, viewers can only look.</p>
+  <div class="note">A LinuxGSM backup stops the game server, so pick a time without players.</div>
+</section>
+
+<section id="files">
+  <h2>Config editor</h2>
+  <p>The Files link of a server opens config editing. Only <code>serverfiles</code> and <code>lgsm/config-lgsm</code> are reachable, and only text files up to 256 KB. Before saving the panel keeps a copy of the previous version next to the file (<code>.stokehold-bak</code>). Changes take effect after the server restarts. The editor creates no new files and does not follow symbolic links. Only owners and admins see and change files: configs often hold passwords.</p>
+</section>
+
+<section id="monitor">
+  <h2>Monitoring</h2>
+  <p>The Monitoring page shows CPU, memory, disk, the one-minute load and the state of every server (including the player count when LinuxGSM prints it for that game). Once a minute the panel takes a sample and asks LinuxGSM for <code>details</code>. The last 60 samples are kept in memory, so the graph restarts with the panel. It works on Linux because it reads <code>/proc</code>. Monitoring is open to every plan.</p>
+</section>
+
+<section id="roles">
+  <h2>Users and roles</h2>
+  <div class="scroll"><table>
+    <tr><th>Role</th><th>What it can do</th></tr>
+    <tr><td><code>owner</code></td><td>everything: users, licence, servers, schedules, files</td></tr>
+    <tr><td><code>admin</code></td><td>manage servers, schedules and files</td></tr>
+    <tr><td><code>viewer</code></td><td>read only: status and update check</td></tr>
+  </table></div>
+  <p>The owner creates users on the Users page: the password is generated and shown once, hand it over in person. The same page resets passwords and 2FA and deletes users. The last owner cannot be deleted. Everyone changes their own password on the Security page, which ends their other sessions. The interface language is switched with RU/EN in the header.</p>
+</section>
+
+<section id="security">
+  <h2>Security</h2>
+  <ul>
+    <li>Passwords are stored as argon2id. After several wrong passwords an account is locked for 15 minutes and attempts per address are limited.</li>
+    <li>TOTP two-factor: each code works once. Turning it off needs the password.</li>
+    <li>CSRF protection, a strict content policy for pages, cookies with HttpOnly, SameSite and Secure flags.</li>
+    <li>The privileged helper accepts a fixed set of operations only and runs them for allowed users. All its operations are logged (<code>journalctl -u stokehold-helper</code>).</li>
+    <li>Server files are opened through a single module that cannot escape the server directory.</li>
+    <li>Game servers run under ordinary users without containers: simpler and lighter, but weaker isolation than Docker.</li>
+  </ul>
+</section>
+
+<section id="https">
+  <h2>HTTPS and a domain</h2>
+  <p>Right after the install the panel answers over HTTPS on port 8443 with its own certificate (the browser warns once). It is a stop-gap until you have a domain. When you do, put a reverse proxy in front, for example Caddy, which gets a trusted certificate by itself.</p>
+  <pre><code>panel.example.com {
+    reverse_proxy 127.0.0.1:8080
+}</code></pre>
+  <p>Then in <code>/etc/stokehold/stokehold.env</code> replace <code>-tls-listen :8443</code> with <code>-trust-proxy</code> and restart:</p>
+  <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>sudo systemctl restart stokehold</code></pre></div>
+  <p>Port 8443 then closes and the client address is taken from the proxy header. Do not enable <code>-trust-proxy</code> without a proxy: the header can be forged.</p>
+</section>
+
+<section id="license">
+  <h2>Licence and plans</h2>
+  <p>The Licence page shows the plan, the included features and the term. <b>Free</b>: the whole open core (AGPL-3.0) with no server limit, no key, no contact with the licence server. <b>Pro</b> and <b>Hosting</b> are a closed build with extra features (below); Hosting adds several machines. Prices are not announced yet.</p>
+  <ul>
+    <li>The owner enters the key on the Licence page. What is sent to the licence server (the key, an instance fingerprint, the panel version) is written on the page itself.</li>
+    <li>If the licence server is unreachable game servers keep running; paid features work until the end of the last confirmed term plus 30 days.</li>
+    <li>If a licence ends only the paid features go away; game servers are never stopped.</li>
+  </ul>
+</section>
+
+<section id="api">
+  <h2>REST API <span class="pro">Pro</span></h2>
+  <p>API keys → create a key. It is shown once and stored only as a hash. A key acts with the role of the person who created it: a viewer's key can only read, an owner's or admin's can also control. Every action by a key is logged; after five wrong keys from one address within a minute a rate limit kicks in.</p>
+  <pre><code>curl -H "Authorization: Bearer shapi_..." https://panel.example.com/api/v1/servers
+curl -X POST -H "Authorization: Bearer shapi_..." https://panel.example.com/api/v1/servers/3/restart
+curl -H "Authorization: Bearer shapi_..." https://panel.example.com/api/v1/metrics</code></pre>
+  <div class="scroll"><table>
+    <tr><th>Request</th><th>What it does</th></tr>
+    <tr><td><code>GET /api/v1/servers</code></td><td>list of servers, state, players, machine</td></tr>
+    <tr><td><code>GET /api/v1/servers/{id}</code></td><td>one server</td></tr>
+    <tr><td><code>POST /api/v1/servers/{id}/{action}</code></td><td><code>details</code>, <code>start</code>, <code>stop</code>, <code>restart</code>, <code>backup</code>, <code>check-update</code></td></tr>
+    <tr><td><code>GET /api/v1/metrics</code></td><td>the latest sample of the machine</td></tr>
+  </table></div>
+</section>
+
+<section id="nodes">
+  <h2>Several machines <span class="pro">Hosting</span></h2>
+  <p>Game servers on other machines are managed from the same panel through a small agent, <code>stokehold-agent</code>. The agent accepts the panel's requests over HTTPS on port 9443 (open it for the panel's address only), makes a self-signed certificate on first start and prints its fingerprint; the secret is in <code>/var/lib/stokehold-agent/secret</code>. For existing LinuxGSM accounts on that machine create <code>/etc/stokehold/adopt.conf</code> as on the main one.</p>
+  <p>In the panel: Machines → add, enter the address, the fingerprint and the secret. The panel checks the fingerprint on every connection, so no certificate authority is needed. After that installing and adding a server offers a choice of machine. Schedules, the config editor and the state work for servers on any machine. A machine that still has servers cannot be removed.</p>
+  <p class="muted">Not yet: moving a server between machines; monitoring shows the main machine only.</p>
+</section>
+
+<section id="mods">
+  <h2>Factorio mods <span class="pro">Pro</span></h2>
+  <p>A Factorio server has a Mods link in the list. It reads <code>serverfiles/mods/mod-list.json</code> and turns mods on or off, leaving the other fields of the file (a version, say) alone. You place the mod files yourself: the panel does not download from the mod portal because the portal needs your login and token and we do not want to keep those in the panel. For other games the page says so.</p>
+</section>
+
+<section id="discord">
+  <h2>Discord and the public page <span class="pro">Pro</span></h2>
+  <h3>Notifications</h3>
+  <p>Integrations → webhook address. The panel posts there when a server starts or stops. Only <code>discord.com/api/webhooks/…</code> addresses are accepted.</p>
+  <h3>Bot commands</h3>
+  <p>The commands <code>/servers</code>, <code>/server</code> and <code>/metrics</code> come from your community's own bot. Create an application in the Discord Developer Portal and an API key on the panel, then run <code>stokehold-bot</code> with these variables:</p>
+  <pre><code>DISCORD_BOT_TOKEN=...  DISCORD_PUBLIC_KEY=...  DISCORD_APP_ID=...
+STOKEHOLD_PANEL_URL=https://panel.example.com
+STOKEHOLD_PANEL_TOKEN=shapi_...
+STOKEHOLD_CONTROL_ROLE="Server Admin"</code></pre>
+  <p>Any member can call <code>/servers</code>; <code>/server &lt;name&gt; &lt;action&gt;</code> and <code>/metrics</code> are for members with the role from <code>STOKEHOLD_CONTROL_ROLE</code>. The bot reaches the panel only through an API key and needs no passwords.</p>
+  <h3>Public status page</h3>
+  <p>Integrations → Public status page. Without signing in, the address <code>/status</code> shows server names and states and nothing else.</p>
+</section>
+
+<section id="cli">
+  <h2>Commands and flags</h2>
+  <h3>The panel</h3>
+  <pre><code>stokehold version
+stokehold serve [flags]</code></pre>
+  <div class="scroll"><table>
+    <tr><th>Flag</th><th>Default</th><th>What it does</th></tr>
+    <tr><td><code>-db</code></td><td><code>panel.db</code></td><td>path to the SQLite database</td></tr>
+    <tr><td><code>-listen</code></td><td><code>127.0.0.1:8080</code></td><td>plain address for a reverse proxy</td></tr>
+    <tr><td><code>-tls-listen</code></td><td>off</td><td>also serve HTTPS on this address with its own certificate, for example <code>:8443</code></td></tr>
+    <tr><td><code>-secure</code></td><td>off</td><td>mark cookies Secure (needed with HTTPS)</td></tr>
+    <tr><td><code>-trust-proxy</code></td><td>off</td><td>take the client address from the proxy header (plain address only)</td></tr>
+    <tr><td><code>-helper</code></td><td><code>/run/stokehold/helper.sock</code></td><td>helper socket</td></tr>
+    <tr><td><code>-license-url</code></td><td>the project server</td><td>licence server address</td></tr>
+  </table></div>
+  <p>On an installed system the flags are in <code>STOKEHOLD_FLAGS</code> in <code>/etc/stokehold/stokehold.env</code>. After editing run <code>sudo systemctl restart stokehold</code>.</p>
+  <h3>The installer</h3>
+  <p><code>install.sh</code> takes <code>--channel stable|beta</code>, <code>--version vX.Y.Z</code>, <code>--no-start</code>. Uninstall with <code>uninstall.sh</code> (<code>--purge</code> also deletes the panel's data).</p>
+  <h3>Services</h3>
+  <pre><code>systemctl status stokehold stokehold-helper
+journalctl -u stokehold -u stokehold-helper -e</code></pre>
+</section>
+
+<section id="files-paths">
+  <h2>Where things live</h2>
+  <div class="scroll"><table>
+    <tr><th>Path</th><th>What is there</th></tr>
+    <tr><td><code>/usr/local/bin/stokehold</code>, <code>stokehold-helper</code></td><td>the programs</td></tr>
+    <tr><td><code>/etc/stokehold/stokehold.env</code></td><td>panel flags</td></tr>
+    <tr><td><code>/etc/stokehold/adopt.conf</code></td><td>Linux users whose servers may be adopted</td></tr>
+    <tr><td><code>/var/lib/stokehold/panel.db</code></td><td>the panel database (users, servers, schedules, log)</td></tr>
+    <tr><td><code>/var/lib/stokehold/tls/</code></td><td>the panel's own certificate</td></tr>
+    <tr><td><code>/run/stokehold/helper.sock</code></td><td>helper socket</td></tr>
+    <tr><td><code>/usr/local/lib/stokehold/previous</code></td><td>the previous version, for rollback</td></tr>
+  </table></div>
+</section>
+
+<section id="update">
+  <h2>Update and uninstall</h2>
+  <p>Update: run the install command again. The old files are kept; if the new version does not answer the health check within 20 seconds the installer brings the previous one back, restarts the services and says so. Uninstalling does not touch your game servers or their users.</p>
+  <div class="cmd"><button type="button" class="copy">Copy</button><pre><code>curl -fsSL https://dl.stokehold.online/uninstall.sh | sudo bash</code></pre></div>
+  <p>Without <code>--purge</code> the panel's data stays in <code>/var/lib/stokehold</code> and <code>/etc/stokehold</code>.</p>
+</section>
+
+<section id="trouble">
+  <h2>Troubleshooting</h2>
+  <p>Look at the log first: <code>journalctl -u stokehold -u stokehold-helper -e</code>.</p>
+  <h3>The panel does not open</h3>
+  <ul>
+    <li><code>curl -s http://127.0.0.1:8080/health</code> on the machine itself should answer <code>ok</code>. No answer: <code>systemctl status stokehold</code>.</li>
+    <li>The installer's link does not open: open TCP port 8443 at your host and in the firewall.</li>
+    <li>Sign-in fails with the right password on plain HTTP: cookies with the Secure flag are not sent. Use HTTPS.</li>
+    <li>After several wrong passwords the account is locked for 15 minutes.</li>
+  </ul>
+  <h3>Lost the setup code</h3>
+  <p><code>sudo journalctl -u stokehold | grep "setup code"</code>. It is printed at start while there is no user; a restart of the service gives a new one.</p>
+  <h3>"Helper unavailable"</h3>
+  <p><code>systemctl status stokehold-helper</code>; the socket <code>/run/stokehold/helper.sock</code> must belong to <code>stokehold</code> with mode <code>srw-------</code>. The helper log shows every operation.</p>
+  <h3>"Could not find servers for this user"</h3>
+  <p>The user is not in <code>/etc/stokehold/adopt.conf</code>, or has no <code>lgsm/config-lgsm/&lt;name&gt;server</code> (LinuxGSM is not installed). For accounts made by the helper the name must start with <code>gs_</code>.</p>
+  <h3>A command failed</h3>
+  <p>The output is on the page. Typical causes: missing dependencies (<code>Missing dependencies</code>, install the named packages); the server is already running or stopped; LinuxGSM downloads its modules from GitHub every time, and without access to GitHub commands hang.</p>
+  <h3>Reporting a problem</h3>
+  <p>On <a href="https://github.com/stokehold-gsm/stokehold/issues">GitHub Issues</a> or in <a href="https://discord.gg/Z4Jkh4AYta">Discord</a>: the panel version (<code>stokehold version</code>), OS, game and a log <b>without passwords, tokens or licence keys</b>.</p>
+</section>
+
+<section id="faq">
+  <h2>FAQ</h2>
+  <h3>Do I need Docker?</h3>
+  <p>No. Game servers run under ordinary Linux users, as in LinuxGSM.</p>
+  <h3>Can I adopt a server that is already running?</h3>
+  <p>Yes, see "Adopting existing servers". Nothing is reinstalled or overwritten.</p>
+  <h3>What about game updates?</h3>
+  <p>The update check is there. Snapshot rollback and version pinning are planned.</p>
+  <h3>What is sent to your servers?</h3>
+  <p>Free sends nothing. Pro sends the key, an instance public key and the panel version to verify the licence.</p>
+  <h3>Do I need Discord for the panel to work?</h3>
+  <p>No. The panel, licences and updates do not depend on Discord.</p>
+  <h3>How do I check that the download is genuine?</h3>
+  <p>The installer verifies the release signature and hashes itself. If the signature does not match, the install stops before any change.</p>
+</section>
+</article>
+</div>
+
+<footer>
+  <p>Stokehold GSM. Legal documents are published before sales begin.</p>
+</footer>
+</div>
+<script>
+(function () {
+  document.documentElement.classList.remove('nojs');
+  document.querySelectorAll('.copy').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var text = b.parentNode.querySelector('code').innerText, label = b.textContent;
+      var done = function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = label; }, 1500); };
+      if (navigator.clipboard) { navigator.clipboard.writeText(text).then(done, done); return; }
+      var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta); done();
+    });
+  });
+  var lang = document.querySelector('a.lang');
+  if (lang) lang.addEventListener('click', function (e) {
+    e.preventDefault();
+    var url = lang.href + location.hash;
+    document.body.classList.add('leaving');
+    setTimeout(function () { location.href = url; }, 230);
+  });
+})();
+</script>
+</body>
+</html>

@@ -46,13 +46,20 @@ footer a { color:var(--muted); }
 .cmd { position:relative; margin:0 0 14px; } .cmd pre { margin:0; padding-right:96px; }
 .cmd .copy { position:absolute; top:8px; right:8px; padding:4px 10px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--muted); font:inherit; font-size:.82rem; cursor:pointer; }
 .cmd .copy:hover { color:var(--fg); } .nojs .tabs, .nojs .copy { display:none; }
+
+html { scroll-behavior: smooth; }
+section[id] { scroll-margin-top: 12px; }
+body { animation: pagein .35s ease both; }
+@keyframes pagein { from { opacity: 0 } to { opacity: 1 } }
+body.leaving { opacity: 0; transition: opacity .22s ease; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } body { animation: none; } body.leaving { transition: none; } }
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
   <a class="logo" href="../"><img src="../logo.svg" alt="" width="28" height="28"> Stokehold GSM</a>
-  <nav><a href="#now">What works</a><a href="#compare">Comparison</a><a href="#install">Install</a><a href="#plans">Plans</a><a href="../">RU</a></nav>
+  <nav><a href="#now">What works</a><a href="#compare">Comparison</a><a href="#install">Install</a><a href="#plans">Plans</a><a href="docs/">Documentation</a><a class="lang" href="../">RU</a></nav>
 </header>
 
 <main>
@@ -62,6 +69,7 @@ footer a { color:var(--muted); }
   <p class="lead">One binary and SQLite instead of PHP, MySQL, Redis and Docker. It adopts the LinuxGSM servers you already run, no reinstall. Built for community admins on a single VPS.</p>
   <div class="btns">
     <a class="btn primary" href="https://discord.gg/Z4Jkh4AYta">Join the Discord</a>
+    <a class="btn" href="docs/">Documentation</a>
     <a class="btn" href="https://github.com/stokehold-gsm/stokehold">GitHub</a>
   </div>
 </div>
@@ -184,6 +192,16 @@ footer a { color:var(--muted); }
       var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
       try { document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta); done();
     });
+  });
+})();
+
+(function () {
+  var lang = document.querySelector('a.lang');
+  if (lang) lang.addEventListener('click', function (e) {
+    e.preventDefault();
+    var url = lang.href + location.hash;
+    document.body.classList.add('leaving');
+    setTimeout(function () { location.href = url; }, 230);
   });
 })();
 </script>
