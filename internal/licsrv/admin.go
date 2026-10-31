@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -44,6 +45,11 @@ type apage struct {
 	AuditBad int64
 	Quota    int
 	Owner    bool
+	Curator  bool
+	Staff    []Staff
+	NewName  string
+	NewRole  string
+	NewPass  string
 	Now      time.Time
 }
 
@@ -51,6 +57,9 @@ func NewAdminUI(st *Store, secure, trustProxy bool) *AdminUI {
 	u := &AdminUI{Store: st, Secure: secure, TrustProxy: trustProxy, Now: time.Now, limiter: ratelimit.New(10, time.Minute)}
 	u.tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 		"date": func(ts int64) string { return time.Unix(ts, 0).UTC().Format("2006-01-02") },
+		"role": func(r string) string {
+			return map[string]string{RoleOwner: "владелец", RoleCurator: "куратор шопа", RoleOperator: "оператор шопа"}[r]
+		},
 	}).Parse(adminTemplates))
 	return u
 }
@@ -68,6 +77,9 @@ func (u *AdminUI) Handler() http.Handler {
 	mux.HandleFunc("POST /issue", u.auth(u.issue, true))
 	mux.HandleFunc("POST /license/{action}", u.auth(u.change, true))
 	mux.HandleFunc("GET /audit", u.auth(u.auditPage, true))
+	mux.HandleFunc("GET /staff", u.auth(u.staffPage, true))
+	mux.HandleFunc("POST /staff", u.auth(u.staffAdd, true))
+	mux.HandleFunc("POST /staff/reset-2fa", u.auth(u.staffReset2FA, true))
 	mux.HandleFunc("GET /security", u.auth(u.security, false))
 	mux.HandleFunc("POST /security/start", u.auth(u.twofaStart, false))
 	mux.HandleFunc("POST /security/enable", u.auth(u.twofaEnable, false))
@@ -126,7 +138,7 @@ func (u *AdminUI) auth(h ahandler, needTOTP bool) http.HandlerFunc {
 			http.Redirect(w, r, "/security", http.StatusSeeOther)
 			return
 		}
-		h(w, r, &apage{Admin: a, CSRF: csrf, Owner: a.Role == RoleOwner, Now: u.Now()})
+		h(w, r, &apage{Admin: a, CSRF: csrf, Owner: a.Role == RoleOwner, Curator: a.Role == RoleCurator, Now: u.Now()})
 	}
 }
 
@@ -204,7 +216,14 @@ func (u *AdminUI) logout(w http.ResponseWriter, r *http.Request, p *apage) {
 }
 
 func (u *AdminUI) list(w http.ResponseWriter, r *http.Request, p *apage) {
-	all, _ := u.Store.List()
+	var all []License
+	if p.Owner || p.Curator {
+		all, _ = u.Store.List()
+		p.Staff, _ = u.Store.StaffList()
+	} else {
+		all, _ = u.Store.ListIssuedBy(p.Admin.Name)
+		p.Quota = u.quotaLeft(p)
+	}
 	if len(all) > 200 {
 		all = all[:200]
 	}
@@ -220,6 +239,10 @@ func (u *AdminUI) quotaLeft(p *apage) int {
 }
 
 func (u *AdminUI) issueForm(w http.ResponseWriter, r *http.Request, p *apage) {
+	if p.Curator {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
 	p.Quota = u.quotaLeft(p)
 	u.render(w, "issue", p, http.StatusOK)
 }
@@ -227,6 +250,10 @@ func (u *AdminUI) issueForm(w http.ResponseWriter, r *http.Request, p *apage) {
 // issue creates a licence for one order. The key is shown once on the result
 // page and is not stored anywhere in readable form.
 func (u *AdminUI) issue(w http.ResponseWriter, r *http.Request, p *apage) {
+	if p.Curator {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
 	order := strings.TrimSpace(r.PostFormValue("order"))
 	days, e2 := strconv.Atoi(r.PostFormValue("days"))
 	plan := r.PostFormValue("plan")
@@ -254,9 +281,10 @@ func (u *AdminUI) issue(w http.ResponseWriter, r *http.Request, p *apage) {
 	u.render(w, "issued", p, http.StatusOK)
 }
 
-// change is for the owner only: revoke, extend or free a licence from its instance.
+// change is for support: the curator may extend a licence or free it from its
+// instance, only the owner may revoke it.
 func (u *AdminUI) change(w http.ResponseWriter, r *http.Request, p *apage) {
-	if !p.Owner {
+	if !p.Owner && !(p.Curator && r.PathValue("action") != "revoke") {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
@@ -293,7 +321,7 @@ func (u *AdminUI) change(w http.ResponseWriter, r *http.Request, p *apage) {
 }
 
 func (u *AdminUI) auditPage(w http.ResponseWriter, r *http.Request, p *apage) {
-	if !p.Owner {
+	if !p.Owner && !p.Curator {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
@@ -339,8 +367,8 @@ table{width:100%;border-collapse:collapse;font-size:.92rem}td,th{text-align:left
 input,select{width:100%;padding:8px;border:1px solid #8886;border-radius:6px;background:transparent;font:inherit}label{display:block;margin:10px 0 3px;font-size:.88rem;opacity:.8}
 button{padding:8px 14px;border:0;border-radius:6px;background:#e8451a;color:#fff;font:inherit;cursor:pointer;margin-top:12px}button.l{background:none;color:inherit;text-decoration:underline;margin:0;padding:0}
 .e{color:#c0392b}.k{font:1.15rem ui-monospace,monospace;word-break:break-all;padding:12px;border:2px dashed #e8451a;border-radius:8px}form.i{display:inline}</style></head><body>
-<nav><b>Stokehold: лицензии</b>{{if .Admin}}<a href="/">Лицензии</a><a href="/issue">Выдать</a>{{if .Owner}}<a href="/audit">Журнал</a>{{end}}<a href="/security">Безопасность</a>
-<span>{{.Admin.Name}} ({{.Admin.Role}})</span>
+<nav><b>Stokehold: лицензии</b>{{if .Admin}}<a href="/">{{if or .Owner .Curator}}Лицензии{{else}}Мои выдачи{{end}}</a>{{if not .Curator}}<a href="/issue">Выдать</a>{{end}}{{if or .Owner .Curator}}<a href="/audit">Журнал</a>{{end}}{{if .Owner}}<a href="/staff">Сотрудники</a>{{end}}<a href="/security">Безопасность</a>
+<span>{{.Admin.Name}} ({{role .Admin.Role}})</span>
 <form class="i" method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="l" type="submit">Выйти</button></form>{{end}}</nav>{{end}}
 {{define "foot"}}</body></html>{{end}}
 
@@ -350,14 +378,31 @@ button{padding:8px 14px;border:0;border-radius:6px;background:#e8451a;color:#fff
 <label for="c">Код 2FA</label><input id="c" name="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
 <button type="submit">Войти</button></form></div>{{template "foot" .}}{{end}}
 
-{{define "list"}}{{template "head" .}}<div class="c"><h2>Лицензии</h2>
-<table><tr><th>Заказ</th><th>Тариф</th><th>Функций</th><th>До</th><th>Статус</th><th>Привязка</th><th>Контакт</th>{{if .Owner}}<th></th>{{end}}</tr>
+{{define "list"}}{{template "head" .}}
+{{if or .Owner .Curator}}<div class="c"><h2>Сотрудники шопа</h2>
+<table><tr><th>Имя</th><th>Роль</th><th>2FA</th><th>Выдано за 24 ч</th><th>Выдано всего</th></tr>
+{{range .Staff}}<tr><td>{{.Name}}</td><td>{{role .Role}}</td><td>{{if .TOTPEnabled}}да{{else}}нет{{end}}</td><td>{{.Issued24h}}</td><td>{{.IssuedTotal}}</td></tr>{{end}}</table></div>
+{{else}}<div class="c"><h2>Ваш лимит</h2>{{if ge .Quota 0}}<p>Осталось выдач за 24 часа: {{.Quota}} из 20.</p>{{end}}<p><a href="/issue">Выдать ключ на оплаченный заказ</a></p></div>{{end}}
+<div class="c"><h2>{{if or .Owner .Curator}}Лицензии{{else}}Мои выдачи{{end}}</h2>
+<table><tr><th>Заказ</th><th>Тариф</th><th>Функций</th><th>До</th><th>Статус</th><th>Привязка</th><th>Контакт</th>{{if or .Owner .Curator}}<th></th>{{end}}</tr>
 {{range $l := .Licenses}}<tr><td>{{$l.OrderRef}}</td><td>{{$l.Plan}}</td><td>{{len $l.Features}}</td><td>{{date $l.ExpiresAt}}</td><td>{{$l.Status}}</td><td>{{if $l.InstancePub}}да{{else}}нет{{end}}</td><td>{{$l.Contact}}</td>
-{{if $.Owner}}<td>{{if eq $l.Status "active"}}
-<form class="i" method="post" action="/license/revoke"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="order" value="{{$l.OrderRef}}"><button class="l" type="submit">отозвать</button></form>
+{{if or $.Owner $.Curator}}<td>{{if eq $l.Status "active"}}
+{{if $.Owner}}<form class="i" method="post" action="/license/revoke"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="order" value="{{$l.OrderRef}}"><button class="l" type="submit">отозвать</button></form>{{end}}
 <form class="i" method="post" action="/license/reset"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="order" value="{{$l.OrderRef}}"><button class="l" type="submit">сбросить привязку</button></form>
 <form class="i" method="post" action="/license/extend"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="order" value="{{$l.OrderRef}}"><input type="hidden" name="days" value="30"><button class="l" type="submit">+30 дн.</button></form>{{end}}</td>{{end}}</tr>
 {{else}}<tr><td colspan="8">Лицензий пока нет.</td></tr>{{end}}</table></div>{{template "foot" .}}{{end}}
+
+{{define "staff"}}{{template "head" .}}<div class="c"><h2>Сотрудники шопа</h2>
+<p>Оператор выдаёт ключи на оплаченные заказы (до 20 за сутки) и видит только свои выдачи. Куратор видит всех и все выдачи, продлевает, сбрасывает привязку и читает журнал, но ключи не выдаёт и не отзывает. Отзыв только у владельца. Каждому при первом входе придётся включить 2FA.</p>
+{{if .NewPass}}<p>Создан <b>{{.NewName}}</b> ({{role .NewRole}}). Одноразовый пароль, показан один раз:</p><p class="k">{{.NewPass}}</p><p>Передайте его лично, не в публичном канале.</p>{{end}}
+<table><tr><th>Имя</th><th>Роль</th><th>2FA</th><th>За 24 ч</th><th>Всего</th><th></th></tr>
+{{range $m := .Staff}}<tr><td>{{$m.Name}}</td><td>{{role $m.Role}}</td><td>{{if $m.TOTPEnabled}}да{{else}}нет{{end}}</td><td>{{$m.Issued24h}}</td><td>{{$m.IssuedTotal}}</td>
+<td>{{if ne $m.Role "owner"}}<form class="i" method="post" action="/staff/reset-2fa"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="name" value="{{$m.Name}}"><button class="l" type="submit">сбросить 2FA</button></form>{{end}}</td></tr>{{end}}</table></div>
+<div class="c"><h2>Добавить</h2>{{if .Error}}<p class="e">{{.Error}}</p>{{end}}
+<form method="post" action="/staff"><input type="hidden" name="csrf" value="{{.CSRF}}">
+<label for="n">Имя для входа</label><input id="n" name="name" value="{{.NewName}}" required maxlength="32">
+<label for="r">Роль</label><select id="r" name="role"><option value="operator">Оператор шопа</option><option value="curator">Куратор шопа</option></select>
+<button type="submit">Создать</button></form></div>{{template "foot" .}}{{end}}
 
 {{define "issue"}}{{template "head" .}}<div class="c"><h2>Выдать лицензию</h2>
 {{if ge .Quota 0}}<p>Осталось выдач за 24 часа: {{.Quota}}.</p>{{end}}
@@ -388,3 +433,60 @@ button{padding:8px 14px;border:0;border-radius:6px;background:#e8451a;color:#fff
 <form method="post" action="/security/start"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">Начать настройку</button></form>{{end}}
 </div>{{template "foot" .}}{{end}}
 `
+
+func (u *AdminUI) staffPage(w http.ResponseWriter, r *http.Request, p *apage) {
+	if !p.Owner {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	p.Staff, _ = u.Store.StaffList()
+	u.render(w, "staff", p, http.StatusOK)
+}
+
+// staffAdd creates an operator or curator with a one-time password that is
+// shown once; their first sign-in forces two-factor.
+func (u *AdminUI) staffAdd(w http.ResponseWriter, r *http.Request, p *apage) {
+	if !p.Owner {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	name, role := strings.TrimSpace(r.PostFormValue("name")), r.PostFormValue("role")
+	fail := func(msg string, status int) {
+		p.Error, p.NewName, p.NewRole = msg, name, role
+		p.Staff, _ = u.Store.StaffList()
+		u.render(w, "staff", p, status)
+	}
+	if !validStaffName.MatchString(name) || (role != RoleOperator && role != RoleCurator) {
+		fail("Имя: 2-32 символа, буквы, цифры, точка, дефис, подчёркивание. Роль: оператор или куратор.", http.StatusBadRequest)
+		return
+	}
+	pw, _ := auth.NewToken()
+	pw = pw[:20]
+	switch err := u.Store.AdminCreate(name, pw, role); {
+	case errors.Is(err, ErrAdminExists):
+		fail("Сотрудник с таким именем уже есть.", http.StatusConflict)
+		return
+	case err != nil:
+		fail("Не удалось создать сотрудника.", http.StatusInternalServerError)
+		return
+	}
+	u.Store.AdminAudit(p.Admin.Name, "admin.add", name+" "+role)
+	p.NewName, p.NewRole, p.NewPass = name, role, pw
+	p.Staff, _ = u.Store.StaffList()
+	u.render(w, "staff", p, http.StatusOK)
+}
+
+// staffReset2FA is for a colleague who lost their authenticator.
+func (u *AdminUI) staffReset2FA(w http.ResponseWriter, r *http.Request, p *apage) {
+	if !p.Owner {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	if name := strings.TrimSpace(r.PostFormValue("name")); name != p.Admin.Name && u.Store.AdminResetTOTP(name) != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	http.Redirect(w, r, "/staff", http.StatusSeeOther)
+}
+
+var validStaffName = regexp.MustCompile(`^[A-Za-z0-9._-]{2,32}$`)

@@ -10,8 +10,10 @@ import (
 )
 
 const (
-	RoleOwner  = "owner"
-	RoleIssuer = "issuer"
+	RoleOwner    = "owner"
+	RoleCurator  = "curator"
+	RoleOperator = "operator"
+	RoleIssuer   = RoleOperator // the old name of the operator role
 
 	AdminSessionTTL = 8 * time.Hour
 	IssuerDailyMax  = 20 // licences one issuer may create per 24 hours; the owner is exempt
@@ -23,6 +25,7 @@ var (
 	ErrAdminExists = errors.New("admin already exists")
 	ErrLocked      = errors.New("account locked")
 	ErrQuota       = errors.New("daily issuing limit reached")
+	ErrForbidden   = errors.New("this role cannot do that")
 )
 
 type Admin struct {
@@ -168,6 +171,9 @@ func (s *Store) IssuedSince(actor string, since time.Time) (n int) {
 // IssueAs issues a licence on behalf of an admin, enforcing the daily limit
 // for issuers.
 func (s *Store) IssueAs(a *Admin, orderRef, plan string, days int, contact string) (string, error) {
+	if a.Role == RoleCurator {
+		return "", ErrForbidden
+	}
 	if a.Role != RoleOwner && s.IssuedSince(a.Name, s.now().Add(-24*time.Hour)) >= IssuerDailyMax {
 		return "", ErrQuota
 	}
@@ -202,4 +208,102 @@ func (s *Store) AdminResetTOTP(name string) error {
 
 func init() {
 	migrations = append(migrations, `alter table licenses add column features text not null default '';`)
+}
+
+// Shop staff: operators issue keys for paid orders, curators watch the
+// operators and handle support cases. The CHECK on role cannot be altered in
+// SQLite, so the table is rebuilt; sessions are dropped with it and admins sign in again.
+func init() {
+	migrations = append(migrations, `
+create table admin_users_new(
+  id integer primary key,
+  name text not null unique collate nocase,
+  pass_hash text not null,
+  role text not null check (role in ('owner','curator','operator')),
+  totp_secret text not null default '',
+  totp_enabled integer not null default 0,
+  totp_last_step integer not null default 0,
+  failed_logins integer not null default 0,
+  locked_until integer not null default 0,
+  created_at integer not null
+);
+insert into admin_users_new select id, name, pass_hash, case role when 'issuer' then 'operator' else role end,
+  totp_secret, totp_enabled, totp_last_step, failed_logins, locked_until, created_at from admin_users;
+drop table admin_users;
+alter table admin_users_new rename to admin_users;`)
+}
+
+// ValidRole reports whether name is a role an admin can hold.
+func ValidRole(name string) bool {
+	return name == RoleOwner || name == RoleCurator || name == RoleOperator
+}
+
+type Staff struct {
+	Name        string
+	Role        string
+	TOTPEnabled bool
+	Issued24h   int
+	IssuedTotal int
+}
+
+// StaffList is the roster with how much each person has issued.
+func (s *Store) StaffList() ([]Staff, error) {
+	rows, err := s.db.Query(`select name, role, totp_enabled from admin_users order by role, name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Staff
+	for rows.Next() {
+		var m Staff
+		var en int
+		if err := rows.Scan(&m.Name, &m.Role, &en); err != nil {
+			return nil, err
+		}
+		m.TOTPEnabled = en == 1
+		out = append(out, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	since := s.now().Add(-24 * time.Hour)
+	for i := range out {
+		out[i].Issued24h = s.IssuedSince(out[i].Name, since)
+		s.db.QueryRow(`select count(*) from licenses where created_by=?`, out[i].Name).Scan(&out[i].IssuedTotal)
+	}
+	return out, nil
+}
+
+// ListIssuedBy is an operator's own view: only what they issued.
+func (s *Store) ListIssuedBy(actor string) ([]License, error) {
+	all, err := s.List()
+	if err != nil {
+		return nil, err
+	}
+	var out []License
+	for _, l := range all {
+		if l.CreatedBy == actor {
+			out = append(out, l)
+		}
+	}
+	return out, nil
+}
+
+// AdminSetPassword replaces a password (the owner on the command line, after a
+// leak or a loss) and unlocks the account.
+func (s *Store) AdminSetPassword(name, password string) error {
+	hash, err := auth.HashPassword(password)
+	if err != nil {
+		return err
+	}
+	res, err := s.db.Exec(`update admin_users set pass_hash=?, failed_logins=0, locked_until=0 where name=?`, hash, strings.TrimSpace(name))
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return ErrNotFound
+	}
+	s.db.Exec(`delete from admin_sessions where admin_id=(select id from admin_users where name=?)`, strings.TrimSpace(name))
+	s.AdminAudit("cli", "admin.reset-password", name)
+	return nil
 }

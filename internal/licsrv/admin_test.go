@@ -242,9 +242,10 @@ func TestOwnerOnlyActions(t *testing.T) {
 	r.st.Issue("owner", "FP-7", "pro", r.now.Add(10*24*time.Hour), "")
 
 	tok := r.signIn("helper", hs)
+	r.st.Issue("helper", "FP-8", "pro", r.now.Add(10*24*time.Hour), "")
 	list := r.do("GET", "/", nil, nil).Body.String()
-	if !strings.Contains(list, "FP-7") || strings.Contains(list, "/license/revoke") {
-		t.Error("an issuer sees the list but no owner actions")
+	if !strings.Contains(list, "FP-8") || strings.Contains(list, "FP-7") || strings.Contains(list, "/license/revoke") {
+		t.Error("an operator sees only their own issues and no owner actions")
 	}
 	for _, act := range []string{"revoke", "extend", "reset"} {
 		if rec := r.do("POST", "/license/"+act, url.Values{"csrf": {tok}, "order": {"FP-7"}, "days": {"30"}}, nil); rec.Code != 403 {
@@ -332,5 +333,49 @@ func TestHeadersAndNoPublicSurface(t *testing.T) {
 	}
 	if rec := r.do("GET", "/v1/token", nil, nil); rec.Code != 404 && rec.Code != 405 {
 		t.Errorf("the admin UI must not serve the token API: %d", rec.Code)
+	}
+}
+
+func TestCuratorWatchesAndSupportsButNeitherIssuesNorRevokes(t *testing.T) {
+	r := newARig(t)
+	cs := r.admin("curator", RoleCurator)
+	r.st.Issue("op", "FP-1", "pro", r.now.Add(10*24*time.Hour), "")
+	tok := r.signIn("curator", cs)
+	if list := r.do("GET", "/", nil, nil).Body.String(); !strings.Contains(list, "FP-1") || strings.Contains(list, "/license/revoke") || !strings.Contains(list, "/license/reset") {
+		t.Error("a curator sees every licence with support actions but no revoke")
+	}
+	if rec := r.do("GET", "/audit", nil, nil); rec.Code != 200 {
+		t.Errorf("curator reading the audit: %d", rec.Code)
+	}
+	for path, form := range map[string]url.Values{
+		"/license/revoke": {"csrf": {tok}, "order": {"FP-1"}},
+		"/issue":          {"csrf": {tok}, "order": {"FP-2"}, "plan": {"pro"}, "days": {"30"}},
+		"/staff":          {"csrf": {tok}, "name": {"newbie"}, "role": {"operator"}},
+	} {
+		if rec := r.do("POST", path, form, nil); rec.Code != 403 {
+			t.Errorf("curator POST %s: %d", path, rec.Code)
+		}
+	}
+	if rec := r.do("POST", "/license/extend", url.Values{"csrf": {tok}, "order": {"FP-1"}, "days": {"30"}}, nil); rec.Code != 303 {
+		t.Errorf("curator extend: %d", rec.Code)
+	}
+	if l, _ := r.st.ByOrder("FP-1"); l.Status != StatusActive {
+		t.Fatal("licence state changed")
+	}
+}
+
+func TestOwnerAddsStaffWithAOneTimePassword(t *testing.T) {
+	r := newARig(t)
+	os := r.admin("owner", RoleOwner)
+	tok := r.signIn("owner", os)
+	rec := r.do("POST", "/staff", url.Values{"csrf": {tok}, "name": {"anna"}, "role": {"operator"}}, nil)
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "Одноразовый пароль") {
+		t.Fatalf("add staff: %d", rec.Code)
+	}
+	if rec := r.do("POST", "/staff", url.Values{"csrf": {tok}, "name": {"anna"}, "role": {"curator"}}, nil); rec.Code != 409 {
+		t.Errorf("duplicate: %d", rec.Code)
+	}
+	if rec := r.do("POST", "/staff", url.Values{"csrf": {tok}, "name": {"x y"}, "role": {"owner"}}, nil); rec.Code != 400 {
+		t.Errorf("bad name or role: %d", rec.Code)
 	}
 }

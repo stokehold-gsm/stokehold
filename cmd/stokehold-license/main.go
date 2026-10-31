@@ -2,8 +2,9 @@
 //
 //	stokehold-license online-key -root root.key -root-id root1 -kid online-2026-11 [-days 90] -out online.json   (offline machine)
 //	stokehold-license serve  -db lic.db -online online.json [-listen 127.0.0.1:8090] [-admin-listen 127.0.0.1:8091] [-trust-proxy]
-//	stokehold-license admin-add -db lic.db -name NAME -role owner|issuer    (prints a one-time password)
+//	stokehold-license admin-add -db lic.db -name NAME -role owner|curator|operator    (prints a one-time password)
 //	stokehold-license admin-reset-2fa -db lic.db -name NAME
+//	stokehold-license admin-reset-password -db lic.db -name NAME
 //	stokehold-license issue  -db lic.db -order FP-1001 [-plan pro|hosting] [-days 365] [-contact who] [-actor name]
 //	stokehold-license list   -db lic.db
 //	stokehold-license revoke|reset-binding -db lic.db -order FP-1001
@@ -61,7 +62,7 @@ func main() {
 	kid := fs.String("kid", "", "id of the new online key (online-key)")
 	out := fs.String("out", "online.json", "output file (online-key)")
 	name := fs.String("name", "", "admin name (admin-add, admin-reset-2fa)")
-	role := fs.String("role", "issuer", "owner or issuer (admin-add)")
+	role := fs.String("role", "issuer", "owner, curator or operator (admin-add)")
 	adminListen := fs.String("admin-listen", "127.0.0.1:8091", "admin interface address (serve)")
 	secure := fs.Bool("secure", true, "mark admin cookies Secure; turn off only for local testing over http (serve)")
 	online := fs.String("online", "online.json", "online key file (serve)")
@@ -118,14 +119,19 @@ func main() {
 		}
 		must(st.Extend(*actor, *order, base.AddDate(0, 0, *days)))
 	case "admin-add":
-		if *name == "" || (*role != licsrv.RoleOwner && *role != licsrv.RoleIssuer) {
-			die(fmt.Errorf("-name and -role owner|issuer are required"))
+		if *name == "" || !licsrv.ValidRole(*role) {
+			die(fmt.Errorf("-name and -role owner|curator|operator are required"))
 		}
 		pw, _ := auth.NewToken()
 		pw = pw[:20]
 		must(st.AdminCreate(*name, pw, *role))
 		st.AdminAudit(*actor, "admin.add", *name+" "+*role)
 		fmt.Printf("Admin %q (%s) created. One-time password, shown once; sign-in then forces setting up two-factor:\n%s\n", *name, *role, pw)
+	case "admin-reset-password":
+		pw, _ := auth.NewToken()
+		pw = pw[:20]
+		must(st.AdminSetPassword(*name, pw))
+		fmt.Printf("New one-time password for %q, shown once:\n%s\n", *name, pw)
 	case "admin-reset-2fa":
 		must(st.AdminResetTOTP(*name))
 		fmt.Println("two-factor reset; the admin sets it up again at the next sign-in")
