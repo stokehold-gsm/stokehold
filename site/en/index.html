@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <title>Stokehold GSM: a game server panel on top of LinuxGSM</title>
 <meta name="description" content="A lightweight panel for game servers on top of LinuxGSM. One binary, SQLite, no Docker. Adopts servers you already run. Under development.">
 <style>
@@ -13,7 +14,8 @@ body { margin:0; font:17px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; ba
 .wrap { max-width:960px; margin:0 auto; padding:0 16px; }
 header { padding:18px 0; display:flex; justify-content:space-between; align-items:center; }
 header a { color:var(--muted); text-decoration:none; margin-left:16px; }
-.logo { font-weight:800; color:var(--brand); letter-spacing:.3px; }
+.logo { display:inline-flex; align-items:center; gap:10px; font-weight:800; color:var(--brand); letter-spacing:.3px; margin-left:0; }
+.logo img { border-radius:7px; }
 .hero { padding:56px 0 40px; }
 h1 { font-size:clamp(2rem,5vw,3.2rem); line-height:1.1; margin:0 0 16px; }
 .lead { font-size:1.2rem; color:var(--muted); max-width:640px; }
@@ -42,7 +44,7 @@ footer a { color:var(--muted); }
 <body>
 <div class="wrap">
 <header>
-  <span class="logo">Stokehold GSM</span>
+  <a class="logo" href="../"><img src="../logo.svg" alt="" width="28" height="28"> Stokehold GSM</a>
   <nav><a href="#now">What works</a><a href="#compare">Comparison</a><a href="#plans">Plans</a><a href="../">RU</a></nav>
 </header>
 
