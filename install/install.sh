@@ -21,10 +21,11 @@ NO_START=0
 LOCAL_DIR=""
 PUBKEY_FILE=""
 
-# The release public key. Replaced when a release is cut; the installer refuses
-# to run with the placeholder, so a development copy can never "verify" anything.
+# The release public key.
 read -r -d '' BUILTIN_PUBKEY <<'PEM' || true
-REPLACE_WITH_RELEASE_PUBLIC_KEY
+-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAzfFMvAcZIJcizf9FQgDOzB6T1xkrC/QQAHe9mMVoh3M=
+-----END PUBLIC KEY-----
 PEM
 
 say() { printf '==> %s\n' "$*"; }

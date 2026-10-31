@@ -6,3 +6,4 @@
 *.db
 *.test
 /dist-*/
+!internal/entitlement/roots/*.pem
