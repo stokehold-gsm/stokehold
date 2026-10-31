@@ -101,7 +101,7 @@ func (u *AdminUI) protect(next http.Handler) http.Handler {
 		h := w.Header()
 		h.Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
 		h.Set("X-Content-Type-Options", "nosniff")
-		h.Set("Referrer-Policy", "no-referrer")
+		h.Set("Referrer-Policy", "same-origin") // no-referrer makes browsers send "Origin: null" on form posts
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Cache-Control", "no-store")
 		if r.Method == http.MethodPost && !sameOrigin(r) {
@@ -113,7 +113,7 @@ func (u *AdminUI) protect(next http.Handler) http.Handler {
 }
 
 func sameOrigin(r *http.Request) bool {
-	if o := r.Header.Get("Origin"); o != "" {
+	if o := r.Header.Get("Origin"); o != "" && o != "null" {
 		p, err := url.Parse(o)
 		return err == nil && p.Host == r.Host
 	}

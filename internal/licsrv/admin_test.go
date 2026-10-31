@@ -423,3 +423,14 @@ func TestOwnerDecidesWhetherStaffNeedsTwoFactor(t *testing.T) {
 		t.Errorf("an owner without 2FA must still be sent to set it up: %d", rec.Code)
 	}
 }
+
+func TestAdminFormPostWithANullOriginReachesTheHandler(t *testing.T) {
+	r := newARig(t)
+	form := url.Values{"name": {"nobody"}, "password": {"x"}}
+	if rec := r.do("POST", "/login", form, map[string]string{"Origin": "null", "Sec-Fetch-Site": "same-origin"}); rec.Code != 401 {
+		t.Errorf("a same-origin post with a null Origin must reach the login handler: %d", rec.Code)
+	}
+	if rec := r.do("POST", "/login", form, map[string]string{"Origin": "null", "Sec-Fetch-Site": "cross-site"}); rec.Code != 403 {
+		t.Errorf("a cross-site post must be refused: %d", rec.Code)
+	}
+}

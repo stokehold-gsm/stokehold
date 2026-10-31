@@ -192,7 +192,7 @@ func TestCrossSitePostsAreRefused(t *testing.T) {
 func TestSecurityHeaders(t *testing.T) {
 	r := newRig(t)
 	h := r.do("GET", "/login", nil, nil).Header()
-	for k, want := range map[string]string{"X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "no-referrer", "Cache-Control": "no-store"} {
+	for k, want := range map[string]string{"X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "same-origin", "Cache-Control": "no-store"} {
 		if h.Get(k) != want {
 			t.Errorf("%s = %q", k, h.Get(k))
 		}
@@ -301,5 +301,25 @@ func TestProxyAddressIsUsedOnlyWhenTrusted(t *testing.T) {
 	r.s.TrustProxy = true
 	if got := r.s.clientIP(req); got != "198.51.100.9" {
 		t.Errorf("trusted proxy: take the last entry, got %s", got)
+	}
+}
+
+func TestFormPostsFromABrowserWithANullOriginAreAccepted(t *testing.T) {
+	r := newRig(t)
+	form := url.Values{"token": {"wrong"}, "email": {"a@b.c"}, "password": {"longenoughpass"}}
+	// the page is served with Referrer-Policy; browsers then send "Origin: null" on form posts
+	if rec := r.do("POST", "/setup", form, map[string]string{"Origin": "null", "Sec-Fetch-Site": "same-origin"}); rec.Code == 403 && !strings.Contains(rec.Body.String(), "<html") {
+		t.Fatalf("a same-origin post with a null Origin must reach the handler: %d %s", rec.Code, rec.Body)
+	}
+	for name, hdr := range map[string]map[string]string{
+		"cross-site":   {"Origin": "null", "Sec-Fetch-Site": "cross-site"},
+		"other origin": {"Origin": "https://evil.example"},
+	} {
+		if rec := r.do("POST", "/setup", form, hdr); rec.Code != 403 || strings.Contains(rec.Body.String(), "<html") {
+			t.Errorf("%s: want the plain forbidden answer, got %d", name, rec.Code)
+		}
+	}
+	if got := r.do("GET", "/login", nil, nil).Header().Get("Referrer-Policy"); got != "same-origin" {
+		t.Errorf("Referrer-Policy %q: no-referrer would make browsers send a null Origin", got)
 	}
 }
