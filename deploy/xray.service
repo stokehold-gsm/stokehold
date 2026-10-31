@@ -1,0 +1,20 @@
+[Unit]
+Description=Xray client (SOCKS on 127.0.0.1:1080, egress for the Discord bot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=xray
+Group=xray
+ExecStart=/usr/local/bin/xray run -config /etc/xray/config.json
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+MemoryMax=96M
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
