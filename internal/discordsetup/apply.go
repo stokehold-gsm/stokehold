@@ -31,10 +31,12 @@ type overwrite struct {
 }
 
 type Options struct {
-	CleanDefaults bool // remove the empty channels Discord creates with a new server
-	RemoveLegacy  bool // remove channels, categories and roles of earlier layouts (Plan.Legacy, Plan.LegacyRoles)
-	Repost        bool // replace the bot's pinned messages with the current texts
-	Onboarding    bool // fill in the onboarding questions (server must already be a community server)
+	CleanDefaults bool   // remove the empty channels Discord creates with a new server
+	RemoveLegacy  bool   // remove channels, categories and roles of earlier layouts (Plan.Legacy, Plan.LegacyRoles)
+	Repost        bool   // replace the bot's pinned messages with the current texts
+	Onboarding    bool   // fill in the onboarding questions (server must already be a community server)
+	AutoMod       bool   // create the AutoMod rules (needs Manage Server)
+	FounderID     string // gets the Founder role, when set
 	Log           func(format string, args ...any)
 }
 
@@ -200,6 +202,21 @@ func Apply(ctx context.Context, c *Client, guildID string, p Plan, o Options) er
 			continue
 		}
 		if err := post(ctx, c, me.ID, t.id, t.ch.Messages, byKey, o.Repost, logf); err != nil {
+			return err
+		}
+	}
+	if o.FounderID != "" {
+		if err := c.Do(ctx, "PUT", "/guilds/"+guildID+"/members/"+o.FounderID+"/roles/"+roleIDs[RoleFounder], nil, nil); err != nil {
+			return err
+		}
+		logf("founder role given")
+	}
+	if o.AutoMod {
+		var exempt []string
+		for _, n := range allStaff {
+			exempt = append(exempt, roleIDs[n])
+		}
+		if err := AutoMod(ctx, c, guildID, byKey["log"], exempt, logf); err != nil {
 			return err
 		}
 	}

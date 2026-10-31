@@ -22,6 +22,8 @@ func main() {
 	legacy := flag.Bool("remove-legacy", false, "remove channels and categories of earlier layouts")
 	repost := flag.Bool("repost", false, "replace the bot's pinned messages with the current texts")
 	onboarding := flag.Bool("onboarding", false, "set up onboarding questions (community must be enabled first)")
+	automod := flag.Bool("automod", false, "create the AutoMod rules (bot needs Manage Server)")
+	founder := flag.String("founder", "", "user id that gets the Founder role")
 	commands := flag.String("register-commands", "", "register the moderation slash commands for this application id and exit")
 	invite := flag.String("invite-for", "", "print the bot invite URL for this application id and exit")
 	flag.Parse()
@@ -52,6 +54,8 @@ func main() {
 		RemoveLegacy:  *legacy,
 		Repost:        *repost,
 		Onboarding:    *onboarding,
+		AutoMod:       *automod,
+		FounderID:     *founder,
 		Log:           func(f string, a ...any) { log.Printf(f, a...) },
 	})
 	if err != nil {
