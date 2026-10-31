@@ -107,3 +107,6 @@ func ParseCheckUpdate(out string) (Update, error) {
 	}
 	return u, nil
 }
+
+func ValidName(name string) bool   { return nameRE.MatchString(name) }
+func ValidCommand(cmd string) bool { return allowed[cmd] }
