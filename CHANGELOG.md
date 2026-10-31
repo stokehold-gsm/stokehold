@@ -7,7 +7,14 @@ Format follows Keep a Changelog. Versions follow semver once there is a first re
 - Discord: detailed logs as embeds from a gateway connection (messages with before and after, members, voice, invites, threads, AutoMod), bot commands and audit events as embeds, numbered moderation cases.
 - Discord: complaint system: /report, a message menu command, and a complaint card with take, warn, resolve and reject buttons.
 
-## 0.1.0 - 2026-10-31
+## 0.1.1 - 2026-10-31
+
+- The paid features (REST API, several machines, mod manager, Discord webhook and panel commands, public status page) moved to the closed Pro edition (ADR 0007). The open build has monitoring, schedules, the config editor and everything else; v0.1.0 was withdrawn because it still contained the Pro code.
+- Discord bot: detailed embed logs through the gateway (messages, members, voice, server, AutoMod), report system with buttons and a numbered case log.
+- Licence admin: shop operator and curator roles, a staff page, password reset from the command line.
+- Site: logo and favicon.
+
+## 0.1.0 - 2026-10-31 (withdrawn)
 
 - Monitoring (CPU, memory, disk, load, server states and players), REST API with tokens, several machines through stokehold-agent, Factorio mod list, Discord webhook and bot commands, public status page. Those beyond monitoring are Pro-only and live in a closed repository (ADR 0007).
 - Fix: schedules never ran in the service because the scheduler was given the helper before it was set.
