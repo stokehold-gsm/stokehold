@@ -19,7 +19,7 @@ import (
 var modGames = map[string]bool{
 	"mcserver": true, "pmcserver": true, "fctrserver": true,
 	"rustserver": true, "vhserver": true, "cs2server": true, "pzserver": true,
-	"gmodserver": true, "scpslserver": true, "arkserver": true, "sdtdserver": true,
+	"gmodserver": true, "scpslserver": true,
 }
 
 // hasMods is the template's question: is there a mods tab for this game here?
