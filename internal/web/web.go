@@ -50,13 +50,15 @@ type Server struct {
 	Releases   func(ctx context.Context, channel string) (*selfupdate.Release, error) // nil: ask GitHub; tests replace it
 	upd        updState
 	dcache     detailsCache
+	hist       histStore
 	status     statusCache
 
 	jobs jobTracker
 	Now  func() time.Time
 
-	tmpl    *template.Template
-	limiter *ratelimit.Limiter
+	tmpl      *template.Template
+	limiter   *ratelimit.Limiter
+	sendLimit *ratelimit.Limiter // console lines per user and minute
 }
 
 type page struct {
@@ -124,10 +126,11 @@ type page struct {
 }
 
 func New(st *store.Store, secure, trustProxy bool, setupToken string) *Server {
-	s := &Server{Distro: helper.CurrentDistro(), Store: st, Secure: secure, TrustProxy: trustProxy, SetupToken: setupToken, Now: time.Now, limiter: ratelimit.New(10, time.Minute)}
+	s := &Server{Distro: helper.CurrentDistro(), Store: st, Secure: secure, TrustProxy: trustProxy, SetupToken: setupToken, Now: time.Now, limiter: ratelimit.New(10, time.Minute), sendLimit: ratelimit.New(30, time.Minute)}
 	s.tmpl = template.Must(template.New("").Funcs(template.FuncMap{
-		"t":   func(p page, key string) string { return tr(p.Lang, key) },
-		"pro": func() bool { return proBuild },
+		"t":    func(p page, key string) string { return tr(p.Lang, key) },
+		"pro":  func() bool { return proBuild },
+		"mods": hasMods,
 	}).ParseFS(templatesFS, "templates/*.html"))
 	s.loadSettings()
 	return s
@@ -284,6 +287,7 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request, p *page) {
 	s.fillNodes(p)
 	p.Statuses = s.Statuses()
 	p.Rows = srvRows(p.Servers, p.Statuses, p.NodeNames)
+	s.rowFacts(p.Lang, p.Rows)
 	p.CanControl = canControl(p.User.Role)
 	p.Actions = actionLabels
 	s.fillLicense(p)

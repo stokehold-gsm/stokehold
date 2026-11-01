@@ -1,54 +1,87 @@
 {{define "server"}}{{template "head" .}}
 {{with .Srv}}
-<div id="live-wrap" data-autorefresh="{{if eq .Tab "logs"}}6{{else}}12{{end}}">
+<div id="live-wrap" data-autorefresh="{{if eq .Tab "console"}}6{{else if eq .Tab "stats"}}60{{else}}15{{end}}">
 <div class="card srv-head">
-  <div class="card-head">
-    <div>
+  <div class="hub-top">
+    <div class="hub-title">
       <h1>{{.Name}}</h1>
       <div class="muted">{{.Game}} · {{.Mode}}{{if .Node}} · {{.Node}}{{end}}</div>
     </div>
     <div class="srv-state-big">
       <span class="badge big st-{{.State}}">{{t $ (printf "st_%s" .State)}}</span>
-      {{if .Players}}<span class="chip">{{t $ "players"}} {{.Players}}</span>{{end}}
+      {{if .Since}}<span class="muted small">{{.Since}} {{t $ "srv_since"}}</span>{{end}}
     </div>
   </div>
-  {{if .Address}}<p class="addr"><span class="muted">{{t $ "srv_address"}}</span> <code>{{.Address}}</code></p>{{end}}
-  {{if .CanControl}}
-  <div class="srv-actions">
-    <form class="inline" method="post" action="/servers/{{.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="start"><button class="btn start" type="submit"{{if not .CanStart}} disabled{{end}}>{{t $ "act_start"}}</button></form>
-    <form class="inline" method="post" action="/servers/{{.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="stop"><button class="btn stop" type="submit"{{if not .CanStop}} disabled{{end}}>{{t $ "act_stop"}}</button></form>
-    <form class="inline" method="post" action="/servers/{{.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="restart"><button class="btn restart" type="submit"{{if not .CanStop}} disabled{{end}}>{{t $ "act_restart"}}</button></form>
-    <form class="inline" method="post" action="/servers/{{.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="backup"><button class="btn" type="submit">{{t $ "act_backup"}}</button></form>
-    <form class="inline" method="post" action="/servers/{{.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="check-update"><button class="btn" type="submit">{{t $ "act_check-update"}}</button></form>
+  <div class="hub-facts">
+    {{if .Players}}<span class="fact">{{template "ic" "users"}}<b>{{.Players}}</b></span>{{end}}
+    {{if .Address}}<span class="fact">{{template "ic" "globe"}}<code>{{.Address}}</code><button type="button" class="btn icon sm js-only" data-copy="{{.Address}}" title="{{t $ "srv_copy"}}" aria-label="{{t $ "srv_copy"}}">{{template "ic" "copy"}}</button></span>{{end}}
   </div>
-  {{else}}
-  <div class="srv-actions">
-    <form class="inline" method="post" action="/servers/{{.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="check-update"><button class="btn" type="submit">{{t $ "act_check-update"}}</button></form>
+  <div class="hub-actions">
+    {{if .CanControl}}
+    <form class="inline" method="post" action="/servers/{{.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="start"><button class="btn start" type="submit"{{if not .CanStart}} disabled{{end}}>{{template "ic" "play"}}{{t $ "act_start"}}</button></form>
+    <form class="inline" method="post" action="/servers/{{.ID}}/run" data-confirm="{{t $ "confirm_stop"}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="stop"><button class="btn stop" type="submit"{{if not .CanStop}} disabled{{end}}>{{template "ic" "stop"}}{{t $ "act_stop"}}</button></form>
+    <form class="inline" method="post" action="/servers/{{.ID}}/run" data-confirm="{{t $ "confirm_restart"}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="restart"><button class="btn restart" type="submit"{{if not .CanStop}} disabled{{end}}>{{template "ic" "restart"}}{{t $ "act_restart"}}</button></form>
+    <form class="inline" method="post" action="/servers/{{.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="backup"><button class="btn" type="submit">{{template "ic" "backup"}}{{t $ "act_backup"}}</button></form>
+    {{end}}
+    <form class="inline" method="post" action="/servers/{{.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="check-update"><button class="btn" type="submit">{{template "ic" "update"}}{{t $ "act_check-update"}}</button></form>
   </div>
-  {{end}}
   <nav class="tabs" aria-label="{{t $ "srv_sections"}}">
-    <a href="/servers/{{.ID}}"{{if eq .Tab "overview"}} aria-current="page"{{end}}>{{t $ "srv_overview"}}</a>
-    {{if .CanControl}}<a href="/servers/{{.ID}}?tab=logs"{{if eq .Tab "logs"}} aria-current="page"{{end}}>{{t $ "srv_logs"}}</a>
-    <a href="/servers/{{.ID}}/files">{{t $ "files"}}</a>{{end}}
-    <a href="/servers/{{.ID}}/schedules">{{t $ "schedules"}}</a>
-    {{if and pro .CanControl (or (eq .Game "mcserver") (eq .Game "pmcserver") (eq .Game "fctrserver"))}}<a href="/servers/{{.ID}}/game">{{t $ "g_menu"}}</a>{{end}}
+    <a href="/servers/{{.ID}}"{{if eq .Tab "overview"}} aria-current="page"{{end}}>{{template "ic" "gear"}}{{t $ "srv_overview"}}</a>
+    {{if .CanControl}}<a href="/servers/{{.ID}}?tab=console"{{if eq .Tab "console"}} aria-current="page"{{end}}>{{template "ic" "terminal"}}{{t $ "srv_console"}}</a>
+    <a href="/servers/{{.ID}}/files">{{template "ic" "folder"}}{{t $ "files"}}</a>
+    {{if mods .Game}}<a href="/servers/{{.ID}}/game">{{template "ic" "puzzle"}}{{t $ "srv_mods"}}</a>{{end}}{{end}}
+    <a href="/servers/{{.ID}}/schedules">{{template "ic" "calendar"}}{{t $ "schedules"}}</a>
+    <a href="/servers/{{.ID}}?tab=stats"{{if eq .Tab "stats"}} aria-current="page"{{end}}>{{template "ic" "chart"}}{{t $ "srv_stats"}}</a>
   </nav>
 </div>
 
-{{if eq .Tab "logs"}}
+{{if eq .Tab "console"}}
 <div class="card">
   <div class="card-head">
-    <h1>{{t $ "srv_logs"}}</h1>
+    <h1>{{t $ "srv_console"}}</h1>
     <div class="head-actions">
-      <a class="btn{{if eq .LogKind "console"}} primary{{end}}" href="/servers/{{.ID}}?tab=logs&log=console">{{t $ "srv_log_console"}}</a>
-      <a class="btn{{if eq .LogKind "script"}} primary{{end}}" href="/servers/{{.ID}}?tab=logs&log=script">{{t $ "srv_log_script"}}</a>
-      <a class="btn" href="/servers/{{.ID}}/fm/download?path={{.LogPath}}">{{t $ "srv_log_download"}}</a>
+      <a class="btn sm{{if eq .LogKind "console"}} primary{{end}}" href="/servers/{{.ID}}?tab=console&log=console">{{t $ "srv_log_console"}}</a>
+      <a class="btn sm{{if eq .LogKind "script"}} primary{{end}}" href="/servers/{{.ID}}?tab=console&log=script">{{t $ "srv_log_script"}}</a>
+      <a class="btn icon sm" href="/servers/{{.ID}}/fm/download?path={{.LogPath}}" title="{{t $ "srv_log_download"}}" aria-label="{{t $ "srv_log_download"}}">{{template "ic" "download"}}</a>
     </div>
   </div>
+  {{if .Sent}}<div class="banner {{if eq .Sent "ok"}}ok{{else}}bad{{end}}"><p>{{t $ (printf "sent_%s" .Sent)}}</p></div>{{end}}
   {{if .LogErr}}<div class="banner"><p class="muted">{{t $ .LogErr}} <code>{{.LogPath}}</code></p></div>
-  {{else if .Log}}<pre class="log" id="live">{{.Log}}</pre>
+  {{else if .Log}}<pre class="log console" id="live">{{.Log}}</pre>
   {{else}}<p class="muted">{{t $ "srv_log_empty"}}</p>{{end}}
+  <form class="send-line wide" method="post" action="/servers/{{.ID}}/send">
+    <input type="hidden" name="csrf" value="{{$.CSRF}}">
+    <span class="prompt" aria-hidden="true">&gt;</span>
+    <input type="text" name="text" maxlength="200" required autocomplete="off" placeholder="{{t $ "srv_send_ph"}}" aria-label="{{t $ "srv_send_ph"}}">
+    <button class="btn primary" type="submit">{{template "ic" "send"}}{{t $ "srv_send"}}</button>
+  </form>
+  <p class="muted small">{{t $ "srv_send_hint"}}</p>
 </div>
+{{else if eq .Tab "stats"}}
+{{with .Stats}}
+{{if lt .Samples 2}}<div class="card"><p class="muted">{{t $ "st_nodata"}}</p></div>
+{{else}}
+<div class="card">
+  <div class="card-head"><h1>{{t $ "st_chart_uptime"}}</h1><span class="muted">{{t $ "st_span"}} {{.Span}}</span></div>
+  <svg class="timeline" viewBox="0 0 100 10" preserveAspectRatio="none" role="img" aria-label="{{t $ "st_chart_uptime"}}">{{range .Timeline}}<rect x="{{.X}}" width="{{.W}}" y="0" height="10" class="tl-{{.State}}"><title>{{t $ (printf "st_%s" .State)}}</title></rect>{{end}}</svg>
+  <div class="legend muted small"><span class="dot tl-started"></span>{{t $ "st_started"}} <span class="dot tl-starting"></span>{{t $ "st_starting"}} <span class="dot tl-stopped"></span>{{t $ "st_stopped"}} <span class="dot tl-unknown"></span>{{t $ "st_unknown"}}</div>
+</div>
+<div class="grid2">
+  <div class="card">
+    <div class="card-head"><h1>{{template "ic" "users"}}{{t $ "st_chart_players"}}</h1>{{if .Players.Has}}<span class="muted">{{t $ "st_now"}} <b>{{.Players.Last}}</b> · {{t $ "st_peak"}} {{.Players.Max}}</span>{{end}}</div>
+    {{if .Players.Has}}<svg class="chart c-players" viewBox="0 0 600 120" preserveAspectRatio="none" role="img" aria-label="{{t $ "st_chart_players"}}"><path class="area" d="{{.Players.Area}}"/><polyline class="line" points="{{.Players.Line}}"/></svg>{{else}}<p class="muted">—</p>{{end}}
+  </div>
+  <div class="card">
+    <div class="card-head"><h1>{{template "ic" "cpu"}}{{t $ "st_chart_cpu"}}</h1>{{if .CPU.Has}}<span class="muted">{{t $ "st_now"}} <b>{{.CPU.Last}}%</b></span>{{end}}</div>
+    {{if .CPU.Has}}<svg class="chart c-cpu" viewBox="0 0 600 120" preserveAspectRatio="none" role="img" aria-label="{{t $ "st_chart_cpu"}}"><path class="area" d="{{.CPU.Area}}"/><polyline class="line" points="{{.CPU.Line}}"/></svg>{{else}}<p class="muted">—</p>{{end}}
+  </div>
+  <div class="card">
+    <div class="card-head"><h1>{{template "ic" "memory"}}{{t $ "st_chart_mem"}}</h1>{{if .Mem.Has}}<span class="muted">{{t $ "st_now"}} <b>{{.Mem.Last}} MB</b> · {{t $ "st_peak"}} {{.Mem.Max}} MB</span>{{end}}</div>
+    {{if .Mem.Has}}<svg class="chart c-mem" viewBox="0 0 600 120" preserveAspectRatio="none" role="img" aria-label="{{t $ "st_chart_mem"}}"><path class="area" d="{{.Mem.Area}}"/><polyline class="line" points="{{.Mem.Line}}"/></svg>{{else}}<p class="muted">—</p>{{end}}
+  </div>
+</div>
+{{end}}
+{{end}}
 {{else}}
 <div>
 {{if .Err}}<div class="banner bad"><p>{{.Err}}</p></div>{{end}}

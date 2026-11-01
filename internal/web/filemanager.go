@@ -257,14 +257,14 @@ func (s *Server) fmBrowse(w http.ResponseWriter, r *http.Request, p *page, sv *s
 	v.NameMark, v.SizeMark, v.TimeMark = mark("name"), mark("size"), mark("time")
 	for _, e := range list.List {
 		full := fmJoin(dir, e.Name)
-		row := fmRow{Name: e.Name, Path: full, Icon: "📄", Time: time.Unix(e.Mtime, 0).UTC().Format("2006-01-02 15:04"),
+		row := fmRow{Name: e.Name, Path: full, Icon: "file", Time: time.Unix(e.Mtime, 0).UTC().Format("2006-01-02 15:04"),
 			RenameHref: fmURL(sv, "/fm/rename", full), DeleteHref: fmURL(sv, "/fm/delete", full)}
 		switch e.Type {
 		case "d":
-			row.IsDir, row.Icon = true, "📁"
+			row.IsDir, row.Icon = true, "folder"
 			row.Href = fmURL(sv, "/files", full)
 		case "l":
-			row.Icon = "🔗"
+			row.Icon = "link"
 		case "f":
 			row.Size = humanSize(e.Size)
 			row.DownloadHref = fmURL(sv, "/fm/download", full)
@@ -272,7 +272,7 @@ func (s *Server) fmBrowse(w http.ResponseWriter, r *http.Request, p *page, sv *s
 				row.EditHref = base(sv) + "/edit?path=" + url.QueryEscape(full)
 			}
 		default:
-			row.Icon = "▫"
+			row.Icon = "file"
 		}
 		v.Rows = append(v.Rows, row)
 	}

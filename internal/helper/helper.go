@@ -89,6 +89,10 @@ func ValidateWith(r Request, adopted Adopted) error {
 		if !lgsm.ValidName(r.Game) {
 			return bad("game")
 		}
+	case "send":
+		if !lgsm.ValidName(r.Game) || !ValidSendText(r.Content) {
+			return bad("game or console text")
+		}
 	case "run":
 		if !lgsm.ValidName(r.Game) || !lgsm.ValidCommand(r.Cmd) {
 			return bad("game or command")
@@ -179,6 +183,9 @@ func HandleFull(r Request, b Backend) Response {
 		out, err = run("runuser", "-l", r.User, "-c", "sh -c '"+script+"' sh "+r.Game)
 	case "run":
 		out, err = run("runuser", "-l", r.User, "-c", "./"+r.Game+" "+r.Cmd)
+	case "send":
+		argv := sendArgv(r.User, r.Game, r.Content)
+		out, err = run(argv[0], argv[1:]...)
 	case "discover":
 		out, err = run("runuser", "-l", r.User, "-c", "ls -1 lgsm/config-lgsm")
 		out = onlyServerNames(out)

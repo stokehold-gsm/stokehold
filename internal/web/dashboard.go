@@ -15,6 +15,11 @@ type srvRow struct {
 	State                         string // started | stopped | unknown, also the badge class
 	Players                       string // "3/10", empty when unknown
 	CanStart, CanStop, CanRestart bool
+	Mods                          bool   // a mods tab exists (Pro)
+	Since                         string // how long in the current state
+	PlayersPct                    int
+	CPU, Mem                      string
+	Spark                         string // players over the last hours, a 100x24 polyline
 }
 
 func srvState(raw string) string {
