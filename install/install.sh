@@ -28,8 +28,11 @@ MCowBQYDK2VwAyEAzfFMvAcZIJcizf9FQgDOzB6T1xkrC/QQAHe9mMVoh3M=
 -----END PUBLIC KEY-----
 PEM
 
-say() { printf '==> %s\n' "$*"; }
-die() { printf 'error: %s\n' "$*" >&2; exit 1; }
+# say and die take the English text and, as a second argument, the Russian one.
+say() { printf '==> %s\n' "$1"; if [ -n "${2:-}" ]; then printf '    %s\n' "$2"; fi; return 0; }
+die() { printf 'error: %s\n' "$1" >&2; if [ -n "${2:-}" ]; then printf 'ошибка: %s\n' "$2" >&2; fi; exit 1; }
+# a command that fails under "set -e" must never end the script without a word
+trap 'printf "error: the installer stopped at line %s\nошибка: установщик остановился на строке %s\n" "$LINENO" "$LINENO" >&2' ERR
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -39,25 +42,25 @@ while [ $# -gt 0 ]; do
     --local-dir) LOCAL_DIR="${2:-}"; shift 2 ;;
     --pubkey) PUBKEY_FILE="${2:-}"; shift 2 ;;
     -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
-    *) die "unknown option $1" ;;
+    *) die "unknown option $1" "неизвестный параметр $1" ;;
   esac
 done
-case "$CHANNEL" in stable|beta) ;; *) die "channel must be stable or beta" ;; esac
+case "$CHANNEL" in stable|beta) ;; *) die "channel must be stable or beta" "канал должен быть stable или beta" ;; esac
 
-[ "$(id -u)" -eq 0 ] || die "run as root (sudo bash install.sh)"
-[ "$(uname -s)" = "Linux" ] || die "Linux only"
-command -v systemctl >/dev/null || die "systemd is required"
+[ "$(id -u)" -eq 0 ] || die "run as root (sudo bash install.sh)" "запустите от root: sudo bash install.sh"
+[ "$(uname -s)" = "Linux" ] || die "Linux only" "работает только на Linux"
+command -v systemctl >/dev/null || die "systemd is required" "нужен systemd"
 case "$(uname -m)" in
   x86_64) ARCH=amd64 ;;
   aarch64|arm64) ARCH=arm64 ;;
-  *) die "unsupported CPU $(uname -m)" ;;
+  *) die "unsupported CPU $(uname -m)" "процессор $(uname -m) не поддерживается" ;;
 esac
 
-for t in curl openssl sha256sum; do command -v "$t" >/dev/null || die "$t is required (apt install $t)"; done
+for t in curl openssl sha256sum; do command -v "$t" >/dev/null || die "$t is required (apt install $t)" "нужен $t (apt install $t)"; done
 # ed25519 verification of a raw message needs OpenSSL 3
 ossl_major=$(openssl version | sed -n 's/^OpenSSL \([0-9]*\)\..*/\1/p')
-[ "${ossl_major:-0}" -ge 3 ] || die "OpenSSL 3 or newer is required (Ubuntu 22.04+, Debian 12+)"
-command -v tmux >/dev/null || say "note: tmux is not installed; LinuxGSM will ask for it when you add a game server"
+[ "${ossl_major:-0}" -ge 3 ] || die "OpenSSL 3 or newer is required (Ubuntu 22.04+, Debian 12+)" "нужен OpenSSL 3 или новее (Ubuntu 22.04+, Debian 12+)"
+command -v tmux >/dev/null || say "note: tmux is not installed; LinuxGSM will ask for it when you add a game server" "примечание: tmux не установлен, LinuxGSM попросит его при добавлении игрового сервера"
 
 WORK=$(mktemp -d)
 cleanup() { rm -rf "$WORK"; }
@@ -67,7 +70,7 @@ trap cleanup EXIT
 if [ -n "$PUBKEY_FILE" ]; then
   cp "$PUBKEY_FILE" "$WORK/pub.pem"
 else
-  case "$BUILTIN_PUBKEY" in *REPLACE_WITH*) die "this copy has no release key built in; use the install.sh from a release, or pass --pubkey" ;; esac
+  case "$BUILTIN_PUBKEY" in *REPLACE_WITH*) die "this copy has no release key built in; use the install.sh from a release, or pass --pubkey" "в этой копии нет ключа релиза: возьмите install.sh из релиза или укажите --pubkey" ;; esac
   printf '%s\n' "$BUILTIN_PUBKEY" > "$WORK/pub.pem"
 fi
 
@@ -77,12 +80,12 @@ BIN_HELPER="stokehold-helper-linux-$ARCH"
 FILES="$BIN_PANEL $BIN_HELPER"
 PATTERN=$(printf "%s" "$FILES" | tr " " "|")
 if [ -n "$LOCAL_DIR" ]; then
-  say "using release files from $LOCAL_DIR"
+  say "using release files from $LOCAL_DIR" "беру файлы релиза из $LOCAL_DIR"
   for f in SHA256SUMS SHA256SUMS.sig $FILES; do
-    [ -f "$LOCAL_DIR/$f" ] || die "$LOCAL_DIR/$f is missing"
+    [ -f "$LOCAL_DIR/$f" ] || die "$LOCAL_DIR/$f is missing" "нет файла $LOCAL_DIR/$f"
     cp "$LOCAL_DIR/$f" "$WORK/$f"
   done
-  case "$VERSION" in ""|v[0-9]*) ;; *) die "odd version string: $VERSION" ;; esac
+  case "$VERSION" in ""|v[0-9]*) ;; *) die "odd version string: $VERSION" "странная версия: $VERSION" ;; esac
   TAG="${VERSION:-local}"
 else
   if [ -z "$VERSION" ]; then
@@ -91,25 +94,25 @@ else
     else
       VERSION=$(curl -fsSL "https://api.github.com/repos/$REPO/releases?per_page=1" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n1)
     fi
-    [ -n "$VERSION" ] || die "could not find a $CHANNEL release"
+    [ -n "$VERSION" ] || die "could not find a $CHANNEL release" "не нашёл релиз в канале $CHANNEL"
   fi
-  case "$VERSION" in v[0-9]*) ;; *) die "odd version string: $VERSION" ;; esac
+  case "$VERSION" in v[0-9]*) ;; *) die "odd version string: $VERSION" "странная версия: $VERSION" ;; esac
   TAG="$VERSION"
-  say "installing $TAG ($CHANNEL)"
+  say "installing $TAG ($CHANNEL): downloading the files" "устанавливаю $TAG (канал $CHANNEL): скачиваю файлы"
   base="https://github.com/$REPO/releases/download/$TAG"
   for f in SHA256SUMS SHA256SUMS.sig $FILES; do
-    curl -fsSL "$base/$f" -o "$WORK/$f" || die "download of $f failed"
+    curl -fsSL "$base/$f" -o "$WORK/$f" || die "download of $f failed" "не удалось скачать $f"
   done
 fi
 
 # --- verify: signature first, then hashes. Anything wrong aborts before install. ---
-say "verifying signature"
+say "verifying the release signature" "проверяю подпись релиза"
 openssl pkeyutl -verify -pubin -inkey "$WORK/pub.pem" -rawin -in "$WORK/SHA256SUMS" -sigfile "$WORK/SHA256SUMS.sig" >/dev/null 2>&1 \
-  || die "signature check FAILED, nothing was installed"
-say "verifying checksums"
+  || die "signature check FAILED, nothing was installed" "подпись НЕ совпала, ничего не установлено"
+say "verifying checksums" "проверяю контрольные суммы"
 ( cd "$WORK" && grep -E " \*?($PATTERN)\$" SHA256SUMS | sha256sum -c - >/dev/null ) \
-  || die "checksum mismatch, nothing was installed"
-[ "$(cd "$WORK" && grep -cE " \*?($PATTERN)\$" SHA256SUMS)" -eq "$(echo $FILES | wc -w)" ] || die "SHA256SUMS does not list the binaries"
+  || die "checksum mismatch, nothing was installed" "контрольные суммы не совпали, ничего не установлено"
+[ "$(cd "$WORK" && grep -cE " \*?($PATTERN)\$" SHA256SUMS)" -eq "$(echo $FILES | wc -w)" ] || die "SHA256SUMS does not list the binaries" "в SHA256SUMS нет нужных файлов"
 
 
 PREV=/usr/local/lib/stokehold/previous
@@ -131,6 +134,7 @@ if [ ! -f /etc/stokehold/stokehold.env ] || grep -qx "STOKEHOLD_FLAGS=-secure -t
 fi
 
 # Services are stopped around the swap so a running binary is never overwritten in place.
+say "installing the files and restarting the services" "ставлю файлы и перезапускаю службы"
 systemctl stop stokehold.service stokehold-helper.service 2>/dev/null || true
 install -m 755 "$WORK/$BIN_PANEL" /usr/local/bin/stokehold
 install -m 755 "$WORK/$BIN_HELPER" /usr/local/bin/stokehold-helper
@@ -196,14 +200,15 @@ healthy() {
 }
 
 if [ "$NO_START" -eq 1 ]; then
-  say "installed, not started (--no-start)"
+  say "installed, not started (--no-start)" "установлено, но не запущено (--no-start)"
   exit 0
 fi
 
 systemctl restart stokehold-helper.service stokehold.service
+say "waiting for the panel to start (up to 20 seconds)" "жду запуска панели (до 20 секунд)"
 if ! healthy; then
   if [ "$UPGRADE" -eq 1 ] && [ -x "$PREV/stokehold" ]; then
-    say "the new version did not come up, rolling back"
+    say "the new version did not come up, rolling back" "новая версия не запустилась, возвращаю прежнюю"
     systemctl stop stokehold.service stokehold-helper.service || true
     install -m 755 "$PREV/stokehold" /usr/local/bin/stokehold
     [ -x "$PREV/stokehold-helper" ] && install -m 755 "$PREV/stokehold-helper" /usr/local/bin/stokehold-helper
@@ -211,80 +216,102 @@ if ! healthy; then
     systemctl reset-failed stokehold.service stokehold-helper.service 2>/dev/null || true
     systemctl restart stokehold-helper.service stokehold.service || true
     if healthy; then
-      die "upgrade failed; the previous version is running again. See: journalctl -u stokehold"
+      die "upgrade failed; the previous version is running again. See: journalctl -u stokehold" "обновление не удалось, прежняя версия снова работает. Подробности: journalctl -u stokehold"
     fi
-    die "upgrade failed and the previous version did not start either. See: journalctl -u stokehold"
+    die "upgrade failed and the previous version did not start either. See: journalctl -u stokehold" "обновление не удалось, и прежняя версия не запустилась. Подробности: journalctl -u stokehold"
   fi
-  die "the panel did not start; see: journalctl -u stokehold"
+  die "the panel did not start; see: journalctl -u stokehold" "панель не запустилась, смотрите: journalctl -u stokehold"
 fi
 
 ENVF=/etc/stokehold/stokehold.env
 # This machine's address for the link: the one the default route leaves from.
-HOST=$(ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -n1)
-[ -n "$HOST" ] || HOST=$(hostname -I 2>/dev/null | awk '{print $1}')
+# Every pipeline ends in "|| true": under pipefail a missing "ip" would otherwise stop the script silently.
+HOST=$(ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -n1) || true
+[ -n "$HOST" ] || HOST=$(hostname -I 2>/dev/null | awk '{print $1}') || true
 [ -n "$HOST" ] || HOST="YOUR_SERVER_ADDRESS"
 
 # A cloud or home server often has only a private address behind NAT: the link
 # must then use the address the internet sees, so ask a public echo service
 # (Cloudflare, then ipify) once. Nothing is sent but the request itself.
 PUBHOST=""
+PRIVATE=0
 case "$HOST" in
   10.*|192.168.*|172.1[6-9].*|172.2[0-9].*|172.3[01].*|100.6[4-9].*|100.[7-9][0-9].*|100.1[01][0-9].*|100.12[0-7].*)
-    PUBHOST=$(curl -fsS -m 4 https://1.1.1.1/cdn-cgi/trace 2>/dev/null | sed -n 's/^ip=//p' | head -n1)
-    [ -n "$PUBHOST" ] || PUBHOST=$(curl -fsS -m 4 https://api.ipify.org 2>/dev/null || true)
+    PRIVATE=1
+    PUBHOST=$(curl -fsS -m 4 https://1.1.1.1/cdn-cgi/trace 2>/dev/null | sed -n 's/^ip=//p' | head -n1) || true
+    [ -n "$PUBHOST" ] || PUBHOST=$(curl -fsS -m 4 https://api.ipify.org 2>/dev/null) || true
     case "$PUBHOST" in *[!0-9a-fA-F.:]*) PUBHOST="" ;; esac ;;
 esac
 LINK_HOST=${PUBHOST:-$HOST}
 
 if grep -q -- '-tls-listen' "$ENVF" 2>/dev/null; then
-  PORT=$(sed -n 's/.*-tls-listen *:\([0-9]*\).*/\1/p' "$ENVF" | head -n1)
+  PORT=$(sed -n 's/.*-tls-listen *:\([0-9]*\).*/\1/p' "$ENVF" | head -n1) || true
   PORT=${PORT:-8443}
   if command -v ufw >/dev/null && ufw status 2>/dev/null | grep -q "Status: active"; then
-    ufw allow "$PORT/tcp" >/dev/null && say "ufw: opened $PORT/tcp for the panel"
+    ufw allow "$PORT/tcp" >/dev/null && say "ufw: opened $PORT/tcp for the panel" "ufw: открыл порт $PORT/tcp для панели"
   fi
   # the code is printed only while there is no owner yet
   CODE=""; FP=""
   for _ in $(seq 1 15); do
     LOGS=$(journalctl -u stokehold --since "-2min" --no-pager 2>/dev/null || true)
-    CODE=$(printf '%s\n' "$LOGS" | sed -n 's/.*setup code \([A-Za-z0-9_-]*\).*/\1/p' | tail -n1)
-    FP=$(printf '%s\n' "$LOGS" | sed -n 's/.*certificate sha256 \([0-9A-F:]*\).*/\1/p' | tail -n1)
+    CODE=$(printf '%s\n' "$LOGS" | sed -n 's/.*setup code \([A-Za-z0-9_-]*\).*/\1/p' | tail -n1) || true
+    FP=$(printf '%s\n' "$LOGS" | sed -n 's/.*certificate sha256 \([0-9A-F:]*\).*/\1/p' | tail -n1) || true
     [ -n "$FP" ] && break
     sleep 1
   done
-  NETNOTE=""
-  if [ -n "$PUBHOST" ]; then
-    NETNOTE="This machine's own address is $HOST (inside a network). The link above uses its
-public address $PUBHOST; from the same local network you can also open
-    https://$HOST:$PORT/${CODE:+setup?code=$CODE}
-Если сервер за роутером (дома), на роутере нужен проброс TCP $PORT на $HOST."
-  elif case "$HOST" in 10.*|192.168.*|172.1[6-9].*|172.2[0-9].*|172.3[01].*|100.6[4-9].*|100.[7-9][0-9].*|100.1[01][0-9].*|100.12[0-7].*) true ;; *) false ;; esac; then
-    NETNOTE="Attention: $HOST is an address inside a network and the public one could not be found.
-Replace it with the address the internet reaches this server at (the one you SSH to).
-Внимание: $HOST это внутренний адрес. С другого компьютера используйте внешний адрес
-сервера (тот, по которому вы заходите по SSH)."
+
+  if [ -n "$CODE" ]; then
+    URL="https://$LINK_HOST:$PORT/setup?code=$CODE"
+    LOCALURL="https://$HOST:$PORT/setup?code=$CODE"
+    EN_OPEN="Open this link in your browser to finish the setup (create the owner, then sign in):"
+    RU_OPEN="Откройте эту ссылку в браузере, чтобы закончить настройку (создать владельца и войти):"
+  else
+    URL="https://$LINK_HOST:$PORT/"
+    LOCALURL="https://$HOST:$PORT/"
+    EN_OPEN="Open the panel and sign in:"
+    RU_OPEN="Откройте панель и войдите:"
   fi
+
+  printf '\n'
+  say "Stokehold $TAG is installed and running." "Stokehold $TAG установлен и работает."
+  printf '\n%s\n%s\n\n    %s\n' "$EN_OPEN" "$RU_OPEN" "$URL"
+
+  if [ -n "$PUBHOST" ]; then
+    printf '\nThis machine'"'"'s own address is %s (inside a network); the link uses its public address %s.\n' "$HOST" "$PUBHOST"
+    printf 'У этой машины внутренний адрес %s, в ссылке указан её внешний адрес %s.\n' "$HOST" "$PUBHOST"
+    printf 'From the same local network you can also open / Из той же локальной сети можно открыть:\n    %s\n' "$LOCALURL"
+    printf 'Behind a router, forward TCP %s to %s. / За роутером пробросьте TCP %s на %s.\n' "$PORT" "$HOST" "$PORT" "$HOST"
+  elif [ "$PRIVATE" = 1 ]; then
+    printf '\nAttention: %s is an address inside a network and the public one could not be found.\n' "$HOST"
+    printf 'Replace it in the link with the address you use to reach this server (for SSH).\n'
+    printf 'Внимание: %s это внутренний адрес, внешний определить не удалось.\n' "$HOST"
+    printf 'Подставьте в ссылку тот адрес, по которому вы заходите на этот сервер (по SSH).\n'
+  fi
+
   cat <<DONE
 
-Stokehold $TAG is running.
-
-$( [ -n "$CODE" ] && printf 'Open this link in your browser to finish the setup (create the owner, then sign in):\n\n    https://%s:%s/setup?code=%s\n' "$LINK_HOST" "$PORT" "$CODE" || printf 'Open the panel and sign in:\n\n    https://%s:%s/\n' "$LINK_HOST" "$PORT" )
-
-The browser will warn about the certificate: Stokehold made its own, because
-there is no domain yet. That is expected. Choose "Advanced" and continue.
-${FP:+To be sure it is yours, the certificate fingerprint (SHA-256) is:
-    $FP}
-
-Если страница не открывается, порт $PORT закрыт в файрволе или в панели
-вашего хостинга: откройте TCP $PORT.
-Ссылка выше нужна один раз; код внутри неё одноразовый.
-${NETNOTE:+
-$NETNOTE
+The browser will warn about the certificate: Stokehold made its own, because there is no domain yet.
+That is expected. Choose "Advanced" and continue.
+Браузер предупредит о сертификате: Stokehold создал свой, пока у вас нет домена.
+Это нормально. Нажмите «Дополнительно» и продолжите.
+${FP:+
+Certificate fingerprint (SHA-256) / Отпечаток сертификата (SHA-256):
+    $FP
 }
+If the page does not open, TCP port $PORT is closed in the firewall or in your hosting panel: open it.
+Если страница не открывается, порт TCP $PORT закрыт в файрволе или в панели хостинга: откройте его.
+
+The link works once: the code inside it is single-use.
+Ссылка одноразовая: код внутри неё действует один раз.
+
 Later, with a domain, put Caddy in front for a trusted certificate:
     panel.example.com { reverse_proxy 127.0.0.1:8080 }
 and in $ENVF replace "-tls-listen :$PORT" with "-trust-proxy".
-Turn on two-factor authentication on the Security page.
-Uninstall: sudo bash uninstall.sh   (your game servers are never touched)
+Позже, когда будет домен, поставьте перед панелью Caddy (доверенный сертификат):
+в $ENVF замените "-tls-listen :$PORT" на "-trust-proxy".
+
+Turn on two-factor authentication on the Security page. / Включите двухфакторную защиту на странице «Безопасность».
+Uninstall / Удаление: sudo bash uninstall.sh   (your game servers are never touched / игровые серверы не затрагиваются)
 DONE
   exit 0
 fi
@@ -292,7 +319,8 @@ fi
 cat <<DONE
 
 Stokehold $TAG is running on 127.0.0.1:8080 (your own flags in $ENVF keep it local).
-Put an HTTPS reverse proxy in front, for example Caddy:
+Stokehold $TAG работает на 127.0.0.1:8080 (ваши параметры в $ENVF оставляют его локальным).
+Put an HTTPS reverse proxy in front, for example Caddy / Поставьте перед ним HTTPS-прокси, например Caddy:
     panel.example.com { reverse_proxy 127.0.0.1:8080 }
-Uninstall: sudo bash uninstall.sh   (your game servers are never touched)
+Uninstall / Удаление: sudo bash uninstall.sh   (your game servers are never touched / игровые серверы не затрагиваются)
 DONE
