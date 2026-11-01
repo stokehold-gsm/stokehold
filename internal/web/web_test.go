@@ -323,3 +323,14 @@ func TestFormPostsFromABrowserWithANullOriginAreAccepted(t *testing.T) {
 		t.Errorf("Referrer-Policy %q: no-referrer would make browsers send a null Origin", got)
 	}
 }
+
+func TestTwoFactorSetupShowsAQRCode(t *testing.T) {
+	r := newRig(t)
+	r.setup()
+	r.login("")
+	tok := r.csrf()
+	r.do("POST", "/security/2fa/start", url.Values{"csrf": {tok}}, nil)
+	if page := r.do("GET", "/security", nil, nil).Body.String(); !strings.Contains(page, `<svg class="qr"`) {
+		t.Fatal("the 2FA setup page must show a QR code of the otpauth link")
+	}
+}

@@ -434,3 +434,18 @@ func TestAdminFormPostWithANullOriginReachesTheHandler(t *testing.T) {
 		t.Errorf("a cross-site post must be refused: %d", rec.Code)
 	}
 }
+
+func TestAdminTwoFactorSetupShowsAQRCode(t *testing.T) {
+	r := newARig(t)
+	r.st.AdminCreate("anna", apass, RoleOperator)
+	r.do("POST", "/login", url.Values{"name": {"anna"}, "password": {apass}}, nil)
+	page := r.do("GET", "/security", nil, nil).Body.String()
+	m := acsrf.FindStringSubmatch(page)
+	if m == nil {
+		t.Fatal("no csrf")
+	}
+	r.do("POST", "/security/start", url.Values{"csrf": {m[1]}}, nil)
+	if page := r.do("GET", "/security", nil, nil).Body.String(); !strings.Contains(page, `<svg class="qr"`) {
+		t.Fatal("the admin 2FA setup page must show a QR code")
+	}
+}

@@ -197,6 +197,8 @@
       <button type="submit">{{t . "twofa_disable"}}</button>
     </form>
   {{else if .Secret}}
+    <p class="muted">{{t . "twofa_scan"}}</p>
+    <div class="qr-wrap">{{qr .URI}}</div>
     <p><b>{{t . "twofa_secret"}}</b></p>
     <p><code>{{.Secret}}</code></p>
     <p class="muted">{{t . "twofa_uri"}}: <code>{{.URI}}</code></p>

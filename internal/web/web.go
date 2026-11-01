@@ -18,6 +18,7 @@ import (
 	"github.com/stokehold-gsm/stokehold/internal/entitlement"
 	"github.com/stokehold-gsm/stokehold/internal/helper"
 	"github.com/stokehold-gsm/stokehold/internal/metrics"
+	"github.com/stokehold-gsm/stokehold/internal/qrsvg"
 	"github.com/stokehold-gsm/stokehold/internal/selfupdate"
 	"github.com/stokehold-gsm/stokehold/internal/store"
 	"github.com/stokehold-gsm/stokehold/pkg/auth"
@@ -130,6 +131,7 @@ func New(st *store.Store, secure, trustProxy bool, setupToken string) *Server {
 	s.tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 		"t":    func(p page, key string) string { return tr(p.Lang, key) },
 		"pro":  func() bool { return proBuild },
+		"qr":   qrsvg.SVG,
 		"mods": hasMods,
 	}).ParseFS(templatesFS, "templates/*.html"))
 	s.loadSettings()

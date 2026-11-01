@@ -479,3 +479,5 @@ dialog.confirm .btns { justify-content: flex-end; }
 
 /* chart cards: the value line always sits under the title, so cards in a row line up */
 .card:has(> svg.chart) > .card-head { flex-direction: column; align-items: flex-start; gap: 2px; }
+
+.qr-wrap svg.qr { width: 220px; height: 220px; border-radius: 10px; display: block; margin: 6px 0 14px; }

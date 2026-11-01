@@ -10,6 +10,15 @@ Format follows Keep a Changelog. Versions follow semver once there is a first re
 - Discord: detailed logs as embeds from a gateway connection (messages with before and after, members, voice, invites, threads, AutoMod), bot commands and audit events as embeds, numbered moderation cases.
 - Discord: complaint system: /report, a message menu command, and a complaint card with take, warn, resolve and reject buttons.
 
+## 0.4.0 - 2026-11-01
+
+- Server hub: icon tabs (overview, console, files, mods, schedule, statistics), console commands through LinuxGSM send (no shell, 200 characters, rate limited, audited), statistics for the last 24 hours (players, CPU, memory, uptime timeline), confirmations for stop and restart.
+- Servers list: players with a bar, time in the current state, CPU and memory, a players sparkline, quick icons for console, files, mods, schedule and stats.
+- File manager: icon toolbar, right-click menu, drag-and-drop upload with progress, breadcrumb fix.
+- QR codes for two-factor setup in the panel and in the licence admin.
+- A drawn icon set across the panel.
+- Pro: mods and plugins for Rust (Oxide, uMod), CS2 (Metamod, CounterStrikeSharp), Valheim (BepInEx, Thunderstore), SCP:SL (EXILED), Project Zomboid and Garry's Mod (Steam Workshop). Not yet run against real game servers.
+
 ## 0.3.0 - 2026-11-01
 
 - Update notices are on by default: the panel checks GitHub shortly after start and then every 6 hours, and shows a banner with an Update button on the front page and a badge in the header. Nothing is installed without the owner pressing the button (automatic install stays a separate, off-by-default mode). Setting the mode to Off stops every request. ADR 0008.

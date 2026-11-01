@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stokehold-gsm/stokehold/internal/qrsvg"
 	"github.com/stokehold-gsm/stokehold/pkg/auth"
 	"github.com/stokehold-gsm/stokehold/pkg/license"
 	"github.com/stokehold-gsm/stokehold/pkg/ratelimit"
@@ -60,6 +61,7 @@ func NewAdminUI(st *Store, secure, trustProxy bool) *AdminUI {
 	u := &AdminUI{Store: st, Secure: secure, TrustProxy: trustProxy, Now: time.Now, limiter: ratelimit.New(10, time.Minute)}
 	u.tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 		"date": func(ts int64) string { return time.Unix(ts, 0).UTC().Format("2006-01-02") },
+		"qr":   qrsvg.SVG,
 		"role": func(r string) string {
 			return map[string]string{RoleOwner: "владелец", RoleCurator: "куратор шопа", RoleOperator: "оператор шопа"}[r]
 		},
@@ -391,7 +393,7 @@ input,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-ra
 label{display:block;margin:14px 0 4px;font-size:.88rem;color:var(--muted)}
 button{padding:11px 20px;border:0;border-radius:10px;background:var(--brand);color:#fff;font:600 1rem system-ui,sans-serif;cursor:pointer;margin-top:16px}button:hover{filter:brightness(.92)}
 button.l{background:none;color:var(--brand);text-decoration:underline;margin:0;padding:0;font-weight:400;font-size:.92rem}nav button.l{color:var(--muted);text-decoration:none}
-.e{color:var(--bad)}.m{color:var(--muted)}.k{font:1.1rem ui-monospace,Consolas,monospace;word-break:break-all;padding:12px;border:2px dashed var(--brand);border-radius:10px}form.i{display:inline}
+.qr-wrap svg.qr{width:220px;height:220px;border-radius:10px;display:block;margin:6px 0 14px}.e{color:var(--bad)}.m{color:var(--muted)}.k{font:1.1rem ui-monospace,Consolas,monospace;word-break:break-all;padding:12px;border:2px dashed var(--brand);border-radius:10px}form.i{display:inline}
 @media(max-width:560px){.w{padding:12px}.c{padding:16px}}</style></head><body><div class="w">
 <nav><a class="b" href="/"><img src="/logo.svg" alt="" width="28" height="28"> Stokehold: лицензии</a>{{if .Admin}}<a href="/">{{if or .Owner .Curator}}Лицензии{{else}}Мои выдачи{{end}}</a>{{if not .Curator}}<a href="/issue">Выдать</a>{{end}}{{if or .Owner .Curator}}<a href="/audit">Журнал</a>{{end}}{{if .Owner}}<a href="/staff">Сотрудники</a>{{end}}<a href="/security">Безопасность</a>
 <span>{{.Admin.Name}} ({{role .Admin.Role}})</span>
@@ -461,7 +463,7 @@ button.l{background:none;color:var(--brand);text-decoration:underline;margin:0;p
 {{define "security"}}{{template "head" .}}<div class="c"><h2>Двухфакторная защита</h2>
 {{if .Error}}<p class="e">{{.Error}}</p>{{end}}
 {{if .Admin.TOTPEnabled}}<p>Включена. Отключить её может только владелец из командной строки.</p>
-{{else if .Secret}}<p>Секрет для приложения-аутентификатора:</p><p class="k">{{.Secret}}</p><p>Ссылка otpauth: <code style="word-break:break-all">{{.URI}}</code></p>
+{{else if .Secret}}<p>Отсканируйте QR-код приложением-аутентификатором (Google Authenticator, Aegis, 2FAS). Без камеры введите секрет вручную.</p><div class="qr-wrap">{{qr .URI}}</div><p>Секрет для приложения-аутентификатора:</p><p class="k">{{.Secret}}</p><p>Ссылка otpauth: <code style="word-break:break-all">{{.URI}}</code></p>
 <form method="post" action="/security/enable"><input type="hidden" name="csrf" value="{{.CSRF}}"><label for="c">Код из приложения</label><input id="c" name="code" inputmode="numeric" maxlength="6" required><button type="submit">Включить</button></form>
 {{else}}<p>{{if or .Owner .Require2FA}}Без двухфакторной защиты работа с лицензиями закрыта. Включите её.{{else}}Двухфакторная защита необязательна, но с ней вход надёжнее.{{end}}</p>
 <form method="post" action="/security/start"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">Начать настройку</button></form>{{end}}
