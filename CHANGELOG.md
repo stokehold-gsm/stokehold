@@ -10,6 +10,10 @@ Format follows Keep a Changelog. Versions follow semver once there is a first re
 - Discord: detailed logs as embeds from a gateway connection (messages with before and after, members, voice, invites, threads, AutoMod), bot commands and audit events as embeds, numbered moderation cases.
 - Discord: complaint system: /report, a message menu command, and a complaint card with take, warn, resolve and reject buttons.
 
+## 0.2.1 - 2026-11-01
+
+- Installer: when the server only has a private address (behind NAT, at home or in some clouds), the setup link now uses the public address the internet sees and also prints the local one, with a note about opening or forwarding the port.
+
 ## 0.2.0 - 2026-11-01
 
 - New interface: full-width layout, light/dark/auto theme, animated RU/EN switch, styled game list with search, server list with state badges and action buttons, step-by-step install progress.

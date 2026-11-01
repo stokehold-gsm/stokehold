@@ -224,6 +224,18 @@ HOST=$(ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p
 [ -n "$HOST" ] || HOST=$(hostname -I 2>/dev/null | awk '{print $1}')
 [ -n "$HOST" ] || HOST="YOUR_SERVER_ADDRESS"
 
+# A cloud or home server often has only a private address behind NAT: the link
+# must then use the address the internet sees, so ask a public echo service
+# (Cloudflare, then ipify) once. Nothing is sent but the request itself.
+PUBHOST=""
+case "$HOST" in
+  10.*|192.168.*|172.1[6-9].*|172.2[0-9].*|172.3[01].*|100.6[4-9].*|100.[7-9][0-9].*|100.1[01][0-9].*|100.12[0-7].*)
+    PUBHOST=$(curl -fsS -m 4 https://1.1.1.1/cdn-cgi/trace 2>/dev/null | sed -n 's/^ip=//p' | head -n1)
+    [ -n "$PUBHOST" ] || PUBHOST=$(curl -fsS -m 4 https://api.ipify.org 2>/dev/null || true)
+    case "$PUBHOST" in *[!0-9a-fA-F.:]*) PUBHOST="" ;; esac ;;
+esac
+LINK_HOST=${PUBHOST:-$HOST}
+
 if grep -q -- '-tls-listen' "$ENVF" 2>/dev/null; then
   PORT=$(sed -n 's/.*-tls-listen *:\([0-9]*\).*/\1/p' "$ENVF" | head -n1)
   PORT=${PORT:-8443}
@@ -239,11 +251,23 @@ if grep -q -- '-tls-listen' "$ENVF" 2>/dev/null; then
     [ -n "$FP" ] && break
     sleep 1
   done
+  NETNOTE=""
+  if [ -n "$PUBHOST" ]; then
+    NETNOTE="This machine's own address is $HOST (inside a network). The link above uses its
+public address $PUBHOST; from the same local network you can also open
+    https://$HOST:$PORT/${CODE:+setup?code=$CODE}
+Если сервер за роутером (дома), на роутере нужен проброс TCP $PORT на $HOST."
+  elif case "$HOST" in 10.*|192.168.*|172.1[6-9].*|172.2[0-9].*|172.3[01].*|100.6[4-9].*|100.[7-9][0-9].*|100.1[01][0-9].*|100.12[0-7].*) true ;; *) false ;; esac; then
+    NETNOTE="Attention: $HOST is an address inside a network and the public one could not be found.
+Replace it with the address the internet reaches this server at (the one you SSH to).
+Внимание: $HOST это внутренний адрес. С другого компьютера используйте внешний адрес
+сервера (тот, по которому вы заходите по SSH)."
+  fi
   cat <<DONE
 
 Stokehold $TAG is running.
 
-$( [ -n "$CODE" ] && printf 'Open this link in your browser to finish the setup (create the owner, then sign in):\n\n    https://%s:%s/setup?code=%s\n' "$HOST" "$PORT" "$CODE" || printf 'Open the panel and sign in:\n\n    https://%s:%s/\n' "$HOST" "$PORT" )
+$( [ -n "$CODE" ] && printf 'Open this link in your browser to finish the setup (create the owner, then sign in):\n\n    https://%s:%s/setup?code=%s\n' "$LINK_HOST" "$PORT" "$CODE" || printf 'Open the panel and sign in:\n\n    https://%s:%s/\n' "$LINK_HOST" "$PORT" )
 
 The browser will warn about the certificate: Stokehold made its own, because
 there is no domain yet. That is expected. Choose "Advanced" and continue.
@@ -253,7 +277,9 @@ ${FP:+To be sure it is yours, the certificate fingerprint (SHA-256) is:
 Если страница не открывается, порт $PORT закрыт в файрволе или в панели
 вашего хостинга: откройте TCP $PORT.
 Ссылка выше нужна один раз; код внутри неё одноразовый.
-
+${NETNOTE:+
+$NETNOTE
+}
 Later, with a domain, put Caddy in front for a trusted certificate:
     panel.example.com { reverse_proxy 127.0.0.1:8080 }
 and in $ENVF replace "-tls-listen :$PORT" with "-trust-proxy".
