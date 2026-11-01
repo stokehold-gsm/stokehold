@@ -10,6 +10,10 @@ Format follows Keep a Changelog. Versions follow semver once there is a first re
 - Discord: detailed logs as embeds from a gateway connection (messages with before and after, members, voice, invites, threads, AutoMod), bot commands and audit events as embeds, numbered moderation cases.
 - Discord: complaint system: /report, a message menu command, and a complaint card with take, warn, resolve and reject buttons.
 
+## 0.3.0 - 2026-11-01
+
+- Update notices are on by default: the panel checks GitHub shortly after start and then every 6 hours, and shows a banner with an Update button on the front page and a badge in the header. Nothing is installed without the owner pressing the button (automatic install stays a separate, off-by-default mode). Setting the mode to Off stops every request. ADR 0008.
+
 ## 0.2.2 - 2026-11-01
 
 - Installer: every message is in English and Russian, with progress lines for each step. Fixed a silent exit at the end of the install on machines without the ip command (a failed pipeline under set -e); any unexpected failure now prints the line it stopped at.
