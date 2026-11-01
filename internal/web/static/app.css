@@ -476,3 +476,6 @@ dialog.confirm .btns { justify-content: flex-end; }
   table.fm-table .when { display: none; }
   .hub-actions .btn { padding: 8px 12px; }
 }
+
+/* chart cards: the value line always sits under the title, so cards in a row line up */
+.card:has(> svg.chart) > .card-head { flex-direction: column; align-items: flex-start; gap: 2px; }
