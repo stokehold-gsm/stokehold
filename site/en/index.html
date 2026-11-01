@@ -116,7 +116,7 @@ body.leaving { opacity: 0; transition: opacity .22s ease; }
 <section id="plans">
   <h2>Plans (intended)</h2>
   <div class="grid">
-    <div class="card"><h3>Free</h3><p class="muted">The whole open core (AGPL-3.0), no limit on the number of servers. Makes no requests to our server and needs no key.</p></div>
+    <div class="card"><h3>Free</h3><p class="muted">The whole open core (AGPL-3.0), no limit on the number of servers. Makes no requests to our servers and needs no key. It asks GitHub every few hours for a newer version (can be turned off).</p></div>
     <div class="card"><h3>Pro</h3><p class="muted">A closed build with the paid features: API, several machines, mod manager, Discord, a public status page; later S3 backups and update rollback. No price announced yet.</p></div>
     <div class="card"><h3>Hosting</h3><p class="muted">Several machines and customer access. Later, after the first version.</p></div>
   </div>
@@ -167,7 +167,7 @@ body.leaving { opacity: 0; transition: opacity .22s ease; }
   <h2>FAQ</h2>
   <details><summary>Do I need Discord for the panel to work?</summary><p class="muted">No. The panel, licences and updates do not depend on Discord.</p></details>
   <details><summary>Is it free?</summary><p class="muted">Yes. The core is open source (AGPL-3.0) and free, with no server limit. Paid Pro, a closed build, adds the API, several machines, mods, Discord and more. Prices are not announced.</p></details>
-  <details><summary>What is sent to your server?</summary><p class="muted">Free sends nothing. Pro sends the key, an instance fingerprint and the panel version to verify the licence. Details will be in the privacy policy.</p></details>
+  <details><summary>What is sent to your server?</summary><p class="muted">Free never contacts our servers and needs no key. The only outgoing request is a check with GitHub every few hours for a newer version (GitHub sees the server address); you can turn it off in the update settings. Pro sends the key, an instance fingerprint and the panel version to verify the licence. Details will be in the privacy policy.</p></details>
   <details><summary>Who builds it?</summary><p class="muted">One developer who runs a Factorio server. The project is written with an AI assistant; a human makes the decisions and releases.</p></details>
 </section>
 </main>

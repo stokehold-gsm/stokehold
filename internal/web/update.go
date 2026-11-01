@@ -94,7 +94,7 @@ func (s *Server) UpdateAvailable() string {
 
 func (s *Server) updView() *updView {
 	v := &updView{Current: s.Version, Dev: !selfupdate.ValidTag(s.Version),
-		Mode: s.updSetting(setUpdMode, "off"), Channel: s.updSetting(setUpdChannel, "stable"), Hour: s.updHour()}
+		Mode: s.updSetting(setUpdMode, "notify"), Channel: s.updSetting(setUpdChannel, "stable"), Hour: s.updHour()}
 	s.upd.mu.Lock()
 	v.Latest, v.CheckErr = s.upd.latest, s.upd.err
 	if !s.upd.checked.IsZero() {
@@ -208,12 +208,17 @@ func (e *updError) Error() string { return e.msg }
 // UpdateLoop checks hourly when the owner asked for it and, in auto mode,
 // starts the update in the chosen hour (UTC) while no game server install runs.
 func (s *Server) UpdateLoop(ctx context.Context, every time.Duration) {
+	// the first look shortly after start, so a new version shows up without waiting
+	first := time.NewTimer(30 * time.Second)
+	defer first.Stop()
 	t := time.NewTicker(every)
 	defer t.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-first.C:
+			s.updateTick(ctx)
 		case <-t.C:
 			s.updateTick(ctx)
 		}
@@ -221,7 +226,7 @@ func (s *Server) UpdateLoop(ctx context.Context, every time.Duration) {
 }
 
 func (s *Server) updateTick(ctx context.Context) {
-	mode := s.updSetting(setUpdMode, "off")
+	mode := s.updSetting(setUpdMode, "notify")
 	if mode == "off" {
 		return
 	}

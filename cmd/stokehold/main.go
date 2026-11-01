@@ -127,7 +127,7 @@ func serve(args []string) {
 	runner := &sched.Runner{S: st, Helper: panel.HelperOn}
 	go runner.Loop(context.Background(), 30*time.Second)
 	go panel.StatusLoop(context.Background(), time.Minute)
-	go panel.UpdateLoop(context.Background(), time.Hour)
+	go panel.UpdateLoop(context.Background(), 6*time.Hour)
 	srv := &http.Server{
 		Addr:              *listen,
 		Handler:           panel.Handler(),

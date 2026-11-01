@@ -357,3 +357,6 @@ details.raw summary { cursor: pointer; font-weight: 600; }
 .srv-name a { color: var(--fg); text-decoration: none; }
 .srv-name a:hover { color: var(--brand); text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 1450px) { header nav .who { display: none; } }
+
+.upd-banner { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 16px; padding: 14px 18px; }
+.upd-banner .muted { font-size: .9rem; }

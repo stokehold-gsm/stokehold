@@ -113,3 +113,27 @@ func TestNotifyModeNeverInstalls(t *testing.T) {
 		}
 	}
 }
+
+func TestNewVersionIsAnnouncedByDefaultAndNeverInstalledWithoutAsking(t *testing.T) {
+	r, f := updRig(t, "v0.1.2", "v0.1.4")
+	r.s.Now = func() time.Time { return time.Date(2026, 11, 2, 4, 0, 0, 0, time.UTC) }
+	r.s.updateTick(context.Background()) // no mode saved: the default must be "notify"
+	if r.s.UpdateAvailable() != "v0.1.4" {
+		t.Fatal("by default the panel must look for a new version")
+	}
+	for _, c := range f.calls {
+		if c.Op == "update" {
+			t.Fatal("the default mode must never install by itself")
+		}
+	}
+	page := r.do("GET", "/", nil, nil).Body.String()
+	if !strings.Contains(page, "v0.1.4") || !strings.Contains(page, `action="/updates/apply"`) {
+		t.Fatalf("the owner's front page must carry the update banner with a button:\n%s", page)
+	}
+	r.st.SetSetting(setUpdMode, "off")
+	r.s.upd = updState{}
+	r.s.updateTick(context.Background())
+	if r.s.UpdateAvailable() != "" {
+		t.Fatal("\"off\" must stop every request")
+	}
+}

@@ -78,6 +78,10 @@
 {{template "foot" .}}{{end}}
 
 {{define "dashboard"}}{{template "head" .}}
+{{if .UpdTag}}<div class="banner ok upd-banner">
+  <div><b>{{t . "upd_banner"}} <code>{{.UpdTag}}</code></b><div class="muted">{{t . "upd_banner_hint"}}</div></div>
+  <form class="inline" method="post" action="/updates/apply"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="version" value="{{.UpdTag}}"><button class="btn primary" type="submit">{{t . "upd_apply"}}</button> <a class="btn" href="/updates">{{t . "upd_details"}}</a></form>
+</div>{{end}}
 <div class="card">
   <div class="card-head">
     <h1>{{t . "servers"}} ({{.Count}})</h1>
