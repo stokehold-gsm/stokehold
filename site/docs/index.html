@@ -269,6 +269,18 @@ curl -H "Authorization: Bearer shapi_..." https://panel.example.com/api/v1/metri
   <p>Поиск по каталогу Modrinth с фильтром по ядру (плагины для Paper и Purpur, моды для Fabric) и версии игры. «Установить» скачивает файл в <code>serverfiles/plugins</code> или <code>serverfiles/mods</code> и проверяет контрольную сумму. Установленные файлы можно удалить там же. Нужные зависимости панель только называет, ставить их надо отдельно. После установки перезапустите сервер. У Vanilla плагинов и модов нет.</p>
   <h3>Быстрые настройки</h3>
   <p>Формы с проверкой значений для <code>server.properties</code> Minecraft (описание, число игроков, сложность, режим, PvP, online-mode, дальность прорисовки, белый список, зерно мира) и настроек Factorio (название, описание, игроки, пароль, видимость, команды). Меняются только перечисленные значения, остальное в файле остаётся. Пароль Factorio на страницу не возвращается: пустое поле оставляет прежний. Изменения вступают в силу после перезапуска сервера.</p>
+  <h3>Моды и плагины других игр</h3>
+  <p>Вкладка «Моды и плагины» есть у этих серверов LinuxGSM. Платформа для модов ставится кнопкой (сервер останавливается и запускается снова), плагины можно выключить (они переезжают в соседнюю папку <code>…-disabled</code>), включить обратно и удалить.</p>
+  <div class="scroll"><table>
+    <tr><th>Игра</th><th>Платформа</th><th>Плагины и моды</th></tr>
+    <tr><td>Rust</td><td>Oxide (uMod), с GitHub</td><td>поиск по uMod, файл <code>.cs</code> с проверкой суммы в <code>oxide/plugins</code>; после обновления Rust поставьте Oxide заново</td></tr>
+    <tr><td>Counter-Strike 2</td><td>Metamod:Source 2.0 (строка в <code>gameinfo.gi</code> добавляется сама) и CounterStrikeSharp</td><td>проверенные: MatchZy, CS2-SimpleAdmin; свои загружаются через файловый менеджер</td></tr>
+    <tr><td>Valheim</td><td>BepInExPack Valheim с Thunderstore</td><td>поиск по Thunderstore, у каждого мода своя папка в <code>BepInEx/plugins</code>; зависимости называются</td></tr>
+    <tr><td>SCP: Secret Laboratory</td><td>EXILED, с GitHub</td><td>свои <code>.dll</code> в папки EXILED и LabAPI через файловый менеджер</td></tr>
+    <tr><td>Project Zomboid</td><td>не нужна</td><td>мастерская Steam: добавить по ссылке, порядок, удалить; Mod ID берётся со страницы предмета</td></tr>
+    <tr><td>Garry's Mod</td><td>не нужна</td><td>коллекция мастерской Steam (<code>wscollectionid</code>), список её предметов</td></tr>
+  </table></div>
+  <p class="muted">На живых игровых серверах эти инструменты ещё не проверены: пути и ключи взяты из LinuxGSM и документации самих платформ.</p>
   <p class="muted">Список версий и загрузки идут только с официальных источников (Mojang, PaperMC, Purpur, Fabric, Modrinth) через helper.</p>
 </section>
 

@@ -269,6 +269,18 @@ curl -H "Authorization: Bearer shapi_..." https://panel.example.com/api/v1/metri
   <p>Search the Modrinth catalogue filtered by the core (plugins for Paper and Purpur, mods for Fabric) and the game version. "Install" downloads the file into <code>serverfiles/plugins</code> or <code>serverfiles/mods</code> and checks its checksum. Installed files can be removed on the same page. The panel only names required dependencies; install them separately. Restart the server afterwards. Vanilla has no plugins or mods.</p>
   <h3>Quick settings</h3>
   <p>Forms with validation for Minecraft's <code>server.properties</code> (description, player count, difficulty, mode, PvP, online-mode, view distance, whitelist, world seed) and for Factorio settings (name, description, players, password, visibility, commands). Only the listed values change; the rest of the file stays. The Factorio password is never sent back to the page: an empty field keeps the old one. Changes take effect after the server restarts.</p>
+  <h3>Mods and plugins for other games</h3>
+  <p>These LinuxGSM servers get a "Mods and plugins" tab. The mod framework is installed with one button (the server is stopped and started again); plugins can be disabled (they move to a sibling <code>…-disabled</code> folder), enabled again and removed.</p>
+  <div class="scroll"><table>
+    <tr><th>Game</th><th>Framework</th><th>Plugins and mods</th></tr>
+    <tr><td>Rust</td><td>Oxide (uMod), from GitHub</td><td>uMod search, the <code>.cs</code> file checked against its checksum into <code>oxide/plugins</code>; reinstall Oxide after a Rust update</td></tr>
+    <tr><td>Counter-Strike 2</td><td>Metamod:Source 2.0 (the <code>gameinfo.gi</code> line is added for you) and CounterStrikeSharp</td><td>checked: MatchZy, CS2-SimpleAdmin; upload your own through the file manager</td></tr>
+    <tr><td>Valheim</td><td>BepInExPack Valheim from Thunderstore</td><td>Thunderstore search, each mod in its own folder under <code>BepInEx/plugins</code>; dependencies are named</td></tr>
+    <tr><td>SCP: Secret Laboratory</td><td>EXILED, from GitHub</td><td>your own <code>.dll</code> into the EXILED and LabAPI folders through the file manager</td></tr>
+    <tr><td>Project Zomboid</td><td>none needed</td><td>Steam Workshop: add by link, reorder, remove; the Mod ID is read from the item page</td></tr>
+    <tr><td>Garry's Mod</td><td>none needed</td><td>Steam Workshop collection (<code>wscollectionid</code>) and its items</td></tr>
+  </table></div>
+  <p class="muted">Not yet tried on live game servers: paths and keys come from LinuxGSM and the frameworks' own documentation.</p>
   <p class="muted">Version lists and downloads come only from official sources (Mojang, PaperMC, Purpur, Fabric, Modrinth) through the helper.</p>
 </section>
 
