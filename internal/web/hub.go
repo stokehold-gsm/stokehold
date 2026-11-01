@@ -74,10 +74,11 @@ func (s *Server) rowFacts(lang string, rows []srvRow) {
 		if last.HasPlayers && last.Max > 0 {
 			r.PlayersPct = min(100, 100*last.Players/last.Max)
 		}
-		if last.CPU >= 0 {
+		running := last.State == "started" || last.State == "starting"
+		if running && last.CPU >= 0 {
 			r.CPU = strconv.FormatFloat(last.CPU, 'f', 0, 64) + "%"
 		}
-		if last.Mem >= 0 {
+		if running && last.Mem >= 0 {
 			r.Mem = memText(last.Mem)
 		}
 		tail := h

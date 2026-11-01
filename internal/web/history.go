@@ -155,7 +155,7 @@ func series(vals []float64, max float64) chart {
 	first := strings.Split(pts[0], ",")[0]
 	end := strings.Split(pts[len(pts)-1], ",")[0]
 	return chart{Line: line, Area: "M" + first + "," + fmt.Sprint(chartH) + " L" + strings.ReplaceAll(line, " ", " L") + " L" + end + "," + fmt.Sprint(chartH) + " Z",
-		Max: strconv.FormatFloat(top, 'f', -1, 64), Last: strconv.FormatFloat(last, 'f', 1, 64), Has: true}
+		Max: num(top), Last: num(last), Has: true}
 }
 
 // band is one stretch of the uptime bar.

@@ -24,7 +24,7 @@ func TestUsageReadsCPUAndMemoryFromDetails(t *testing.T) {
 
 func TestSeriesSkipsGapsAndScales(t *testing.T) {
 	c := series([]float64{-1, 0, 5, 10}, 10)
-	if !c.Has || strings.Count(c.Line, ",") != 3 || !strings.HasSuffix(c.Line, "600.0,0.0") || c.Last != "10.0" {
+	if !c.Has || strings.Count(c.Line, ",") != 3 || !strings.HasSuffix(c.Line, "600.0,0.0") || c.Last != "10" {
 		t.Fatalf("%+v", c)
 	}
 	if series([]float64{-1, 3}, 0).Has {

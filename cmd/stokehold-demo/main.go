@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"flag"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -107,10 +108,12 @@ func (f *fake) run(user, cmd string) helper.Response {
 }
 
 var tree = map[string][]map[string]any{
-	".":           {{"n": "serverfiles", "t": "d", "s": 0, "m": 1762000000}, {"n": "lgsm", "t": "d", "s": 0, "m": 1762000000}, {"n": "log", "t": "d", "s": 0, "m": 1762000000}, {"n": "backups", "t": "d", "s": 0, "m": 1762000000}},
-	"serverfiles": {{"n": "server-settings.json", "t": "f", "s": 1432, "m": 1762000000}, {"n": "mods", "t": "d", "s": 0, "m": 1762000000}, {"n": "saves", "t": "d", "s": 0, "m": 1762000000}},
-	"log":         {{"n": "console", "t": "d", "s": 0, "m": 1762000000}, {"n": "script", "t": "d", "s": 0, "m": 1762000000}},
-	"backups":     {{"n": "demo-backup.tar.gz", "t": "f", "s": 1288490188, "m": 1762000000}},
+	".":                             {{"n": "serverfiles", "t": "d", "s": 0, "m": 1762000000}, {"n": "lgsm", "t": "d", "s": 0, "m": 1762000000}, {"n": "log", "t": "d", "s": 0, "m": 1762000000}, {"n": "backups", "t": "d", "s": 0, "m": 1762000000}, {"n": ".config", "t": "d", "s": 0, "m": 1762000000}, {"n": "start.sh", "t": "f", "s": 312, "m": 1762000000}},
+	".config":                       {{"n": "SCP Secret Laboratory", "t": "d", "s": 0, "m": 1762000000}},
+	".config/SCP Secret Laboratory": {{"n": "config", "t": "d", "s": 0, "m": 1762000000}, {"n": "LocalAdminLogs", "t": "d", "s": 0, "m": 1762000000}, {"n": "config_gameplay.txt", "t": "f", "s": 18342, "m": 1762000000}},
+	"serverfiles":                   {{"n": "server-settings.json", "t": "f", "s": 1432, "m": 1762000000}, {"n": "mods", "t": "d", "s": 0, "m": 1762000000}, {"n": "saves", "t": "d", "s": 0, "m": 1762000000}},
+	"log":                           {{"n": "console", "t": "d", "s": 0, "m": 1762000000}, {"n": "script", "t": "d", "s": 0, "m": 1762000000}},
+	"backups":                       {{"n": "demo-backup.tar.gz", "t": "f", "s": 1288490188, "m": 1762000000}},
 }
 
 const logText = "[ 12:00:01 ] Server started\n[ 12:00:04 ] Loading map...\n[ 12:00:09 ] Map loaded in 4.9 s\n[ 12:03:11 ] Player Alice joined\n[ 12:07:40 ] Player Bob joined\n[ 12:15:02 ] Autosave complete\n"
@@ -178,8 +181,47 @@ func main() {
 	p.Version = "v0.2.0"
 	p.Metrics = metrics.New(60)
 	go p.Metrics.Run(make(chan struct{}), 10*time.Second)
+	seedHistory(p)
 	p.RefreshStatus()
 	go p.StatusLoop(context.Background(), 20*time.Second)
 	log.Printf("demo on http://%s as %s", *listen, *email)
 	log.Fatal((&http.Server{Addr: *listen, Handler: p.Handler(), ReadHeaderTimeout: 5 * time.Second}).ListenAndServe())
+}
+
+// seedHistory draws a believable day so the charts and sparklines have something to show.
+func seedHistory(p *web.Server) {
+	now := time.Now()
+	type shape struct {
+		peak, max int
+		cpu, mem  float64
+		down      int
+	}
+	shapes := map[int64]shape{1: {14, 16, 18, 1400, 300}, 2: {16, 20, 35, 3100, 1300}, 3: {22, 30, 12, 900, 1430}}
+	for id, sh := range shapes {
+		for i := 0; i < 1440; i++ {
+			t := now.Add(time.Duration(i-1440) * time.Minute)
+			h := float64(t.Hour()) + float64(t.Minute())/60
+			// evenings are busy, nights are quiet
+			load := 0.5 + 0.5*math.Sin((h-14)/24*2*math.Pi)
+			players := int(float64(sh.peak)*load*load + 0.5*math.Sin(float64(i)/7))
+			if players < 0 {
+				players = 0
+			}
+			state := "started"
+			if i >= sh.down && i < sh.down+25 {
+				state, players = "stopped", 0
+			}
+			if i == sh.down+25 {
+				state = "starting"
+			}
+			if id == 3 && i >= 1430 {
+				state, players = "stopped", 0
+			}
+			cpu, mem := sh.cpu*(0.4+load)+3*math.Sin(float64(i)/5), sh.mem*(0.8+0.3*load)
+			if state != "started" {
+				cpu, mem = 0, 0
+			}
+			p.AddHistory(id, web.Sample{T: t, State: state, Players: players, Max: sh.max, HasPlayers: true, CPU: math.Max(cpu, 0), Mem: mem})
+		}
+	}
 }
