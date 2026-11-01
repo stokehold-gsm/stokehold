@@ -24,6 +24,11 @@ var FetchHosts = map[string]bool{
 	"maven.neoforged.net": true,
 	"api.modrinth.com":    true, "cdn.modrinth.com": true,
 	"api.purpurmc.io": true, "api.purpurmc.org": true, "fill.papermc.io": true,
+	// mod frameworks and plugins of the Pro game tools: GitHub releases (Oxide, CounterStrikeSharp,
+	// EXILED and curated CS2 plugins) and the CDNs GitHub redirects their assets to, Metamod:Source
+	// builds, uMod plugins for Rust, Thunderstore packages for Valheim and their CDN
+	"api.github.com": true, "github.com": true, "objects.githubusercontent.com": true, "release-assets.githubusercontent.com": true,
+	"mms.alliedmods.net": true, "umod.org": true, "thunderstore.io": true, "ccdn.thunderstore.io": true,
 }
 
 var maxFetch int64 = 512 << 20 // a var so tests can lower it

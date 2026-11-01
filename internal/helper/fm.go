@@ -30,6 +30,7 @@ import (
 //	rename     Path To                   never overwrites
 //	fetch      Path URL [SHA256|SHA1]    download from an allow-listed host into Path
 //	http-get-json URL                    Out: body (<= 4 MiB) from an allow-listed host; needs no user
+//	extract    Path To [Sub]             unpack a .zip/.tar.gz in the home into the folder To; Out: files written
 const maxListEntries = 5000
 
 // FileManager is implemented by OSFiles; tests of the handler use it directly.
@@ -42,6 +43,7 @@ type FileManager interface {
 	Delete(user, rel string) error
 	Rename(user, from, to string) error
 	Fetch(user, rel, url string, sums Sums) error
+	Extract(user, archive, dest, sub string) (int, error)
 }
 
 type Sums struct{ SHA256, SHA1 string }
@@ -128,6 +130,15 @@ func (o OSFiles) Rename(account, from, to string) error {
 	return f.Move(from, to)
 }
 
+func (o OSFiles) Extract(account, archive, dest, sub string) (int, error) {
+	f, err := o.openOwned(account)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	return f.Extract(archive, dest, sub)
+}
+
 func (o OSFiles) Fetch(account, rel, url string, sums Sums) error {
 	f, err := o.openOwned(account)
 	if err != nil {
@@ -176,15 +187,18 @@ func validateFM(r Request) error {
 		if !fmPathOK(r.Path, true) {
 			return bad("path")
 		}
-	case "mkdir", "delete", "get", "put", "rename", "fetch":
+	case "mkdir", "delete", "get", "put", "rename", "fetch", "extract":
 		if !fmPathOK(r.Path, false) {
 			return bad("path")
 		}
 	}
 	switch r.Op {
-	case "rename":
+	case "rename", "extract":
 		if !fmPathOK(r.To, false) {
 			return bad("target path")
+		}
+		if r.Op == "extract" && r.Sub != "" && !fmPathOK(r.Sub, false) {
+			return bad("subfolder")
 		}
 	case "put":
 		if r.Offset < 0 || len(r.Data) > base64.StdEncoding.EncodedLen(safefs.MaxChunk) {
@@ -265,6 +279,12 @@ func handleFM(r Request, files Files) Response {
 		if err := fm.Rename(r.User, r.Path, r.To); err != nil {
 			return fail(err)
 		}
+	case "extract":
+		n, err := fm.Extract(r.User, r.Path, r.To, r.Sub)
+		if err != nil {
+			return fail(err)
+		}
+		return Response{OK: true, Out: strconv.Itoa(n)}
 	case "fetch":
 		if err := fm.Fetch(r.User, r.Path, r.URL, Sums{SHA256: r.SHA256, SHA1: r.SHA1}); err != nil {
 			return fail(err)

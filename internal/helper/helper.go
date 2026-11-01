@@ -43,6 +43,7 @@ type Request struct {
 	URL      string   `json:"url,omitempty"`     // fetch, http-get-json
 	SHA256   string   `json:"sha256,omitempty"`  // fetch: expected checksum
 	SHA1     string   `json:"sha1,omitempty"`    // fetch: expected checksum
+	Sub      string   `json:"sub,omitempty"`     // extract: take only this top folder of the archive
 	Version  string   `json:"version,omitempty"` // update: the release tag to install
 }
 
@@ -64,7 +65,7 @@ func ValidateWith(r Request, adopted Adopted) error {
 	switch r.Op {
 	case "create-user":
 	case "discover", "files":
-	case "list-dir", "stat", "mkdir", "put", "get", "delete", "rename", "fetch":
+	case "list-dir", "stat", "mkdir", "put", "get", "delete", "rename", "fetch", "extract":
 		if err := validateFM(r); err != nil {
 			return err
 		}
@@ -144,7 +145,7 @@ func HandleFull(r Request, b Backend) Response {
 	switch r.Op {
 	case "files", "read-file", "write-file":
 		return handleFiles(r, b.Files)
-	case "list-dir", "stat", "mkdir", "put", "get", "delete", "rename", "fetch":
+	case "list-dir", "stat", "mkdir", "put", "get", "delete", "rename", "fetch", "extract":
 		return handleFM(r, b.Files)
 	case "http-get-json":
 		return handleJSON(r)
