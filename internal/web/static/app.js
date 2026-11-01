@@ -221,7 +221,10 @@
   if (!box || !window.fetch || !window.DOMParser) return;
   var secs = +box.getAttribute("data-autorefresh") || 10, busy = false;
   setInterval(function () {
-    if (document.hidden || busy || document.querySelector("details.menu[open]")) return;
+    var ae = document.activeElement;
+    if (document.hidden || busy || document.querySelector("details.menu[open], details.pop[open], dialog[open], .ctx")) return;
+    if (ae && box.contains(ae) && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return; // never wipe what is being typed
+    if ([].some.call(box.querySelectorAll("input[type=text]"), function (i) { return i.value; })) return;
     busy = true;
     fetch(location.href, { credentials: "same-origin" }).then(function (r) { return r.text(); }).then(function (t) {
       var n = new DOMParser().parseFromString(t, "text/html").querySelector("[data-autorefresh]");
@@ -232,4 +235,192 @@
       if (np && atEnd) np.scrollTop = np.scrollHeight;
     }).catch(function () {}).then(function () { busy = false; });
   }, secs * 1000);
+})();
+
+// Server hub, servers list and file manager. Everything is delegated to the
+// document, so blocks swapped in by the auto-refresh keep working.
+(function () {
+  'use strict';
+  var doc = document, root = doc.documentElement;
+  var ru = (root.lang || '').indexOf('ru') === 0;
+  root.classList.add('js');
+
+  // Toolbar popovers (<details class="pop">): one open at a time, closed by Esc or a click outside.
+  doc.addEventListener('toggle', function (e) {
+    var d = e.target;
+    if (!d.matches || !d.matches('details.pop') || !d.open) return;
+    doc.querySelectorAll('details.pop[open]').forEach(function (x) { if (x !== d) x.removeAttribute('open'); });
+    var f = d.querySelector('input:not([type=hidden])');
+    if (f) setTimeout(function () { f.focus(); }, 30);
+  }, true);
+  doc.addEventListener('click', function (e) {
+    doc.querySelectorAll('details.pop[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); });
+  });
+
+  // Copy buttons.
+  function copy(text, btn) {
+    var done = function () {
+      if (!btn) return;
+      btn.classList.add('copied');
+      var t = btn.getAttribute('title');
+      btn.setAttribute('title', ru ? 'Скопировано' : 'Copied');
+      setTimeout(function () { btn.classList.remove('copied'); if (t) btn.setAttribute('title', t); }, 1400);
+    };
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(done, done); return; }
+    var ta = doc.createElement('textarea');
+    ta.value = text; doc.body.appendChild(ta); ta.select();
+    try { doc.execCommand('copy'); } catch (err) {}
+    doc.body.removeChild(ta); done();
+  }
+  doc.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-copy]');
+    if (!b) return;
+    e.preventDefault();
+    copy(b.getAttribute('data-copy'), b);
+    closeCtx();
+  });
+
+  // Forms with data-confirm ask first, in a small dialog instead of the browser's prompt.
+  function ask(text, ok) {
+    if (!window.HTMLDialogElement) { if (window.confirm(text)) ok(); return; }
+    var dlg = doc.createElement('dialog');
+    dlg.className = 'confirm';
+    var p = doc.createElement('p'); p.textContent = text;
+    var row = doc.createElement('div'); row.className = 'btns';
+    var no = doc.createElement('button'); no.type = 'button'; no.className = 'btn'; no.textContent = ru ? 'Отмена' : 'Cancel';
+    var yes = doc.createElement('button'); yes.type = 'button'; yes.className = 'btn stop'; yes.textContent = ru ? 'Да' : 'Yes';
+    row.appendChild(no); row.appendChild(yes); dlg.appendChild(p); dlg.appendChild(row);
+    doc.body.appendChild(dlg);
+    var close = function () { dlg.close(); dlg.remove(); };
+    no.addEventListener('click', close);
+    yes.addEventListener('click', function () { close(); ok(); });
+    dlg.addEventListener('cancel', function () { dlg.remove(); });
+    dlg.showModal();
+    yes.focus();
+  }
+  doc.addEventListener('submit', function (e) {
+    var f = e.target;
+    if (!f.hasAttribute || !f.hasAttribute('data-confirm') || f.dataset.confirmed) return;
+    e.preventDefault();
+    ask(f.getAttribute('data-confirm'), function () { f.dataset.confirmed = '1'; f.submit(); });
+  }, true);
+
+  // A click on a server row (not on a control) opens its hub.
+  doc.addEventListener('click', function (e) {
+    var row = e.target.closest && e.target.closest('.srv[data-href]');
+    if (!row || e.defaultPrevented || e.button !== 0 || e.target.closest('a, button, summary, form, details, input')) return;
+    location.href = row.getAttribute('data-href');
+  });
+
+  // File manager: selection, download of one selected file, context menu, drag and drop upload.
+  var list = doc.getElementById('fm-list');
+  function selection() {
+    return [].slice.call(doc.querySelectorAll('#fm-list tr.fm-row input[type=checkbox]:checked')).map(function (c) { return c.closest('tr'); });
+  }
+  function syncSel() {
+    doc.querySelectorAll('#fm-list tr.fm-row').forEach(function (tr) {
+      var c = tr.querySelector('input[type=checkbox]');
+      tr.classList.toggle('sel', !!(c && c.checked));
+    });
+    var dl = doc.querySelector('[data-fm-dl]'), sel = selection();
+    if (dl) dl.disabled = !(sel.length === 1 && sel[0].hasAttribute('data-dl'));
+  }
+  doc.addEventListener('change', function (e) { if (e.target.closest && e.target.closest('#fm-list')) syncSel(); });
+  doc.addEventListener('click', function (e) {
+    var dl = e.target.closest && e.target.closest('[data-fm-dl]');
+    if (!dl) return;
+    var sel = selection();
+    if (sel.length === 1 && sel[0].hasAttribute('data-dl')) location.href = sel[0].getAttribute('data-dl');
+  });
+  syncSel();
+
+  var ctx = null;
+  function closeCtx() { if (ctx) { ctx.remove(); ctx = null; } }
+  function openCtx(row, x, y) {
+    closeCtx();
+    var src = row.querySelector('.menu-list');
+    if (!src) return;
+    ctx = doc.createElement('div');
+    ctx.className = 'ctx';
+    ctx.setAttribute('role', 'menu');
+    [].forEach.call(src.children, function (it) {
+      var c = it.cloneNode(true);
+      c.setAttribute('role', 'menuitem');
+      c.tabIndex = -1;
+      ctx.appendChild(c);
+    });
+    doc.body.appendChild(ctx);
+    var w = ctx.offsetWidth, h = ctx.offsetHeight;
+    ctx.style.left = Math.max(8, Math.min(x, innerWidth - w - 8)) + 'px';
+    ctx.style.top = Math.max(8, Math.min(y, innerHeight - h - 8)) + 'px';
+    var first = ctx.querySelector('.menu-item');
+    if (first) first.focus();
+  }
+  doc.addEventListener('contextmenu', function (e) {
+    var row = e.target.closest && e.target.closest('#fm-list tr.fm-row');
+    if (!row) { closeCtx(); return; }
+    e.preventDefault();
+    openCtx(row, e.clientX, e.clientY);
+  });
+  doc.addEventListener('keydown', function (e) {
+    if (ctx) {
+      var items = [].slice.call(ctx.querySelectorAll('.menu-item')), i = items.indexOf(doc.activeElement);
+      if (e.key === 'Escape') { e.preventDefault(); closeCtx(); return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); return; }
+      if (e.key === 'Tab') { closeCtx(); return; }
+    }
+    if (e.key === 'Escape') doc.querySelectorAll('details.pop[open]').forEach(function (d) { d.removeAttribute('open'); });
+    if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+      var row = doc.activeElement && doc.activeElement.closest && doc.activeElement.closest('#fm-list tr.fm-row');
+      if (!row) return;
+      e.preventDefault();
+      var r = row.getBoundingClientRect();
+      openCtx(row, r.left + 40, r.bottom - 4);
+    }
+  });
+  doc.addEventListener('click', function (e) { if (ctx && !ctx.contains(e.target)) closeCtx(); });
+  addEventListener('scroll', closeCtx, true);
+  addEventListener('resize', closeCtx);
+
+  var drop = doc.querySelector('.fm-drop[data-upload]');
+  if (drop && window.FormData && window.XMLHttpRequest) {
+    var depth = 0;
+    var hasFiles = function (e) { return e.dataTransfer && [].indexOf.call(e.dataTransfer.types || [], 'Files') >= 0; };
+    drop.addEventListener('dragenter', function (e) { if (!hasFiles(e)) return; e.preventDefault(); depth++; drop.classList.add('over'); });
+    drop.addEventListener('dragover', function (e) { if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
+    drop.addEventListener('dragleave', function () { if (--depth <= 0) { depth = 0; drop.classList.remove('over'); } });
+    drop.addEventListener('drop', function (e) {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth = 0; drop.classList.remove('over');
+      var files = e.dataTransfer.files;
+      if (!files.length) return;
+      // the server reads the CSRF field first and streams the rest, so the order matters
+      var fd = new FormData();
+      fd.append('csrf', drop.getAttribute('data-csrf'));
+      fd.append('path', drop.getAttribute('data-path'));
+      for (var i = 0; i < files.length; i++) fd.append('file', files[i], files[i].name);
+      var bar = doc.createElement('div'); bar.className = 'fm-progress';
+      var label = doc.createElement('span'); label.textContent = drop.getAttribute('data-up-label') + '…';
+      var prog = doc.createElement('progress'); prog.max = 100; prog.value = 0;
+      bar.appendChild(label); bar.appendChild(prog);
+      drop.parentNode.insertBefore(bar, drop);
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', drop.getAttribute('data-upload'));
+      xhr.upload.onprogress = function (ev) {
+        if (!ev.lengthComputable) return;
+        prog.value = Math.round(100 * ev.loaded / ev.total);
+        label.textContent = drop.getAttribute('data-up-label') + ' ' + prog.value + '%';
+      };
+      xhr.onloadend = function () { location.href = xhr.responseURL || location.href; };
+      xhr.send(fd);
+    });
+  }
+  if (list) list.addEventListener('dblclick', function (e) {
+    var row = e.target.closest('tr.fm-row');
+    if (!row || e.target.closest('input, a, summary, button')) return;
+    var a = row.querySelector('.fm-name a');
+    if (a) location.href = a.href;
+  });
 })();

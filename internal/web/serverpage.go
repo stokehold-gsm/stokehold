@@ -39,7 +39,10 @@ type cachedDetails struct {
 type srvPage struct {
 	ID, Name, Game, Mode, Node string
 	NodeID                     int64
-	Tab                        string // overview | logs
+	Tab                        string // overview | console | stats
+	Since                      string // how long in this state
+	Stats                      hubStats
+	Sent                       string // ok | fail | bad | slow after a console line
 	State                      string // started | starting | stopped | unknown
 	Players                    string
 	Address                    string
@@ -57,6 +60,7 @@ type srvPage struct {
 
 func (s *Server) srvRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /servers/{id}", s.auth(s.serverPage))
+	mux.HandleFunc("POST /servers/{id}/send", s.auth(s.serverSend))
 }
 
 func (s *Server) serverByID(r *http.Request) *store.Server {
@@ -101,17 +105,27 @@ func (s *Server) serverPage(w http.ResponseWriter, r *http.Request, p *page) {
 		Tab: "overview", CanControl: canControl(p.User.Role)}
 	s.fillNodes(p)
 	v.Node = p.NodeNames[sv.NodeID]
-	if r.URL.Query().Get("tab") == "logs" && v.CanControl {
-		v.Tab = "logs"
+	switch tab := r.URL.Query().Get("tab"); {
+	case (tab == "console" || tab == "logs") && v.CanControl:
+		v.Tab = "console"
+	case tab == "stats":
+		v.Tab = "stats"
+	}
+	v.Sent = r.URL.Query().Get("sent")
+	if h := s.history(sv.ID); len(h) > 1 {
+		v.Since = ago(p.Lang, s.Now().Sub(since(h)))
 	}
 	// the cached state first, so a failing `details` still shows something
 	v.State = srvState(s.Statuses()[sv.ID].State)
 	if st, ok := s.Statuses()[sv.ID]; ok && st.HasPlayers {
 		v.Players = strconv.Itoa(st.Players) + "/" + strconv.Itoa(st.Max)
 	}
-	if v.Tab == "logs" {
+	switch v.Tab {
+	case "console":
 		s.fillLog(v, sv, r.URL.Query().Get("log"))
-	} else {
+	case "stats":
+		v.Stats = s.hubStats(p.Lang, sv.ID)
+	default:
 		raw, ok := s.details(sv)
 		if !ok {
 			v.Err = tr(p.Lang, "srv_details_failed")

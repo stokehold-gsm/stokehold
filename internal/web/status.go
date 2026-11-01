@@ -59,15 +59,19 @@ func (s *Server) RefreshStatus() {
 	}
 	for _, sv := range servers {
 		st := ServerStatus{State: "unknown", At: s.Now()}
+		cpu, mem := -1.0, -1.0
 		resp, err := s.callHelperOn(sv.NodeID, helper.Request{Op: "run", User: sv.LinuxUser, Game: sv.Game, Cmd: "details"})
 		if err == nil {
-			if d := lgsm.ParseDetails(resp.Out); d.Status != "" {
+			d := lgsm.ParseDetails(resp.Out)
+			if d.Status != "" {
 				st.State = d.State() // STARTING when started but no game port listens yet
 			} else if state, perr := lgsm.ParseStatus(resp.Out); perr == nil {
 				st.State = state
 			}
 			st.Players, st.Max, st.HasPlayers = lgsm.ParsePlayers(resp.Out)
+			cpu, mem = usage(d)
 		}
+		s.AddHistory(sv.ID, Sample{T: st.At, State: srvState(st.State), Players: st.Players, Max: st.Max, HasPlayers: st.HasPlayers, CPU: cpu, Mem: mem})
 		prev, had := s.status.get(sv.ID)
 		s.status.put(sv.ID, st)
 		if had && prev.State != st.State {

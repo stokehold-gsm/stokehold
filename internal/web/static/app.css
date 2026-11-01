@@ -360,3 +360,119 @@ details.raw summary { cursor: pointer; font-weight: 600; }
 
 .upd-banner { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 16px; padding: 14px 18px; }
 .upd-banner .muted { font-size: .9rem; }
+
+/* icons: an inline sprite in the base template (#i-trash, #i-upload, #i-download, #i-file, #i-file-plus,
+   #i-folder, #i-folder-plus, #i-link, #i-edit, #i-rename, #i-copy, #i-terminal, #i-play, #i-stop,
+   #i-restart, #i-backup, #i-refresh, #i-update, #i-calendar, #i-puzzle, #i-chart, #i-gear, #i-users,
+   #i-cpu, #i-memory, #i-globe, #i-more, #i-close, #i-search, #i-external, #i-send);
+   in templates: {{template "ic" "trash"}} renders <svg class="ic"><use href="#i-trash"/></svg> */
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.ic { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vertical-align: -3px; }
+.btn .ic, .menu-item .ic, .tabs a .ic, h1 .ic { margin-right: 2px; }
+.btn.icon .ic { margin: 0; }
+.btn.icon.sm { width: 30px; height: 30px; padding: 0; }
+.btn.icon.sm .ic { width: 16px; height: 16px; }
+html:not(.js) .js-only { display: none !important; }
+.menu-item { display: flex; align-items: center; gap: 10px; }
+.menu-item.danger { color: var(--bad); }
+.menu-item .ic { opacity: .8; }
+
+/* servers list: name + links | state | live stats | actions */
+.srv { grid-template-columns: minmax(180px, 1.4fr) minmax(130px, auto) minmax(0, 1.4fr) auto; }
+.srv[data-href] { cursor: pointer; }
+.srv-links { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+.srv-links .btn.icon.sm { color: var(--muted); }
+.srv-links .btn.icon.sm:hover { color: var(--brand); border-color: var(--brand); }
+.srv-stats { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; font-size: .9rem; min-width: 0; }
+.srv-stats .stat { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); white-space: nowrap; }
+.srv-stats .stat span { color: var(--fg); font-variant-numeric: tabular-nums; }
+.srv-stats progress { width: 64px; height: 6px; }
+progress { appearance: none; border: 0; border-radius: 99px; background: var(--line); overflow: hidden; }
+progress::-webkit-progress-bar { background: var(--line); border-radius: 99px; }
+progress::-webkit-progress-value { background: var(--ok); border-radius: 99px; transition: width .4s var(--ease); }
+progress::-moz-progress-bar { background: var(--ok); border-radius: 99px; }
+.spark.players { width: 110px; height: 26px; }
+.spark.players polyline { stroke: var(--ok); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+@media (max-width: 1100px) {
+  .srv { grid-template-columns: minmax(0, 1fr) auto; }
+  .srv-stats { grid-column: 1 / -1; }
+  .srv-actions { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
+/* server hub */
+.hub-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.hub-title h1 { margin: 0 0 2px; }
+.hub-facts { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 12px 0 6px; }
+.hub-facts .fact { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+.hub-facts .fact b, .hub-facts .fact code { color: var(--fg); }
+.hub-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 14px; }
+.hub-actions form { margin: 0; }
+.hub-actions .btn { padding: 8px 16px; }
+.tabs a { display: inline-flex; align-items: center; gap: 7px; }
+pre.log.console { background: #0d0f14; color: #d7dde6; border-color: var(--line); min-height: 240px; }
+form.send-line { display: flex; gap: 8px; align-items: center; max-width: none; margin-top: 10px; }
+form.send-line .prompt { font-family: var(--mono); color: var(--brand); font-weight: 700; }
+form.send-line input[type=text] { flex: 1; min-width: 0; font-family: var(--mono); }
+form.send-line .btn { margin: 0; flex: none; }
+
+/* statistics */
+svg.chart { display: block; width: 100%; height: 150px; margin-top: 8px; overflow: visible; }
+svg.chart .line { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+svg.chart .area { stroke: none; opacity: .18; }
+svg.chart.c-players .line { stroke: var(--ok); }
+svg.chart.c-players .area { fill: var(--ok); }
+svg.chart.c-cpu .line { stroke: var(--brand); }
+svg.chart.c-cpu .area { fill: var(--brand); }
+svg.chart.c-mem .line { stroke: #6aa3ff; }
+svg.chart.c-mem .area { fill: #6aa3ff; }
+svg.timeline { display: block; width: 100%; height: 26px; margin: 10px 0 8px; border-radius: 8px; overflow: hidden; }
+.tl-started { fill: var(--ok); background: var(--ok); }
+.tl-starting { fill: var(--warn); background: var(--warn); }
+.tl-stopped { fill: var(--bad); background: var(--bad); }
+.tl-unknown { fill: var(--line); background: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; }
+.legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; }
+
+/* file manager: toolbar of icon buttons with popovers, dense rows, context menu, drop zone */
+.fm-tools { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.pop { position: relative; }
+.pop > summary { list-style: none; }
+.pop > summary::-webkit-details-marker { display: none; }
+.pop[open] > summary { background: var(--tint); border-color: var(--brand); color: var(--brand); }
+.pop-body { position: absolute; right: 0; top: calc(100% + 8px); z-index: 40; width: min(340px, 86vw); padding: 14px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); animation: ddin .16s var(--ease) both; transform-origin: top right; }
+.pop-body form { margin: 0; max-width: none; }
+.pop-body label { margin-top: 0; }
+.pop-body .btn { margin-top: 10px; }
+.crumbs .ic { color: var(--muted); margin-left: 4px; }
+table.fm-table td, table.fm-table th { padding-top: 6px; padding-bottom: 6px; }
+table.fm-table th.cb, table.fm-table td.cb { width: 32px; }
+table.fm-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+table.fm-table .when { white-space: nowrap; color: var(--muted); font-size: .88rem; }
+table.fm-table td.acts { width: 44px; text-align: right; }
+table.fm-table td.fm-name { min-width: 0; }
+table.fm-table .fm-name .fi { display: inline-flex; vertical-align: -2px; margin-right: 10px; }
+table.fm-table .fi-folder { color: #e6b450; }
+table.fm-table .fi-folder .ic { fill: rgba(230, 180, 80, .25); }
+table.fm-table .fi-file { color: var(--muted); }
+table.fm-table .fi-link { color: #6aa3ff; }
+table.fm-table .fm-name span:not(.fi) { word-break: break-all; }
+table.fm-table tr.fm-row.sel td { background: var(--tint); }
+.row-menu .menu-list { min-width: 200px; }
+.fm-drop { position: relative; border-radius: 12px; }
+.fm-drop.over::after { content: attr(data-drop-label); position: absolute; inset: 0; display: grid; place-items: center; border: 2px dashed var(--brand); border-radius: 12px; background: color-mix(in srgb, var(--card) 80%, transparent); color: var(--brand); font-weight: 600; z-index: 20; }
+.fm-progress { display: flex; align-items: center; gap: 12px; margin: 8px 0 12px; }
+.fm-progress progress { flex: 1; height: 8px; }
+.fm-progress progress::-webkit-progress-value { background: var(--brand); }
+.fm-progress progress::-moz-progress-bar { background: var(--brand); }
+
+/* context menu and confirm dialog built by app.js */
+.ctx { position: fixed; z-index: 100; min-width: 210px; padding: 6px; display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); animation: ddin .12s var(--ease) both; }
+.ctx .menu-item:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+dialog.confirm { padding: 22px 24px; max-width: min(420px, 92vw); color: var(--fg); background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+dialog.confirm::backdrop { background: rgba(0, 0, 0, .45); }
+dialog.confirm p { margin: 0 0 16px; }
+dialog.confirm .btns { justify-content: flex-end; }
+@media (max-width: 640px) {
+  table.fm-table .when { display: none; }
+  .hub-actions .btn { padding: 8px 12px; }
+}

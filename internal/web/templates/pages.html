@@ -10,6 +10,7 @@
 {{if .Refresh}}<meta http-equiv="refresh" content="3">{{end}}
 </head>
 <body>
+{{template "icons"}}
 <header>
   <a class="brand" href="/"><img src="/static/logo.svg" alt="" width="28" height="28"> {{t . "app"}}</a>
   <nav>
@@ -89,33 +90,46 @@
   </div>
   {{if .Rows}}
   <div class="srv-list">
-    {{range $r := .Rows}}<div class="srv">
+    {{range $r := .Rows}}<div class="srv" data-href="/servers/{{$r.ID}}">
       <div class="srv-main">
         <div class="srv-name"><a href="/servers/{{$r.ID}}">{{$r.Name}}</a>{{if $r.Node}} <span class="muted">({{$r.Node}})</span>{{end}}</div>
         <div class="srv-meta muted">{{$r.Game}} · {{$r.Mode}}</div>
+        <div class="srv-links">
+          {{if $.CanControl}}<a class="btn icon sm" href="/servers/{{$r.ID}}?tab=console" title="{{t $ "srv_console"}}" aria-label="{{t $ "srv_console"}}">{{template "ic" "terminal"}}</a>
+          <a class="btn icon sm" href="/servers/{{$r.ID}}/files" title="{{t $ "files"}}" aria-label="{{t $ "files"}}">{{template "ic" "folder"}}</a>
+          {{if $r.Mods}}<a class="btn icon sm" href="/servers/{{$r.ID}}/game" title="{{t $ "srv_mods"}}" aria-label="{{t $ "srv_mods"}}">{{template "ic" "puzzle"}}</a>{{end}}{{end}}
+          <a class="btn icon sm" href="/servers/{{$r.ID}}/schedules" title="{{t $ "schedules"}}" aria-label="{{t $ "schedules"}}">{{template "ic" "calendar"}}</a>
+          <a class="btn icon sm" href="/servers/{{$r.ID}}?tab=stats" title="{{t $ "srv_stats"}}" aria-label="{{t $ "srv_stats"}}">{{template "ic" "chart"}}</a>
+        </div>
       </div>
-      <div class="srv-state"><span class="badge st-{{$r.State}}">{{t $ (printf "st_%s" $r.State)}}</span>{{if $r.Players}}<span class="muted">{{t $ "players"}} {{$r.Players}}</span>{{end}}</div>
+      <div class="srv-state">
+        <span class="badge st-{{$r.State}}">{{t $ (printf "st_%s" $r.State)}}</span>
+        {{if $r.Since}}<span class="muted small">{{$r.Since}}</span>{{end}}
+      </div>
+      <div class="srv-stats">
+        {{if $r.Players}}<div class="stat" title="{{t $ "players"}}">{{template "ic" "users"}}<span>{{$r.Players}}</span><progress max="100" value="{{$r.PlayersPct}}"></progress></div>{{end}}
+        {{if $r.CPU}}<div class="stat" title="CPU">{{template "ic" "cpu"}}<span>{{$r.CPU}}</span></div>{{end}}
+        {{if $r.Mem}}<div class="stat" title="RAM">{{template "ic" "memory"}}<span>{{$r.Mem}}</span></div>{{end}}
+        {{if $r.Spark}}<svg class="spark players" viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true"><polyline points="{{$r.Spark}}"/></svg>{{end}}
+      </div>
       <div class="srv-actions">
         {{if $.CanControl}}
-        <form class="inline" method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="start"><button class="btn start" type="submit"{{if not $r.CanStart}} disabled{{end}}>{{t $ "act_start"}}</button></form>
-        <form class="inline" method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="stop"><button class="btn stop" type="submit"{{if not $r.CanStop}} disabled{{end}}>{{t $ "act_stop"}}</button></form>
-        <form class="inline" method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="restart"><button class="btn restart" type="submit"{{if not $r.CanRestart}} disabled{{end}}>{{t $ "act_restart"}}</button></form>
+        <form class="inline" method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="start"><button class="btn icon start" type="submit"{{if not $r.CanStart}} disabled{{end}} title="{{t $ "act_start"}}" aria-label="{{t $ "act_start"}}">{{template "ic" "play"}}</button></form>
+        <form class="inline" method="post" action="/servers/{{$r.ID}}/run" data-confirm="{{t $ "confirm_stop"}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="stop"><button class="btn icon stop" type="submit"{{if not $r.CanStop}} disabled{{end}} title="{{t $ "act_stop"}}" aria-label="{{t $ "act_stop"}}">{{template "ic" "stop"}}</button></form>
+        <form class="inline" method="post" action="/servers/{{$r.ID}}/run" data-confirm="{{t $ "confirm_restart"}}"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="restart"><button class="btn icon restart" type="submit"{{if not $r.CanRestart}} disabled{{end}} title="{{t $ "act_restart"}}" aria-label="{{t $ "act_restart"}}">{{template "ic" "restart"}}</button></form>
         <details class="menu">
-          <summary class="btn icon" aria-label="{{t $ "more"}}" title="{{t $ "more"}}">⋯</summary>
+          <summary class="btn icon" aria-label="{{t $ "more"}}" title="{{t $ "more"}}">{{template "ic" "more"}}</summary>
           <div class="menu-list">
-            <form method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="details"><button class="menu-item" type="submit">{{t $ "act_details"}}</button></form>
-            <form method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="backup"><button class="menu-item" type="submit">{{t $ "act_backup"}}</button></form>
-            <form method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="check-update"><button class="menu-item" type="submit">{{t $ "act_check-update"}}</button></form>
-            <a class="menu-item" href="/servers/{{$r.ID}}/schedules">{{t $ "schedules"}}</a>
-            <a class="menu-item" href="/servers/{{$r.ID}}/files">{{t $ "files"}}</a>
-            {{if and pro (eq $r.Game "fctrserver")}}<a class="menu-item" href="/servers/{{$r.ID}}/mods">{{t $ "mods"}}</a>{{end}}
-            {{if and pro (or (eq $r.Game "mcserver") (eq $r.Game "pmcserver") (eq $r.Game "fctrserver"))}}<a class="menu-item" href="/servers/{{$r.ID}}/game">{{t $ "g_menu"}}</a>{{end}}
+            <form method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="details"><button class="menu-item" type="submit">{{template "ic" "search"}}{{t $ "act_details"}}</button></form>
+            <form method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="backup"><button class="menu-item" type="submit">{{template "ic" "backup"}}{{t $ "act_backup"}}</button></form>
+            <form method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="check-update"><button class="menu-item" type="submit">{{template "ic" "update"}}{{t $ "act_check-update"}}</button></form>
+            {{if and pro (eq $r.Game "fctrserver")}}<a class="menu-item" href="/servers/{{$r.ID}}/mods">{{template "ic" "puzzle"}}{{t $ "mods"}}</a>{{end}}
+            {{if $r.Mods}}<a class="menu-item" href="/servers/{{$r.ID}}/game">{{template "ic" "puzzle"}}{{t $ "g_menu"}}</a>{{end}}
           </div>
         </details>
         {{else}}
         <form class="inline" method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="details"><button class="btn" type="submit">{{t $ "act_details"}}</button></form>
         <form class="inline" method="post" action="/servers/{{$r.ID}}/run"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="cmd" value="check-update"><button class="btn" type="submit">{{t $ "act_check-update"}}</button></form>
-        <a class="btn" href="/servers/{{$r.ID}}/schedules">{{t $ "schedules"}}</a>
         {{end}}
       </div>
     </div>{{end}}
